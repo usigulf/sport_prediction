@@ -194,3 +194,4 @@ mypy app/
 [Contact Information]
 # sport_prediction
 # sport_prediction
+# sport_prediction
