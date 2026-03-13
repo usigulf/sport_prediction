@@ -1,0 +1,106 @@
+# Dependencies (root)
+node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+venv/
+ENV/
+env/
+.venv
+.venv/
+backend/.venv/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# IDEs / editors
+.vscode/
+.idea/
+.cursor/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+backend/app.db
+backend/test.db
+
+# Logs
+*.log
+logs/
+
+# Mobile
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/.expo-shared/
+mobile/.npm/
+mobile/.yarn/
+mobile/.yarn/cache/
+mobile/.yarn/unplugged/
+mobile/.yarn/build-state.yml
+mobile/.yarn/install-state.gz
+mobile/.pnp.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ML Models
+*.pkl
+*.h5
+*.pb
+models/
+ml/models/
+
+# Docker
+.dockerignore
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Secrets
+secrets/
+*.pem
+*.key
+
+# Temporary files
+tmp/
+temp/
+*.tmp

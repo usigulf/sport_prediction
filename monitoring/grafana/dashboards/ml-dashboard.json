@@ -1,0 +1,91 @@
+{
+  "dashboard": {
+    "title": "ML Model Performance Dashboard",
+    "tags": ["ml", "predictions"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Model Accuracy Over Time",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "ml_model_accuracy{metric_type=\"accuracy\"}",
+            "legendFormat": "{{model_name}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Prediction Latency (P95)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, ml_prediction_latency_seconds_bucket)",
+            "legendFormat": "{{model_name}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Predictions per Minute",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(ml_predictions_total[1m])",
+            "legendFormat": "{{model_name}} - {{prediction_type}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 4,
+        "title": "Brier Score",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "ml_model_accuracy{metric_type=\"brier_score\"}",
+            "legendFormat": "{{model_name}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 5,
+        "title": "Current Accuracy",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "ml_model_accuracy{metric_type=\"accuracy\"}",
+            "refId": "A"
+          }
+        ],
+        "format": "percentunit",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 16}
+      },
+      {
+        "id": 6,
+        "title": "Total Predictions",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(ml_predictions_total)",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 16}
+      }
+    ],
+    "refresh": "30s",
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    }
+  }
+}

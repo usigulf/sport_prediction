@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "Octobet",
+    "slug": "sport-prediction",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sportsprediction.app"
+    },
+    "android": {
+      "package": "com.sportsprediction.app",
+      "usesCleartextTraffic": true
+    }
+  }
+}

@@ -1,0 +1,155 @@
+version: '3.8'
+
+services:
+  # PostgreSQL with TimescaleDB
+  postgres:
+    image: timescale/timescaledb:latest-pg15
+    container_name: sport-prediction-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sportsprediction
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sport-prediction-network
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: sport-prediction-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sport-prediction-network
+
+  # Backend API
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sport-prediction-api
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/sportsprediction
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: dev-secret-key-change-in-production-min-32-chars
+      ML_INFERENCE_URL: http://ml-inference:8501
+      CORS_ORIGINS: '["http://localhost:3000","http://localhost:19006"]'
+      LOG_LEVEL: INFO
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - /app/venv  # Exclude venv from volume
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - sport-prediction-network
+
+  # ML Inference Service (TensorFlow Serving)
+  ml-inference:
+    image: tensorflow/serving:2.13.0
+    container_name: sport-prediction-ml
+    ports:
+      - "8500:8500"  # gRPC
+      - "8501:8501"  # REST API
+    volumes:
+      - ./ml/models:/models
+    environment:
+      MODEL_NAME: sports_prediction
+      MODEL_BASE_PATH: /models
+    command: >
+      --model_config_file=/models/models.config
+      --rest_api_port=8501
+      --rest_api_timeout_in_ms=30000
+    networks:
+      - sport-prediction-network
+
+  # Prometheus (Monitoring)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: sport-prediction-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - sport-prediction-network
+
+  # Grafana (Visualization)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sport-prediction-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    networks:
+      - sport-prediction-network
+
+  # Kafka (Event Streaming - Optional for local dev)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: sport-prediction-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - sport-prediction-network
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: sport-prediction-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - sport-prediction-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  sport-prediction-network:
+    driver: bridge
