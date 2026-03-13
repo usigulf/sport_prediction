@@ -195,3 +195,4 @@ mypy app/
 # sport_prediction
 # sport_prediction
 # sport_prediction
+# sport_prediction
