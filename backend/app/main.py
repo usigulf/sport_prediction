@@ -5,22 +5,37 @@ import asyncio
 import logging
 from typing import Optional
 from urllib.parse import parse_qs
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends
-from fastapi.middleware.cors import CORSMiddleware
+from uuid import UUID
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from starlette.middleware.cors import CORSMiddleware as StarletteCORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import joinedload
 from app.api.v1.router import api_router
 from app.api.internal import router as internal_router
 from app.core.exceptions import setup_exception_handlers
 from app.core.security import verify_token
 from app.config import get_settings
-from app.database import get_db
+from app.database import SessionLocal
 from app.models.game import Game
 from app.models.user import User
 from app.services.prediction_service import PredictionService
 
 settings = get_settings()
+
+
+class CORSMiddlewareHTTPOnly(StarletteCORSMiddleware):
+    """
+    Starlette's CORSMiddleware only skips non-http scopes in recent versions; older stacks
+    still run CORS on WebSocket and return 403 on the handshake when Origin is missing (curl, RN).
+    """
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        await super().__call__(scope, receive, send)
+
 
 app = FastAPI(
     title="Octobet API",
@@ -32,7 +47,7 @@ app = FastAPI(
 
 # CORS middleware
 app.add_middleware(
-    CORSMiddleware,
+    CORSMiddlewareHTTPOnly,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
@@ -85,55 +100,86 @@ def _get_ws_token(websocket: WebSocket) -> Optional[str]:
 async def websocket_live_updates(
     websocket: WebSocket,
     game_id: str,
-    db: Session = Depends(get_db),
 ):
     """
     Live updates stream for a game. Sends prediction + score every 30s (stub until real live pipeline).
     Requires JWT in query: ?token=<access_token>. Premium tier required for live updates.
     """
-    token = _get_ws_token(websocket)
-    if not token:
-        await websocket.close(code=1008, reason="Missing token. Use ?token=<access_token>")
-        return
-    payload = verify_token(token)
-    if not payload:
-        await websocket.close(code=1008, reason="Invalid or expired token")
-        return
-    user_id = payload.get("user_id")
-    if not user_id:
-        await websocket.close(code=1008, reason="Invalid token payload")
-        return
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        await websocket.close(code=1008, reason="User not found")
-        return
-    if (user.subscription_tier or "free").lower() not in ("premium", "premium_plus", "trialing", "pro"):
-        await websocket.close(code=1008, reason="Premium subscription required for live updates")
-        return
+    # Accept first: if we close() before accept(), uvicorn maps that to HTTP 403 on the handshake,
+    # which breaks clients and confuses operators — use WS close codes after accept instead.
+    # Do not use Depends(get_db) here: some ASGI stacks resolve WS dependencies before accept and can fail the handshake.
     await websocket.accept()
+    db = SessionLocal()
     try:
+        game_id_str = str(game_id).strip()
+        if not game_id_str:
+            await websocket.send_json({"error": "Missing game id in path"})
+            await websocket.close(code=1008, reason="Missing game id")
+            return
+        try:
+            game_uuid = UUID(game_id_str)
+        except ValueError:
+            await websocket.send_json({"error": "Invalid game id"})
+            await websocket.close(code=1008, reason="Invalid game id")
+            return
+
+        token = _get_ws_token(websocket)
+        if not token:
+            await websocket.send_json({"error": "Missing token. Use ?token=<access_token>"})
+            await websocket.close(code=1008, reason="Missing token. Use ?token=<access_token>")
+            return
+        payload = verify_token(token)
+        if not payload:
+            await websocket.send_json({"error": "Invalid or expired token"})
+            await websocket.close(code=1008, reason="Invalid or expired token")
+            return
+        user_id_raw = payload.get("user_id")
+        if not user_id_raw:
+            await websocket.send_json({"error": "Invalid token payload"})
+            await websocket.close(code=1008, reason="Invalid token payload")
+            return
+        try:
+            user_uuid = UUID(str(user_id_raw))
+        except ValueError:
+            await websocket.send_json({"error": "Invalid user in token"})
+            await websocket.close(code=1008, reason="Invalid user in token")
+            return
+
+        user = db.query(User).filter(User.id == user_uuid).first()
+        if not user:
+            await websocket.send_json({"error": "User not found"})
+            await websocket.close(code=1008, reason="User not found")
+            return
+        if (user.subscription_tier or "free").lower() not in ("premium", "premium_plus", "trialing", "pro"):
+            await websocket.send_json({"error": "Premium subscription required for live updates"})
+            await websocket.close(code=1008, reason="Premium subscription required for live updates")
+            return
+
         while True:
             game = (
                 db.query(Game)
                 .options(joinedload(Game.home_team), joinedload(Game.away_team))
-                .filter(Game.id == game_id)
+                .filter(Game.id == game_uuid)
                 .first()
             )
             if not game:
                 await websocket.send_json({"error": "Game not found"})
                 break
-            prediction = PredictionService(db).get_latest_prediction(game_id)
-            payload = {
+            prediction = PredictionService(db).get_latest_prediction(str(game_uuid), use_cache=False)
+            out = {
                 "type": "update",
-                "game_id": game_id,
+                "game_id": str(game_uuid),
                 "home_score": game.home_score or 0,
                 "away_score": game.away_score or 0,
                 "home_win_probability": float(prediction.home_win_probability) if prediction else 0.5,
                 "away_win_probability": float(prediction.away_win_probability) if prediction else 0.5,
                 "confidence_level": prediction.confidence_level if prediction else None,
+                "prediction_updated_at": prediction.created_at.isoformat()
+                if prediction and prediction.created_at
+                else None,
             }
-            await websocket.send_json(payload)
-            await asyncio.sleep(30)
+            await websocket.send_json(out)
+            await asyncio.sleep(12 if game.status == "live" else 45)
     except WebSocketDisconnect:
         pass
     except Exception:
@@ -141,6 +187,8 @@ async def websocket_live_updates(
             await websocket.close()
         except Exception:
             pass
+    finally:
+        db.close()
 
 
 @app.get("/ready")
