@@ -1,16 +1,36 @@
 """
 Application configuration management
 """
-from pydantic_settings import BaseSettings
 from functools import lru_cache
+from pathlib import Path
 from typing import List, Optional
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# backend/app/config.py -> parent.parent == backend/ (Docker: /app)
+_BACKEND_DIR = Path(__file__).resolve().parent.parent
+_BACKEND_ENV = _BACKEND_DIR / ".env"
+
+
+def _env_file() -> str:
+    """Prefer backend/.env by absolute path so loading does not depend on process cwd."""
+    if _BACKEND_ENV.is_file():
+        return str(_BACKEND_ENV)
+    return ".env"
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=_env_file(),
+        env_file_encoding="utf-8",
+        extra="ignore",
+        case_sensitive=False,
+    )
     # Database: default SQLite (no install needed). For PostgreSQL set DATABASE_URL.
     database_url: str = "sqlite:///./app.db"
-    database_pool_size: int = 20
-    database_max_overflow: int = 10
+    # Keep total connections << Postgres max_connections (esp. with multiple uvicorn workers).
+    database_pool_size: int = 5
+    database_max_overflow: int = 5
     
     # Redis
     redis_url: str = "redis://localhost:6379/0"
@@ -38,8 +58,10 @@ class Settings(BaseSettings):
     # ML Inference
     ml_inference_url: str = "http://localhost:8501"
     ml_model_version: str = "v1.0.0"
-    # Optional: path to directory containing simple_model.pkl and feature_columns.pkl (for real explanations)
+    # Optional: directory with simple_model.pkl + feature_columns.pkl (explanations + batch inference job)
     explanation_model_dir: Optional[str] = None
+    # Optional: override artifact path for inference only; defaults to explanation_model_dir
+    model_artifact_dir: Optional[str] = None
     
     # External APIs
     sportradar_api_key: str = ""
@@ -67,10 +89,6 @@ class Settings(BaseSettings):
     stripe_price_id_premium: Optional[str] = None  # price_xxx for Premium monthly
     stripe_success_url: str = "https://app.sportsprediction.com/payment/success"
     stripe_cancel_url: str = "https://app.sportsprediction.com/payment/cancel"
-    
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
 
 
 @lru_cache()
