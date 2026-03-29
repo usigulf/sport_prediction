@@ -4,32 +4,32 @@ global:
   external_labels:
     monitor: 'sport-prediction-monitor'
 
+# Only scrape targets that actually exist in your stack.
+# (Previously this file scraped api:8000/metrics — the FastAPI app has no /metrics route → 404 spam.)
+
 scrape_configs:
-  # Backend API
-  - job_name: 'sport-prediction-api'
-    static_configs:
-      - targets: ['api:8000']
-    metrics_path: '/metrics'
-    scrape_interval: 10s
-
-  # ML Inference Service
-  - job_name: 'ml-inference'
-    static_configs:
-      - targets: ['ml-inference:8501']
-    metrics_path: '/metrics'
-    scrape_interval: 30s
-
-  # PostgreSQL (via postgres_exporter)
-  - job_name: 'postgres'
-    static_configs:
-      - targets: ['postgres-exporter:9187']
-
-  # Redis (via redis_exporter)
-  - job_name: 'redis'
-    static_configs:
-      - targets: ['redis-exporter:9121']
-
-  # Prometheus itself
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
+
+  # Uncomment when the API exposes Prometheus metrics (e.g. prometheus-fastapi-instrumentator):
+  # - job_name: 'sport-prediction-api'
+  #   static_configs:
+  #     - targets: ['api:8000']
+  #   metrics_path: '/metrics'
+  #   scrape_interval: 10s
+
+  # Uncomment when ml-inference is running and exposes metrics on this path/port:
+  # - job_name: 'ml-inference'
+  #   static_configs:
+  #     - targets: ['ml-inference:8501']
+  #   metrics_path: '/metrics'
+  #   scrape_interval: 30s
+
+  # Add postgres_exporter / redis_exporter services to docker-compose, then uncomment:
+  # - job_name: 'postgres'
+  #   static_configs:
+  #     - targets: ['postgres-exporter:9187']
+  # - job_name: 'redis'
+  #   static_configs:
+  #     - targets: ['redis-exporter:9121']
