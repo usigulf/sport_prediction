@@ -16,38 +16,44 @@ class PredictionService:
         self.db = db
         self.cache = CacheService()
     
-    def get_latest_prediction(self, game_id: str) -> Optional[Prediction]:
-        """Get latest prediction for a game (with caching)"""
+    def invalidate_prediction_cache(self, game_id: str) -> None:
+        """Call after inserting a new prediction so readers see fresh probabilities."""
+        self.cache.delete(f"prediction:{game_id}")
+
+    def get_latest_prediction(self, game_id: str, use_cache: bool = True) -> Optional[Prediction]:
+        """Get latest prediction for a game. use_cache=False for WebSocket / post-invalidation reads."""
         cache_key = f"prediction:{game_id}"
-        
-        # Try cache first
-        cached = self.cache.get(cache_key)
-        if cached:
-            # Reconstruct Prediction object from cached data
-            prediction = self.db.query(Prediction).filter(
-                Prediction.id == cached["id"]
-            ).first()
-            if prediction:
-                return prediction
-        
-        # Query database
+
+        if use_cache:
+            cached = self.cache.get(cache_key)
+            if cached:
+                prediction = self.db.query(Prediction).filter(Prediction.id == cached["id"]).first()
+                if prediction:
+                    return prediction
+
         try:
             game_uuid = UUID(game_id)
         except ValueError:
             return None
-        
-        prediction = self.db.query(Prediction).filter(
-            Prediction.game_id == game_uuid
-        ).order_by(desc(Prediction.created_at)).first()
-        
-        if prediction:
-            # Cache for 1 hour
-            self.cache.set(cache_key, {
-                "id": str(prediction.id),
-                "game_id": str(prediction.game_id),
-                "model_version": prediction.model_version,
-            }, ttl=3600)
-        
+
+        prediction = (
+            self.db.query(Prediction)
+            .filter(Prediction.game_id == game_uuid)
+            .order_by(desc(Prediction.created_at))
+            .first()
+        )
+
+        if prediction and use_cache:
+            self.cache.set(
+                cache_key,
+                {
+                    "id": str(prediction.id),
+                    "game_id": str(prediction.game_id),
+                    "model_version": prediction.model_version,
+                },
+                ttl=3600,
+            )
+
         return prediction
     
     def has_exceeded_daily_limit(self, user_id: UUID) -> bool:

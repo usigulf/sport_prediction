@@ -1,20 +1,34 @@
 """
-Internal endpoints for cron or ops (e.g. push triggers). Protected by PUSH_CRON_SECRET when set.
+Internal endpoints for cron or ops (e.g. push triggers, prediction refresh). Protected by PUSH_CRON_SECRET when set.
 """
-from fastapi import APIRouter, Depends, Header, HTTPException
+from typing import Optional
+
+from fastapi import APIRouter, Body, Depends, Header, HTTPException
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.config import get_settings
 from app.services.push_trigger_service import send_game_starting_reminders, send_high_confidence_picks
+from app.services.prediction_inference_service import run_prediction_job
 
 router = APIRouter(prefix="/internal", tags=["internal"])
+
+
+class PredictionRunBody(BaseModel):
+    game_ids: Optional[list[str]] = None
+    force: bool = False
+    min_minutes_scheduled: int = Field(45, ge=1, le=1440)
+    min_minutes_live: int = Field(2, ge=1, le=120)
 
 
 def _require_cron_secret(x_cron_secret: str = Header(None, alias="X-Cron-Secret")):
     settings = get_settings()
     if not settings.push_cron_secret:
-        raise HTTPException(status_code=501, detail="Push triggers not configured (set PUSH_CRON_SECRET)")
+        raise HTTPException(
+            status_code=501,
+            detail="Internal cron not configured (set PUSH_CRON_SECRET for push triggers and prediction refresh)",
+        )
     if x_cron_secret != settings.push_cron_secret:
         raise HTTPException(status_code=401, detail="Invalid or missing X-Cron-Secret")
 
@@ -31,3 +45,31 @@ async def run_push_triggers(
     n_reminders = send_game_starting_reminders(db)
     n_picks = send_high_confidence_picks(db)
     return {"game_reminders_sent": n_reminders, "high_confidence_picks_sent": n_picks}
+
+
+@router.post("/predictions/run")
+async def run_predictions_cron(
+    db: Session = Depends(get_db),
+    _: None = Depends(_require_cron_secret),
+    body: PredictionRunBody = Body(default_factory=PredictionRunBody),
+):
+    """
+    Refresh ML predictions for live + upcoming games. Schedule via cron every 15–60 minutes with header:
+    X-Cron-Secret: <PUSH_CRON_SECRET>
+
+    Set EXPLANATION_MODEL_DIR or MODEL_ARTIFACT_DIR to a folder with simple_model.pkl + feature_columns.pkl
+    for sklearn inference; otherwise a deterministic heuristic runs from game state.
+    """
+    result = run_prediction_job(
+        db,
+        game_ids=body.game_ids,
+        force=body.force,
+        min_minutes_scheduled=body.min_minutes_scheduled,
+        min_minutes_live=body.min_minutes_live,
+    )
+    return {
+        "games_considered": result.games_considered,
+        "predictions_written": result.predictions_written,
+        "skipped_cooldown": result.skipped_cooldown,
+        "errors": result.errors,
+    }
