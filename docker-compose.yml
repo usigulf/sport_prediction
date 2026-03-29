@@ -1,16 +1,19 @@
-version: '3.8'
-
 services:
   # PostgreSQL with TimescaleDB
   postgres:
     image: timescale/timescaledb:latest-pg15
     container_name: sport-prediction-postgres
+    # Raise ceiling so API pool(s) + Grafana/metrics + one-off scripts do not hit "too many clients".
+    command: ["postgres", "-c", "max_connections=150"]
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      # Only applied on first volume init; existing data keeps the old password until ALTER USER.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: sportsprediction
     ports:
-      - "5432:5432"
+      # Never publish Postgres on 0.0.0.0 — scanners bruteforce and run exploit SQL (see server logs).
+      # API/redis reach postgres on the Docker network without host ports. Admin: docker compose exec postgres psql …
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
@@ -27,7 +30,7 @@ services:
     image: redis:7-alpine
     container_name: sport-prediction-redis
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes
@@ -46,25 +49,52 @@ services:
       dockerfile: Dockerfile
     container_name: sport-prediction-api
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/sportsprediction
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/sportsprediction
       REDIS_URL: redis://redis:6379/0
       JWT_SECRET: dev-secret-key-change-in-production-min-32-chars
       ML_INFERENCE_URL: http://ml-inference:8501
       CORS_ORIGINS: '["http://localhost:3000","http://localhost:19006"]'
+      OPENAPI_DOCS_ENABLED: "false"
       LOG_LEVEL: INFO
+      # Sklearn pickles for explanations + POST /internal/predictions/run (train: ml/training/train_simple_model.py)
+      EXPLANATION_MODEL_DIR: /models
+      # Same secret as prediction-scheduler / scripts/run_predictions_job.py
+      PUSH_CRON_SECRET: ${PUSH_CRON_SECRET:-changeme}
+    # Bind to loopback so host nginx can proxy; not exposed on the public interface.
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./backend:/app
+      - ./scripts:/app/scripts
+      - ./ml/models:/models:ro
       - /app/venv  # Exclude venv from volume
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     networks:
       - sport-prediction-network
+
+  # Optional: refresh DB predictions on an interval (docker compose --profile predictions up -d)
+  prediction-scheduler:
+    image: curlimages/curl:8.5.0
+    container_name: sport-prediction-prediction-scheduler
+    environment:
+      PUSH_CRON_SECRET: ${PUSH_CRON_SECRET:-changeme}
+      API_INTERNAL_URL: http://api:8000
+    # curl image ENTRYPOINT is ["curl"] — override with sh -c. One line only (multiline YAML breaks || parsing).
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - 'while true; do curl -sS -X POST "$$API_INTERNAL_URL/internal/predictions/run" -H "Content-Type: application/json" -H "X-Cron-Secret: $$PUSH_CRON_SECRET" -d "{}"; sleep 900; done'
+    depends_on:
+      - api
+    networks:
+      - sport-prediction-network
+    profiles:
+      - predictions
 
   # ML Inference Service (TensorFlow Serving)
   ml-inference:
