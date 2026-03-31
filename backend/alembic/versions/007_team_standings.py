@@ -6,6 +6,7 @@ Create Date: 2026-03-30
 """
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 revision = "007"
 down_revision = "006"
@@ -14,11 +15,12 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # Must match teams.id (postgresql.UUID in 001), not VARCHAR — FK requires same type
     op.create_table(
         "team_standings",
-        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("league", sa.String(length=50), nullable=False),
-        sa.Column("team_id", sa.String(length=36), nullable=False),
+        sa.Column("team_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("league_rank", sa.Integer(), nullable=False),
         sa.Column("played", sa.Integer(), nullable=False),
         sa.Column("wins", sa.Integer(), nullable=False),

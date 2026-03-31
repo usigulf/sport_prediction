@@ -28,6 +28,7 @@ if os.path.isdir(os.path.join(_BACKEND, "app")):
 sys.path.insert(0, _ROOT)
 
 from sqlalchemy.orm import Session
+from app.config import get_settings
 from app.database import SessionLocal, engine, Base
 from app.models.team import Team
 from app.models.team_standing import TeamStanding  # noqa: F401 — register with Base
@@ -534,8 +535,10 @@ def seed_database():
     """Main seeding function"""
     print("Starting database seeding...")
     
-    # Create all tables
-    Base.metadata.create_all(bind=engine)
+    # SQLite only: create tables when Alembic is not used. Postgres schema comes from `alembic upgrade head`
+    # (GUID/String vs native UUID mismatch would break create_all for team_standings vs teams.id).
+    if get_settings().database_url.startswith("sqlite"):
+        Base.metadata.create_all(bind=engine)
     
     db = SessionLocal()
     try:
