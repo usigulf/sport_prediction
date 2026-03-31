@@ -550,7 +550,7 @@ def seed_database():
                 )
             else:
                 response = input(f"Database already has {existing_teams} teams. Clear and reseed? (y/n): ")
-            if response.lower() == 'y":
+            if response.lower() == 'y':
                 print("Clearing existing data...")
                 db.query(Prediction).delete()
                 db.query(Game).delete()
