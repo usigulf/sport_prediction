@@ -1,18 +1,36 @@
 """
 Database seed script for development and testing.
-Populates database with sample teams, games, and predictions.
+Populates database with sample teams, games, predictions, and team_standings.
+
+Run (dependencies required: SQLAlchemy, etc.):
+  From repo root on a host with backend/.env (DATABASE_URL):
+    python3 -m venv .venv && . .venv/bin/activate
+    pip install -r backend/requirements.txt
+    set -a && . backend/.env && set +a && python scripts/seed_data.py
+
+  Or inside the API container (recommended on servers):
+    docker compose exec api python /app/scripts/seed_data.py
+
+  Non-interactive full reseed (no y/n prompt):
+    SEED_AUTO_YES=1 docker compose exec -e SEED_AUTO_YES=1 api python /app/scripts/seed_data.py
 """
 import sys
 import os
 from datetime import datetime, timedelta
 from uuid import uuid4
 
-# Add parent directory to path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Repo root + backend (so `python scripts/seed_data.py` from project root works)
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_ROOT = os.path.dirname(_SCRIPT_DIR)
+_BACKEND = os.path.join(_ROOT, "backend")
+if os.path.isdir(os.path.join(_BACKEND, "app")):
+    sys.path.insert(0, _BACKEND)
+sys.path.insert(0, _ROOT)
 
 from sqlalchemy.orm import Session
 from app.database import SessionLocal, engine, Base
 from app.models.team import Team
+from app.models.team_standing import TeamStanding  # noqa: F401 — register with Base
 from app.models.game import Game
 from app.models.prediction import Prediction
 from app.models.user import User
@@ -291,16 +309,16 @@ def create_games(db: Session, teams: list):
         games.append(game)
 
     # Create some finished games for historical data
+    import random
+
     for i in range(10):
-        game_date = now - timedelta(days=i+1)
+        game_date = now - timedelta(days=i + 1)
         home_team = nfl_teams[i % len(nfl_teams)]
-        away_team = nfl_teams[(i+1) % len(nfl_teams)]
-        
-        # Random scores
-        import random
+        away_team = nfl_teams[(i + 1) % len(nfl_teams)]
+
         home_score = random.randint(14, 35)
         away_score = random.randint(7, 28)
-        
+
         game = Game(
             id=uuid4(),
             league="nfl",
@@ -309,11 +327,35 @@ def create_games(db: Session, teams: list):
             scheduled_time=game_date,
             status="finished",
             home_score=home_score,
-            away_score=away_score
+            away_score=away_score,
         )
         db.add(game)
         games.append(game)
-    
+
+    # Repeat H2H: same two teams, multiple finished games (powers analysis "Head-to-head history")
+    if len(nfl_teams) >= 2:
+        a, b = nfl_teams[0], nfl_teams[1]
+        for i in range(5):
+            game_date = now - timedelta(days=40 + i * 14)
+            if i % 2 == 0:
+                hid, aid = a.id, b.id
+                hs, aws = random.randint(17, 31), random.randint(10, 27)
+            else:
+                hid, aid = b.id, a.id
+                hs, aws = random.randint(14, 28), random.randint(17, 30)
+            game = Game(
+                id=uuid4(),
+                league="nfl",
+                home_team_id=hid,
+                away_team_id=aid,
+                scheduled_time=game_date,
+                status="finished",
+                home_score=hs,
+                away_score=aws,
+            )
+            db.add(game)
+            games.append(game)
+
     db.commit()
     print(f"Created {len(games)} games")
     return games
@@ -392,6 +434,64 @@ def create_predictions(db: Session, games: list):
     print(f"Created {len(predictions)} predictions")
     return predictions
 
+
+def create_team_standings(db: Session, teams: list):
+    """Placeholder league tables so full analysis can show standings (replace with API sync later)."""
+    from collections import defaultdict
+
+    played_by_league = {
+        "nfl": 17,
+        "nba": 82,
+        "mlb": 162,
+        "nhl": 82,
+        "premier_league": 38,
+        "champions_league": 6,
+        "boxing": 1,
+        "tennis": 1,
+        "golf": 1,
+        "mma": 1,
+    }
+    by_league = defaultdict(list)
+    for t in teams:
+        by_league[t.league].append(t)
+
+    rows = []
+    for league, tlist in by_league.items():
+        tlist.sort(key=lambda x: x.name)
+        n = len(tlist)
+        played = played_by_league.get(league, 34)
+        for league_rank, team in enumerate(tlist, start=1):
+            wins = max(0, min(played, played - league_rank - 1))
+            if league in ("premier_league", "champions_league"):
+                draws = max(0, min(8, (n - league_rank) % 6))
+                losses = max(0, played - wins - draws)
+                points = 3 * wins + draws
+            else:
+                draws = 0
+                losses = max(0, played - wins)
+                points = None
+            gf = 200 + (n - league_rank) * 8 + (hash(str(team.id)) % 25)
+            ga = 180 + league_rank * 6 + (hash(str(team.id)) % 40)
+            st = TeamStanding(
+                id=uuid4(),
+                league=league,
+                team_id=team.id,
+                league_rank=league_rank,
+                played=played,
+                wins=wins,
+                draws=draws,
+                losses=losses,
+                points=points,
+                goals_for=gf,
+                goals_against=ga,
+            )
+            db.add(st)
+            rows.append(st)
+    db.commit()
+    print(f"Created {len(rows)} team standings rows")
+    return rows
+
+
 def create_test_users(db: Session):
     """Create test users for development"""
     users_data = [
@@ -442,11 +542,19 @@ def seed_database():
         # Check if data already exists
         existing_teams = db.query(Team).count()
         if existing_teams > 0:
-            response = input(f"Database already has {existing_teams} teams. Clear and reseed? (y/n): ")
-            if response.lower() == 'y':
+            auto_yes = os.environ.get("SEED_AUTO_YES", "").strip().lower() in ("1", "true", "yes", "y")
+            if auto_yes:
+                response = "y"
+                print(
+                    f"Database already has {existing_teams} teams. SEED_AUTO_YES=1 — clearing and reseeding."
+                )
+            else:
+                response = input(f"Database already has {existing_teams} teams. Clear and reseed? (y/n): ")
+            if response.lower() == 'y":
                 print("Clearing existing data...")
                 db.query(Prediction).delete()
                 db.query(Game).delete()
+                db.query(TeamStanding).delete()
                 db.query(Team).delete()
                 db.query(User).delete()
                 db.commit()
@@ -458,6 +566,7 @@ def seed_database():
         teams = create_teams(db)
         games = create_games(db, teams)
         predictions = create_predictions(db, games)
+        standings = create_team_standings(db, teams)
         users = create_test_users(db)
         
         print("\n✅ Database seeding completed successfully!")
@@ -465,6 +574,7 @@ def seed_database():
         print(f"  Teams: {len(teams)}")
         print(f"  Games: {len(games)}")
         print(f"  Predictions: {len(predictions)}")
+        print(f"  Standings rows: {len(standings)}")
         print(f"  Users: {len(users)}")
         
     except Exception as e:

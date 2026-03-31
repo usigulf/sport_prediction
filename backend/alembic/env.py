@@ -16,6 +16,7 @@ from app.models.user import User
 from app.models.team import Team
 from app.models.game import Game
 from app.models.prediction import Prediction
+from app.models.team_standing import TeamStanding  # noqa: F401
 from app.models.user_favorite import UserFavorite
 
 # this is the Alembic Config object

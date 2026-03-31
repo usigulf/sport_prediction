@@ -39,6 +39,7 @@ def _make_engine() -> Engine:
         return create_engine(url, **opts)
     opts["pool_size"] = settings.database_pool_size
     opts["max_overflow"] = settings.database_max_overflow
+    opts["pool_recycle"] = 1800
     return create_engine(url, **opts)
 
 engine = _make_engine()
@@ -47,10 +48,19 @@ Base = declarative_base()
 
 
 def init_sqlite_tables():
-    """Create tables for SQLite (dev); no-op for PostgreSQL (use Alembic)."""
+    """Create tables for SQLite (dev) only when Alembic has not run yet.
+
+    If `alembic_version` exists, schema is owned by migrations — skip create_all so
+    `alembic upgrade head` is not fighting duplicate CREATE TABLE errors.
+    """
     if not settings.database_url.startswith("sqlite"):
         return
-    from app.models import user, user_favorite, user_prediction_view, user_push_token, push_reminder_sent, team, game, prediction, challenge  # noqa: F401
+    from sqlalchemy import inspect
+
+    insp = inspect(engine)
+    if insp.has_table("alembic_version"):
+        return
+    from app.models import user, user_favorite, user_prediction_view, user_push_token, push_reminder_sent, team, team_standing, game, prediction, challenge  # noqa: F401
     Base.metadata.create_all(bind=engine)
 
 

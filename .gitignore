@@ -79,11 +79,11 @@ mobile/.pnp.*
 .DS_Store
 Thumbs.db
 
-# ML Models
+# ML Models / artifacts (do not use bare `models/` — it ignores backend/app/models/)
 *.pkl
 *.h5
 *.pb
-models/
+/models/
 ml/models/
 
 # Docker
