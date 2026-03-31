@@ -579,7 +579,15 @@ def seed_database():
         print(f"  Predictions: {len(predictions)}")
         print(f"  Standings rows: {len(standings)}")
         print(f"  Users: {len(users)}")
-        
+        if not get_settings().database_url.startswith("sqlite"):
+            print(
+                "\nNext (recommended): run the inference job so each prediction gets rich_analysis "
+                "(full analysis text). Requires PUSH_CRON_SECRET in the api container env:"
+            )
+            print(
+                '  docker compose exec api python /app/scripts/run_predictions_job.py \'{"force": true}\''
+            )
+
     except Exception as e:
         print(f"❌ Error seeding database: {e}")
         db.rollback()
