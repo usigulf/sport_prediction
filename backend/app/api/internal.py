@@ -2,6 +2,7 @@
 Internal endpoints for cron or ops (e.g. push triggers, prediction refresh). Protected by PUSH_CRON_SECRET when set.
 """
 from typing import Optional
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Body, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
@@ -9,8 +10,11 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.config import get_settings
+from app.models.game import Game
+from app.models.game_player_spotlight import GamePlayerSpotlight
 from app.services.push_trigger_service import send_game_starting_reminders, send_high_confidence_picks
 from app.services.prediction_inference_service import run_prediction_job
+from app.services.sportradar_nfl_service import fetch_nfl_standings_json
 
 router = APIRouter(prefix="/internal", tags=["internal"])
 
@@ -20,6 +24,20 @@ class PredictionRunBody(BaseModel):
     force: bool = False
     min_minutes_scheduled: int = Field(45, ge=1, le=1440)
     min_minutes_live: int = Field(2, ge=1, le=120)
+
+
+class PlayerSpotlightItem(BaseModel):
+    player_name: str = Field(..., max_length=255)
+    team_name: str = Field(..., max_length=255)
+    role: Optional[str] = Field(None, max_length=120)
+    summary: str = Field(..., max_length=8000)
+    sort_order: int = 0
+
+
+class ReplacePlayerSpotlightsBody(BaseModel):
+    """Full replace: existing rows for this game are deleted, then these are inserted."""
+
+    spotlights: list[PlayerSpotlightItem] = Field(default_factory=list)
 
 
 def _require_cron_secret(x_cron_secret: str = Header(None, alias="X-Cron-Secret")):
@@ -72,4 +90,80 @@ async def run_predictions_cron(
         "predictions_written": result.predictions_written,
         "skipped_cooldown": result.skipped_cooldown,
         "errors": result.errors,
+    }
+
+
+@router.put("/games/{game_id}/player-spotlights")
+async def replace_game_player_spotlights(
+    game_id: str,
+    body: ReplacePlayerSpotlightsBody,
+    db: Session = Depends(get_db),
+    _: None = Depends(_require_cron_secret),
+):
+    """
+    Replace all performer spotlight rows for a game (ETL / admin). Same auth as cron:
+    X-Cron-Secret: <PUSH_CRON_SECRET>
+    """
+    try:
+        gid = UUID(game_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid game ID format")
+    game = db.query(Game).filter(Game.id == gid).first()
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    db.query(GamePlayerSpotlight).filter(GamePlayerSpotlight.game_id == gid).delete()
+    for item in body.spotlights:
+        db.add(
+            GamePlayerSpotlight(
+                id=uuid4(),
+                game_id=gid,
+                player_name=item.player_name,
+                team_name=item.team_name,
+                role=item.role,
+                summary=item.summary,
+                sort_order=item.sort_order,
+            )
+        )
+    db.commit()
+    return {"game_id": game_id, "spotlights_written": len(body.spotlights)}
+
+
+@router.delete("/games/{game_id}/player-spotlights")
+async def clear_game_player_spotlights(
+    game_id: str,
+    db: Session = Depends(get_db),
+    _: None = Depends(_require_cron_secret),
+):
+    """Remove all spotlight rows for a game."""
+    try:
+        gid = UUID(game_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid game ID format")
+    n = db.query(GamePlayerSpotlight).filter(GamePlayerSpotlight.game_id == gid).delete()
+    db.commit()
+    return {"game_id": game_id, "spotlights_deleted": n}
+
+
+@router.get("/health/sportradar")
+async def sportradar_health(_: None = Depends(_require_cron_secret)):
+    """
+    Verify Sportradar NFL standings can be fetched (same X-Cron-Secret as other internal routes).
+    Does not persist data; uses the same cache as explanation enrichment.
+    """
+    settings = get_settings()
+    key = (settings.sportradar_api_key or "").strip()
+    if not key:
+        return {
+            "configured": False,
+            "nfl_standings_ok": False,
+            "standings_source": None,
+            "detail": "SPORTRADAR_API_KEY not set",
+        }
+    data, label = fetch_nfl_standings_json(settings)
+    return {
+        "configured": True,
+        "nfl_standings_ok": data is not None,
+        "standings_source": label,
+        "access_level": settings.sportradar_access_level,
+        "season_year_effective": settings.sportradar_nfl_season_year,
     }

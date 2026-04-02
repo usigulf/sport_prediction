@@ -52,7 +52,8 @@ services:
       ENVIRONMENT: production
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/sportsprediction
       REDIS_URL: redis://redis:6379/0
-      JWT_SECRET: dev-secret-key-change-in-production-min-32-chars
+      # Set JWT_SECRET in project .env (min ~32 chars). Rotating logs everyone out.
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-key-change-in-production-min-32-chars}
       ML_INFERENCE_URL: http://ml-inference:8501
       CORS_ORIGINS: '["http://localhost:3000","http://localhost:19006"]'
       OPENAPI_DOCS_ENABLED: "false"

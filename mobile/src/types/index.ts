@@ -44,6 +44,65 @@ export interface Prediction {
   created_at: string;
 }
 
+export interface RichAnalysisSections {
+  real_time_analysis?: string | null;
+  form_standings?: string | null;
+  head_to_head?: string | null;
+  key_players?: string | null;
+  tactical?: string | null;
+  h2h_history?: string | null;
+  standings_context?: string | null;
+  advanced_metrics?: string | null;
+  scenario_outcomes?: string | null;
+}
+
+export interface StandingsRowDetail {
+  team_name: string;
+  league_rank: number;
+  played: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  points?: number | null;
+  goals_for?: number | null;
+  goals_against?: number | null;
+  goal_difference: number;
+}
+
+export interface H2HMeetingDetail {
+  date_iso: string;
+  home_team_name: string;
+  away_team_name: string;
+  home_score: number;
+  away_score: number;
+}
+
+export interface MetricComparisonRow {
+  label: string;
+  home_display: string;
+  away_display: string;
+  footnote?: string | null;
+}
+
+export interface PlayerSpotlightDetail {
+  player_name: string;
+  team_name: string;
+  role?: string | null;
+  summary: string;
+}
+
+export interface StructuredGameAnalysis {
+  league_label?: string | null;
+  standings_rows: StandingsRowDetail[];
+  h2h_meetings: H2HMeetingDetail[];
+  h2h_series_summary?: string | null;
+  metric_comparisons: MetricComparisonRow[];
+  player_spotlights: PlayerSpotlightDetail[];
+  data_freshness_note?: string | null;
+  /** NFL: Sportradar REG standings snapshot when API key configured */
+  provider_context_note?: string | null;
+}
+
 export interface PredictionExplanation {
   top_features: Array<{
     feature: string;
@@ -53,6 +112,8 @@ export interface PredictionExplanation {
   confidence_explanation?: string;
   model_version: string;
   accuracy?: number;
+  rich_analysis?: RichAnalysisSections | null;
+  structured_analysis?: StructuredGameAnalysis | null;
 }
 
 export interface PlayerProp {

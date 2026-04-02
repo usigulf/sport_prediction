@@ -16,13 +16,33 @@ const getApiBaseUrl = () => {
       ? 'http://10.0.2.2:8000/api/v1'
       : 'http://localhost:8000/api/v1';
   }
-  return 'https://api.sportsprediction.com/api/v1';
+  return 'https://api.octobetiq.com/api/v1';
 };
 
 const API_BASE_URL = getApiBaseUrl();
 
 // In dev, we may override this when we discover backend on the other port (8000/8001)
 let effectiveBaseUrl: string = API_BASE_URL;
+
+const _apiOriginListeners = new Set<() => void>();
+
+/** Fired when effectiveBaseUrl changes (e.g. alternate port detected). Use to reconnect WebSockets. */
+export function subscribeApiOriginChanged(cb: () => void): () => void {
+  _apiOriginListeners.add(cb);
+  return () => {
+    _apiOriginListeners.delete(cb);
+  };
+}
+
+function _notifyApiOriginChanged(): void {
+  _apiOriginListeners.forEach((listener) => {
+    try {
+      listener();
+    } catch {
+      /* ignore subscriber errors */
+    }
+  });
+}
 
 function getOriginFromBase(base: string): string {
   return base.replace(/\/api\/v1\/?$/, '') || 'http://localhost:8000';
@@ -43,6 +63,32 @@ export function getApiOrigin(): string {
   return getOriginFromBase(effectiveBaseUrl);
 }
 
+/**
+ * WebSocket origin (ws:// or wss://) for /ws/live/... — same host/port as getApiOrigin() after health checks.
+ * Override with EXPO_PUBLIC_WS_URL if a reverse proxy serves WS on a different host (rare).
+ */
+export function getWebSocketOrigin(): string {
+  const raw =
+    typeof process !== 'undefined' ? process.env?.EXPO_PUBLIC_WS_URL?.trim() : '';
+  if (raw) {
+    return raw.replace(/\/$/, '');
+  }
+  const origin = getApiOrigin();
+  if (origin.startsWith('https://')) {
+    return `wss://${origin.slice('https://'.length)}`;
+  }
+  if (origin.startsWith('http://')) {
+    return `ws://${origin.slice('http://'.length)}`;
+  }
+  return origin;
+}
+
+/** Full URL for authenticated live game WebSocket. */
+export function buildLiveWebSocketUrl(gameId: string, accessToken: string): string {
+  const base = getWebSocketOrigin();
+  return `${base}/ws/live/${gameId}?token=${encodeURIComponent(accessToken)}`;
+}
+
 // Token is set on login and cleared on logout. For persistence across app restarts, use AsyncStorage (P1).
 let authToken: string | null = null;
 
@@ -58,6 +104,14 @@ export function getAuthToken(): string | null {
 let onUnauthorized: (() => void) | null = null;
 export function setOnUnauthorized(cb: (() => void) | null): void {
   onUnauthorized = cb;
+}
+
+/** After silent refresh, Redux (and WebSocket URLs) must see the new access token. Wired from App. */
+let onAccessTokenRefreshed: ((p: { accessToken: string; email: string }) => void) | null = null;
+export function setOnAccessTokenRefreshed(
+  cb: ((p: { accessToken: string; email: string }) => void) | null
+): void {
+  onAccessTokenRefreshed = cb;
 }
 
 function fetchHealth(origin: string, signal?: AbortSignal): Promise<boolean> {
@@ -79,6 +133,7 @@ export async function checkBackendHealth(): Promise<{ ok: boolean; url: string }
       const altOk = await fetchHealth(altOrigin, c.signal);
       if (altOk) {
         effectiveBaseUrl = alt;
+        _notifyApiOriginChanged();
         ok = true;
       }
     }
@@ -218,6 +273,10 @@ class ApiService {
                 refreshToken: tokens.refresh_token ?? rt,
                 email: stored!.email,
               });
+              onAccessTokenRefreshed?.({
+                accessToken: tokens.access_token,
+                email: stored!.email,
+              });
               return this.request<T>(endpoint, options, true);
             }
           } catch {
@@ -238,13 +297,23 @@ class ApiService {
           const data = await doFetch(alt, c2.signal);
           clearTimeout(t2);
           effectiveBaseUrl = alt;
+          _notifyApiOriginChanged();
           return data;
         } catch {
           clearTimeout(t2);
         }
       }
       if (error?.name !== 'AbortError') {
-        console.error(`API Error [${method} ${endpoint}]:`, error);
+        const st = error?.status;
+        console.error(
+          `API Error [${method} ${endpoint}]${st != null ? ` HTTP ${st}` : ''} base=${effectiveBaseUrl}:`,
+          error
+        );
+        if (__DEV__ && st === 503) {
+          console.error(
+            '503 usually means the backend DB connection failed (check server DATABASE_URL / Postgres).'
+          );
+        }
       }
       if (error?.name === 'AbortError') {
         const err = new Error('Request timed out. Start the backend: cd backend && ./run.sh') as Error & { name: string };

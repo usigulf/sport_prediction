@@ -92,15 +92,93 @@ def test_get_prediction_explanation(client, auth_headers, test_game, test_predic
     assert "top_features" in data or "explanation" in data
 
 
-def test_get_live_prediction_requires_premium(client, auth_headers, test_game):
-    """Test that live predictions require premium"""
-    # Update game to live status
-    test_game.status = "live"
-    from app.database import SessionLocal
-    db = SessionLocal()
-    db.add(test_game)
+def test_get_prediction_explanation_rich_analysis(client, auth_headers, test_game, test_prediction, db):
+    """Optional narrative sections are returned when stored on the prediction."""
+    test_prediction.rich_analysis = {
+        "real_time_analysis": "Sample live context from data pipeline.",
+        "form_standings": "Home 3rd in table; away 9th.",
+    }
+    db.add(test_prediction)
     db.commit()
-    
+
+    response = client.get(
+        f"/api/v1/games/{test_game.id}/explanation",
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["rich_analysis"] is not None
+    assert data["rich_analysis"]["real_time_analysis"] == "Sample live context from data pipeline."
+    assert data["rich_analysis"]["form_standings"] == "Home 3rd in table; away 9th."
+    assert data["rich_analysis"].get("scenario_outcomes")
+    assert "Possible outcomes" in data["rich_analysis"]["scenario_outcomes"]
+
+
+def test_explanation_enriches_h2h_and_standings(client, premium_auth_headers, db, test_teams, test_game, test_prediction):
+    """DB-backed H2H + standings appear on explanation when rows exist."""
+    from uuid import uuid4
+    from app.models.game import Game
+    from app.models.team_standing import TeamStanding
+
+    for i in range(2):
+        g = Game(
+            id=uuid4(),
+            league="nfl",
+            home_team_id=test_teams[0].id,
+            away_team_id=test_teams[1].id,
+            scheduled_time=datetime.now() - timedelta(days=30 * (i + 1)),
+            status="finished",
+            home_score=24 + i,
+            away_score=17,
+        )
+        db.add(g)
+    for rank, tid in enumerate([test_teams[0].id, test_teams[1].id], start=1):
+        db.add(
+            TeamStanding(
+                id=uuid4(),
+                league="nfl",
+                team_id=tid,
+                league_rank=rank,
+                played=10,
+                wins=6,
+                draws=0,
+                losses=4,
+                points=18,
+                goals_for=240,
+                goals_against=200,
+            )
+        )
+    db.commit()
+
+    response = client.get(
+        f"/api/v1/games/{test_game.id}/explanation",
+        headers=premium_auth_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    ra = data["rich_analysis"]
+    assert ra is not None
+    assert ra.get("h2h_history")
+    assert "Last 2 meeting" in ra["h2h_history"]
+    assert ra.get("standings_context")
+    assert "#1" in ra["standings_context"] or "#2" in ra["standings_context"]
+    assert ra.get("advanced_metrics")
+    assert "scoring environment" in ra["advanced_metrics"].lower()
+
+    struct = data.get("structured_analysis")
+    assert struct is not None
+    assert len(struct.get("standings_rows") or []) == 2
+    assert len(struct.get("h2h_meetings") or []) == 2
+    assert struct.get("h2h_series_summary")
+    assert len(struct.get("metric_comparisons") or []) >= 3
+    assert struct.get("data_freshness_note")
+
+
+def test_get_live_prediction_requires_premium(client, auth_headers, test_game, db):
+    """Test that live predictions require premium"""
+    test_game.status = "live"
+    db.commit()
+
     response = client.get(
         f"/api/v1/games/{test_game.id}/live-predictions",
         headers=auth_headers
@@ -109,15 +187,11 @@ def test_get_live_prediction_requires_premium(client, auth_headers, test_game):
     assert "premium" in response.json()["detail"].lower()
 
 
-def test_get_live_prediction_premium_user(client, premium_auth_headers, test_game):
+def test_get_live_prediction_premium_user(client, premium_auth_headers, test_game, db):
     """Test premium user getting live predictions"""
-    # Update game to live status
     test_game.status = "live"
-    from app.database import SessionLocal
-    db = SessionLocal()
-    db.add(test_game)
     db.commit()
-    
+
     response = client.get(
         f"/api/v1/games/{test_game.id}/live-predictions",
         headers=premium_auth_headers

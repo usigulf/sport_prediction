@@ -5,14 +5,24 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.sportsprediction.app"
+      "bundleIdentifier": "com.sportsprediction.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.sportsprediction.app",
       "usesCleartextTraffic": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "1c6a5910-f9f8-43fe-8aea-da17ac3331fb"
+      }
     }
   }
 }

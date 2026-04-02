@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -6,13 +6,25 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Linking,
   Alert,
 } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { useFocusEffect } from '@react-navigation/native';
 import { apiService } from '../services/api';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { theme } from '../constants/theme';
+
+const CHECKOUT_TIMEOUT_MS = 20000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let id: ReturnType<typeof setTimeout> | null = null;
+  const timeout = new Promise<never>((_, reject) => {
+    id = setTimeout(() => reject(new Error('Checkout request timed out. Please try again.')), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (id) clearTimeout(id);
+  }) as Promise<T>;
+}
 
 const TIERS = [
   {
@@ -41,6 +53,7 @@ const TIERS = [
 export const PaywallScreen: React.FC = () => {
   const [currentTier, setCurrentTier] = useState<string>('free');
   const [loading, setLoading] = useState(true);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadTier = useCallback(async () => {
@@ -56,23 +69,35 @@ export const PaywallScreen: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => {
-    loadTier();
-  }, [loadTier]);
-
+  // Do not put `loading` in this callback's deps: when load finishes, `loading` flips to false,
+  // React Navigation re-runs the focus effect, and `loadTier()` runs again → infinite blink.
   useFocusEffect(
     useCallback(() => {
-      if (!loading) loadTier();
-    }, [loadTier, loading])
+      loadTier();
+    }, [loadTier])
   );
 
   const handleSubscribe = useCallback(async (tierId: string) => {
     if (tierId === 'free') return;
+    if (tierId !== 'premium') {
+      Alert.alert('Coming soon', 'Pro plan checkout is not available yet.');
+      return;
+    }
+    setCheckoutLoading(true);
     try {
-      const { url } = await apiService.createCheckoutSession();
-      if (url) await Linking.openURL(url);
+      const { url } = await withTimeout(apiService.createCheckoutSession(), CHECKOUT_TIMEOUT_MS);
+      if (!url) {
+        Alert.alert('Checkout', 'Checkout URL missing. Payments may not be configured yet.');
+        return;
+      }
+      // Stripe Checkout: use in-app browser (SFSafariViewController / Chrome Custom Tabs).
+      // Linking.openURL often flashes or fails to stay open during hosted checkout.
+      setCheckoutLoading(false);
+      await WebBrowser.openBrowserAsync(url);
     } catch (e) {
       Alert.alert('Checkout', getUserFriendlyMessage(e));
+    } finally {
+      setCheckoutLoading(false);
     }
   }, []);
 
@@ -127,12 +152,16 @@ export const PaywallScreen: React.FC = () => {
             {isPaid && (
               <TouchableOpacity
                 style={[styles.cta, isCurrent && styles.ctaCurrent]}
-                disabled={isCurrent}
+                disabled={isCurrent || tier.id !== 'premium' || checkoutLoading}
                 onPress={() => handleSubscribe(tier.id)}
               >
-                <Text style={[styles.ctaText, isCurrent && styles.ctaTextCurrent]}>
-                  {isCurrent ? 'Current plan' : tier.id === 'premium' ? 'Start 7-day free trial' : 'Coming soon'}
-                </Text>
+                {tier.id === 'premium' && checkoutLoading ? (
+                  <ActivityIndicator color={theme.colors.background} />
+                ) : (
+                  <Text style={[styles.ctaText, isCurrent && styles.ctaTextCurrent]}>
+                    {isCurrent ? 'Current plan' : tier.id === 'premium' ? 'Start 7-day free trial' : 'Coming soon'}
+                  </Text>
+                )}
               </TouchableOpacity>
             )}
           </View>

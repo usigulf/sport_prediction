@@ -32,6 +32,7 @@ from app.config import get_settings
 from app.database import SessionLocal, engine, Base
 from app.models.team import Team
 from app.models.team_standing import TeamStanding  # noqa: F401 — register with Base
+from app.models.game_player_spotlight import GamePlayerSpotlight  # noqa: F401 — register with Base
 from app.models.game import Game
 from app.models.prediction import Prediction
 from app.models.user import User
@@ -436,6 +437,47 @@ def create_predictions(db: Session, games: list):
     return predictions
 
 
+def create_player_spotlights_demo(db: Session, games: list):
+    """Two placeholder spotlight rows on the first scheduled game so structured analysis shows the performers block."""
+    scheduled = [g for g in games if getattr(g, "status", None) == "scheduled"]
+    if not scheduled:
+        return []
+    g0 = scheduled[0]
+    home = db.query(Team).filter(Team.id == g0.home_team_id).first()
+    away = db.query(Team).filter(Team.id == g0.away_team_id).first()
+    if not home or not away:
+        return []
+    rows = [
+        GamePlayerSpotlight(
+            id=uuid4(),
+            game_id=g0.id,
+            player_name=f"{home.abbreviation} key contributor",
+            team_name=home.name,
+            role="Matchup note",
+            summary=(
+                "Demo row — replace with real usage, injury, and recent form from your stats provider."
+            ),
+            sort_order=0,
+        ),
+        GamePlayerSpotlight(
+            id=uuid4(),
+            game_id=g0.id,
+            player_name=f"{away.abbreviation} key contributor",
+            team_name=away.name,
+            role="Matchup note",
+            summary=(
+                "Demo row — replace with real usage, injury, and recent form from your stats provider."
+            ),
+            sort_order=1,
+        ),
+    ]
+    for r in rows:
+        db.add(r)
+    db.commit()
+    print(f"Created {len(rows)} game_player_spotlights (demo on game {g0.id})")
+    return rows
+
+
 def create_team_standings(db: Session, teams: list):
     """Placeholder league tables so full analysis can show standings (replace with API sync later)."""
     from collections import defaultdict
@@ -556,6 +598,7 @@ def seed_database():
             if response.lower() == 'y':
                 print("Clearing existing data...")
                 db.query(Prediction).delete()
+                db.query(GamePlayerSpotlight).delete()
                 db.query(Game).delete()
                 db.query(TeamStanding).delete()
                 db.query(Team).delete()
@@ -569,6 +612,7 @@ def seed_database():
         teams = create_teams(db)
         games = create_games(db, teams)
         predictions = create_predictions(db, games)
+        spotlights = create_player_spotlights_demo(db, games)
         standings = create_team_standings(db, teams)
         users = create_test_users(db)
         
@@ -577,6 +621,7 @@ def seed_database():
         print(f"  Teams: {len(teams)}")
         print(f"  Games: {len(games)}")
         print(f"  Predictions: {len(predictions)}")
+        print(f"  Player spotlights (demo): {len(spotlights)}")
         print(f"  Standings rows: {len(standings)}")
         print(f"  Users: {len(users)}")
         if not get_settings().database_url.startswith("sqlite"):

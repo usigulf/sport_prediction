@@ -11,12 +11,16 @@ from typing import Any, Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import and_, or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.config import get_settings
 from app.models.game import Game
 from app.models.prediction import Prediction
-from app.services.feature_builder import build_feature_dict, expected_scores_for_league
+from app.services.feature_builder import (
+    build_feature_dict,
+    build_rich_analysis_dict,
+    expected_scores_for_league,
+)
 from app.services.ml_artifacts import heuristic_predict, predict_from_artifacts
 from app.services.prediction_service import PredictionService
 
@@ -62,7 +66,7 @@ def _should_skip(
     return age_min < cooldown
 
 
-def _predict_for_game(game: Game) -> dict[str, Any]:
+def _predict_for_game(game: Game) -> tuple[dict[str, Any], dict[str, float | int]]:
     features = build_feature_dict(game)
     model_dir = _model_dir()
     out = predict_from_artifacts(model_dir, features) if model_dir else None
@@ -71,7 +75,7 @@ def _predict_for_game(game: Game) -> dict[str, Any]:
     exp_h, exp_a = expected_scores_for_league(game.league, float(out["home_win_probability"]))
     out["expected_home_score"] = exp_h
     out["expected_away_score"] = exp_a
-    return out
+    return out, features
 
 
 def run_prediction_job(
@@ -108,7 +112,7 @@ def run_prediction_job(
             )
         )
 
-    games = q.all()
+    games = q.options(joinedload(Game.home_team), joinedload(Game.away_team)).all()
     result = PredictionJobResult(
         games_considered=len(games),
         predictions_written=0,
@@ -128,7 +132,8 @@ def run_prediction_job(
             ):
                 result.skipped_cooldown += 1
                 continue
-            payload = _predict_for_game(game)
+            payload, feat = _predict_for_game(game)
+            rich = build_rich_analysis_dict(game, feat)
             created_at = datetime.now(timezone.utc)
             pred = Prediction(
                 id=uuid4(),
@@ -139,6 +144,7 @@ def run_prediction_job(
                 expected_home_score=payload["expected_home_score"],
                 expected_away_score=payload["expected_away_score"],
                 confidence_level=str(payload["confidence_level"]),
+                rich_analysis=rich,
                 created_at=created_at,
             )
             db.add(pred)

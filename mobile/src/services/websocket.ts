@@ -1,7 +1,10 @@
 /**
  * WebSocket Service for Live Game Updates
- * Handles real-time prediction updates during live games
+ * Handles real-time prediction updates during live games.
+ * Prefer useLiveUpdates for screens; this class shares the same URL rules as api.ts.
  */
+
+import { getAuthToken, getWebSocketOrigin } from './api';
 
 interface WebSocketCallbacks {
   onPredictionUpdate?: (data: any) => void;
@@ -20,17 +23,10 @@ class WebSocketService {
   private callbacks: WebSocketCallbacks = {};
   private heartbeatInterval: NodeJS.Timeout | null = null;
 
-  private getAuthToken(): string | null {
-    // Get token from AsyncStorage or Redux store
-    return null;
-  }
-
   private getWebSocketUrl(gameId: string): string {
-    const baseUrl = __DEV__
-      ? 'ws://localhost:8000'
-      : 'wss://api.sportsprediction.com';
-    const token = this.getAuthToken();
-    return `${baseUrl}/ws/live/${gameId}${token ? `?token=${token}` : ''}`;
+    const baseUrl = getWebSocketOrigin();
+    const token = getAuthToken();
+    return `${baseUrl}/ws/live/${gameId}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
   }
 
   connect(gameId: string, callbacks: WebSocketCallbacks = {}) {

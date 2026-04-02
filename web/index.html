@@ -299,6 +299,7 @@
         <span class="trust-pill"><span class="arrow" aria-hidden="true">↑</span> 68% Last 90 Days</span>
         <span class="trust-pill">4.9 ★</span>
         <span class="trust-pill">12k+ Users</span>
+        <span class="trust-pill" id="api-status-pill">API: checking…</span>
       </div>
     </div>
   </section>
@@ -309,7 +310,7 @@
       <p class="section-label">Top value today</p>
       <h2 id="picks-heading" class="text-2xl sm:text-3xl font-bold text-white mb-2">Today's Top AI Picks</h2>
       <p class="text-gray-400 mb-6 sm:mb-8">High-confidence value bets, updated in real time</p>
-      <div class="picks-scroll md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible md:gap-4">
+      <div class="picks-scroll md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible md:gap-4" id="picks-container" aria-live="polite">
         <article class="card-pick pick-card featured p-5 fade-in">
           <div class="flex items-center justify-between mb-3">
             <span class="league-badge">NBA</span>
@@ -426,6 +427,9 @@
           <a href="#" class="mt-3 inline-block text-sm text-[var(--neon-green)] font-medium hover:underline">View Analysis →</a>
         </article>
       </div>
+      <p class="text-xs text-gray-500 mt-4">
+        Live data powered by <span class="text-gray-300">api.octobetiq.com</span>.
+      </p>
     </div>
   </section>
 
@@ -661,6 +665,94 @@
   </footer>
 
   <script>
+    const API_ORIGIN = 'https://api.octobetiq.com';
+    const API_V1 = `${API_ORIGIN}/api/v1`;
+
+    function setApiPill(text, ok) {
+      const el = document.getElementById('api-status-pill');
+      if (!el) return;
+      el.textContent = text;
+      el.style.color = ok ? 'var(--neon-green)' : 'var(--text-muted)';
+      el.style.borderColor = ok ? 'rgba(0,255,157,0.25)' : 'var(--border)';
+    }
+
+    function formatKickoff(iso) {
+      if (!iso) return 'TBD';
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return 'TBD';
+      return d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    }
+
+    function confToPct(conf) {
+      const m = { low: 65, medium: 75, high: 85 };
+      return m[String(conf || '').toLowerCase()] ?? 70;
+    }
+
+    function makePickCard(game) {
+      const league = (game.league || '').toUpperCase() || 'GAME';
+      const when = formatKickoff(game.scheduled_time);
+      const home = game?.home_team?.name || 'Home';
+      const away = game?.away_team?.name || 'Away';
+      const pred = game?.prediction;
+      const homeP = pred?.home_win_probability;
+      const awayP = pred?.away_win_probability;
+      const pick = (typeof homeP === 'number' && typeof awayP === 'number')
+        ? (homeP >= awayP ? `${home} to win` : `${away} to win`)
+        : 'Pick loading…';
+      const pct = confToPct(pred?.confidence_level);
+      const confLabel = (pred?.confidence_level || 'low').toString().toUpperCase();
+
+      const article = document.createElement('article');
+      article.className = 'card-pick pick-card p-5';
+      article.innerHTML = `
+        <div class="flex items-center justify-between mb-3">
+          <span class="league-badge">${league}</span>
+          <span class="text-xs text-gray-500">${when}</span>
+        </div>
+        <div class="flex items-center gap-2 mb-3">
+          <span class="font-semibold text-white">${home}</span>
+          <span class="text-gray-500">vs</span>
+          <span class="font-semibold text-white">${away}</span>
+        </div>
+        <p class="text-[var(--neon-green)] font-bold text-lg mb-2">${pick}</p>
+        <div class="flex items-center gap-2 mb-2">
+          <div class="conf-bar flex-1"><div class="conf-fill" style="width:${pct}%"></div></div>
+          <span class="text-sm font-medium text-gray-300">${pct}%</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[rgba(0,255,157,0.15)] text-[var(--neon-green)] text-xs font-semibold">${confLabel} CONF</span>
+          <span class="text-xs text-gray-500">${pred?.model_version ? `model ${pred.model_version}` : ''}</span>
+        </div>
+      `;
+      return article;
+    }
+
+    async function hydrateApiStatus() {
+      try {
+        const res = await fetch(`${API_ORIGIN}/health`, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`health not ok: ${res.status}`);
+        setApiPill('API: online', true);
+      } catch {
+        setApiPill('API: offline', false);
+      }
+    }
+
+    async function hydrateTopPicks() {
+      const container = document.getElementById('picks-container');
+      if (!container) return;
+      try {
+        const res = await fetch(`${API_V1}/games/upcoming?limit=6`, { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const games = Array.isArray(data?.games) ? data.games : [];
+        if (!games.length) return;
+        container.innerHTML = '';
+        games.slice(0, 6).forEach((g) => container.appendChild(makePickCard(g)));
+      } catch {
+        // Keep the static cards if anything fails.
+      }
+    }
+
     // Sticky header shadow on scroll
     (function () {
       var header = document.getElementById('site-header');
@@ -681,6 +773,9 @@
         this.classList.add('active');
       });
     });
+
+    hydrateApiStatus();
+    hydrateTopPicks();
   </script>
 </body>
 </html>

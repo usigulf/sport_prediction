@@ -66,6 +66,9 @@ class Settings(BaseSettings):
     # External APIs
     sportradar_api_key: str = ""
     sportradar_api_url: str = "https://api.sportradar.com"
+    # NFL v7 standings: /nfl/official/{access}/v7/en/seasons/{year}/REG/standings/season.json
+    sportradar_access_level: str = "trial"  # trial | production
+    sportradar_nfl_season_year: Optional[int] = None  # default: current UTC calendar year
     weather_api_key: str = ""
     
     # Monitoring

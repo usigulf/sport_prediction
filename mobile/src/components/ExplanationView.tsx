@@ -1,38 +1,252 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-} from 'react-native';
+import React, { useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchExplanation } from '../store/slices/gamesSlice';
 import { theme } from '../constants/theme';
+import type {
+  H2HMeetingDetail,
+  MetricComparisonRow,
+  PlayerSpotlightDetail,
+  StandingsRowDetail,
+} from '../types';
 
 interface ExplanationViewProps {
   gameId: string;
   predictionId: string;
+  homeTeamName?: string;
+  awayTeamName?: string;
+  /** ISO timestamp of the prediction row driving this analysis */
+  analysisAsOf?: string;
+  /** Bumps when live WS reports a prediction refresh — refetches explanation for up-to-date tables. */
+  analysisRefreshToken?: string | null;
+}
+
+/** Backend returns these three when no ML artifact dir is configured — not real SHAP factors. */
+function isStubTopFeatures(
+  features: { feature: string }[] | undefined
+): boolean {
+  if (!features?.length || features.length !== 3) return false;
+  const names = new Set(features.map((f) => f.feature));
+  return (
+    names.has('Home win probability') &&
+    names.has('Away win probability') &&
+    names.has('Confidence')
+  );
+}
+
+function stripDevConfidenceCopy(text: string): string | null {
+  const cut = text.indexOf('Set EXPLANATION_MODEL_DIR');
+  const t = (cut >= 0 ? text.slice(0, cut) : text).trim();
+  return t.length > 0 ? t : null;
+}
+
+function AnalysisSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <View style={styles.sectionCard}>
+      <Text style={styles.analysisHeading}>{title}</Text>
+      {children}
+    </View>
+  );
+}
+
+/** Renders API text with newline breaks and • bullet lines (matches backend rich_analysis). */
+function RichFormattedBody({ text }: { text: string }) {
+  const lines = text.split('\n');
+  return (
+    <View>
+      {lines.map((line, i) => {
+        const t = line.trim();
+        if (!t) {
+          return <View key={`e-${i}`} style={styles.paragraphSpacer} />;
+        }
+        if (t.startsWith('•')) {
+          return (
+            <View key={`b-${i}`} style={styles.bulletRow}>
+              <Text style={styles.bulletDot}>•</Text>
+              <Text style={styles.bulletText}>{t.replace(/^•\s*/, '')}</Text>
+            </View>
+          );
+        }
+        return (
+          <Text key={`p-${i}`} style={styles.richBody}>
+            {line}
+          </Text>
+        );
+      })}
+    </View>
+  );
+}
+
+function RichBodyIfPresent({ text }: { text?: string | null }) {
+  const t = text?.trim();
+  if (!t) return null;
+  return <RichFormattedBody text={t} />;
+}
+
+function formatAsOf(iso?: string): string | null {
+  if (!iso) return null;
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  } catch {
+    return null;
+  }
+}
+
+function StructuredStandingsBlock({
+  leagueLabel,
+  rows,
+}: {
+  leagueLabel?: string | null;
+  rows: StandingsRowDetail[];
+}) {
+  if (!rows.length) return null;
+  return (
+    <AnalysisSection title={leagueLabel ? `Standings (${leagueLabel})` : 'Current form & standings'}>
+      {rows.map((r) => (
+        <View key={r.team_name} style={styles.standingsCard}>
+          <Text style={styles.standingsTeam}>
+            {r.team_name}
+            <Text style={styles.standingsRank}> · #{r.league_rank}</Text>
+          </Text>
+          <Text style={styles.standingsMeta}>
+            {r.played} played · {r.wins}-{r.draws}-{r.losses}
+            {r.points != null ? ` · ${r.points} pts` : ''}
+          </Text>
+          <Text style={styles.standingsMeta}>
+            GF–GA {(r.goals_for ?? 0)}–{(r.goals_against ?? 0)} ({r.goal_difference >= 0 ? '+' : ''}
+            {r.goal_difference} GD)
+          </Text>
+        </View>
+      ))}
+    </AnalysisSection>
+  );
+}
+
+function StructuredH2HBlock({
+  meetings,
+  summary,
+}: {
+  meetings: H2HMeetingDetail[];
+  summary?: string | null;
+}) {
+  if (!meetings.length && !summary?.trim()) return null;
+  return (
+    <AnalysisSection title="Head-to-head history">
+      {meetings.map((m, i) => (
+        <Text key={`${m.date_iso}-${i}`} style={styles.h2hRow}>
+          {m.date_iso} · {m.home_team_name} {m.home_score}–{m.away_score} {m.away_team_name}
+        </Text>
+      ))}
+      {summary?.trim() ? <Text style={styles.h2hSummary}>{summary}</Text> : null}
+    </AnalysisSection>
+  );
+}
+
+function StructuredMetricsBlock({
+  homeLabel,
+  awayLabel,
+  rows,
+}: {
+  homeLabel: string;
+  awayLabel: string;
+  rows: MetricComparisonRow[];
+}) {
+  if (!rows.length) return null;
+  return (
+    <AnalysisSection title="Advanced statistics & key metrics">
+      <View style={styles.metricsHeaderRow}>
+        <Text style={[styles.metricsCell, styles.metricsLabelCol]} />
+        <Text style={[styles.metricsCell, styles.metricsTeamCol]}>{homeLabel}</Text>
+        <Text style={[styles.metricsCell, styles.metricsTeamCol]}>{awayLabel}</Text>
+      </View>
+      {rows.map((row) => (
+        <View key={row.label} style={styles.metricsRow}>
+          <Text style={[styles.metricsCell, styles.metricsLabelCol]}>{row.label}</Text>
+          <Text style={[styles.metricsCell, styles.metricsTeamCol]}>{row.home_display}</Text>
+          <Text style={[styles.metricsCell, styles.metricsTeamCol]}>{row.away_display}</Text>
+        </View>
+      ))}
+      {rows.some((r) => r.footnote) ? (
+        <Text style={styles.metricsFootnote}>
+          {rows
+            .filter((r) => r.footnote)
+            .map((r) => r.footnote)
+            .join(' · ')}
+        </Text>
+      ) : null}
+      <Text style={styles.metricsDisclaimer}>
+        Values reflect model inputs; connect league APIs for official advanced stats.
+      </Text>
+    </AnalysisSection>
+  );
+}
+
+function StructuredPlayersBlock({
+  spotlights,
+}: {
+  spotlights: PlayerSpotlightDetail[];
+}) {
+  if (!spotlights.length) return null;
+  return (
+    <AnalysisSection title="Key players & performer form">
+      {spotlights.map((p) => (
+        <View key={`${p.player_name}-${p.team_name}`} style={styles.playerCard}>
+          <Text style={styles.playerTitle}>
+            {p.player_name}
+            {p.role ? <Text style={styles.playerRole}> · {p.role}</Text> : null}
+          </Text>
+          <Text style={styles.playerTeam}>{p.team_name}</Text>
+          <Text style={styles.playerSummary}>{p.summary}</Text>
+        </View>
+      ))}
+    </AnalysisSection>
+  );
 }
 
 export const ExplanationView: React.FC<ExplanationViewProps> = ({
   gameId,
   predictionId,
+  homeTeamName = 'Home',
+  awayTeamName = 'Away',
+  analysisAsOf,
+  analysisRefreshToken,
 }) => {
   const dispatch = useAppDispatch();
-  const { explanation, loadingExplanation } = useAppSelector(
-    (state) => state.games
-  );
+  const { explanation, loadingExplanation } = useAppSelector((state) => state.games);
 
   useEffect(() => {
     dispatch(fetchExplanation({ gameId, predictionId }));
-  }, [gameId, predictionId]);
+  }, [gameId, predictionId, analysisRefreshToken, dispatch]);
+
+  const narrativeSections = useMemo(() => {
+    const ra = explanation?.rich_analysis;
+    if (!ra) return [];
+    const defs: { title: string; text: string | null | undefined }[] = [
+      { title: 'Live & match context', text: ra.real_time_analysis },
+      { title: 'Current form & standings', text: ra.standings_context },
+      { title: 'Form & team inputs', text: ra.form_standings },
+      { title: 'Head-to-head history', text: ra.h2h_history },
+      { title: 'Strength matchup', text: ra.head_to_head },
+      { title: 'Performer & scoring profile', text: ra.key_players },
+      { title: 'Advanced metrics', text: ra.advanced_metrics },
+      { title: 'Venue, rest & tactics', text: ra.tactical },
+      { title: 'Possible outcomes & scenarios', text: ra.scenario_outcomes },
+    ];
+    return defs.filter((d) => d.text?.trim());
+  }, [explanation?.rich_analysis]);
 
   if (loadingExplanation) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="small" color={theme.colors.accent} />
-        <Text style={styles.loadingText}>Loading explanation...</Text>
+        <Text style={styles.loadingText}>Loading analysis…</Text>
       </View>
     );
   }
@@ -40,20 +254,81 @@ export const ExplanationView: React.FC<ExplanationViewProps> = ({
   if (!explanation) {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>Explanation not available</Text>
+        <Text style={styles.errorText}>Analysis not available</Text>
       </View>
     );
   }
 
-  return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Why This Prediction?</Text>
+  const asOf = formatAsOf(analysisAsOf);
+  const showModelDrivers =
+    explanation.top_features &&
+    explanation.top_features.length > 0 &&
+    !isStubTopFeatures(explanation.top_features);
+  const confidenceText = explanation.confidence_explanation
+    ? stripDevConfidenceCopy(explanation.confidence_explanation)
+    : null;
 
-      {/* Top Features */}
-      {explanation.top_features && explanation.top_features.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Key Factors</Text>
-          {explanation.top_features.map((feature: any, index: number) => (
+  const sa = explanation.structured_analysis;
+  const standingsRows = sa?.standings_rows ?? [];
+  const h2hMeetings = sa?.h2h_meetings ?? [];
+  const metricRows = sa?.metric_comparisons ?? [];
+  const playerRows = sa?.player_spotlights ?? [];
+  const hasStructuredDetail =
+    standingsRows.length > 0 ||
+    h2hMeetings.length > 0 ||
+    Boolean(sa?.h2h_series_summary?.trim()) ||
+    metricRows.length > 0 ||
+    playerRows.length > 0;
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Analysis</Text>
+      <Text style={styles.matchSubtitle}>
+        {homeTeamName} vs {awayTeamName}
+        {asOf ? ` · ${asOf}` : ''}
+      </Text>
+
+      {sa?.data_freshness_note ? (
+        <Text style={styles.freshnessNote}>{sa.data_freshness_note}</Text>
+      ) : null}
+
+      {sa?.provider_context_note?.trim() ? (
+        <AnalysisSection title="Live standings (Sportradar)">
+          <RichFormattedBody text={sa.provider_context_note.trim()} />
+        </AnalysisSection>
+      ) : null}
+
+      {hasStructuredDetail ? (
+        <>
+          <StructuredStandingsBlock leagueLabel={sa?.league_label} rows={standingsRows} />
+          <StructuredH2HBlock meetings={h2hMeetings} summary={sa?.h2h_series_summary} />
+          <StructuredPlayersBlock spotlights={playerRows} />
+          <StructuredMetricsBlock
+            homeLabel={homeTeamName}
+            awayLabel={awayTeamName}
+            rows={metricRows}
+          />
+        </>
+      ) : null}
+
+      {!hasStructuredDetail && narrativeSections.length === 0 ? (
+        <Text style={styles.placeholderText}>
+          No written breakdown is stored for this pick yet. Pull to refresh after the next model run.
+        </Text>
+      ) : null}
+
+      {narrativeSections.length === 0
+        ? null
+        : narrativeSections.map((s) => (
+            <AnalysisSection key={s.title} title={s.title}>
+              <RichBodyIfPresent text={s.text} />
+            </AnalysisSection>
+          ))}
+
+      {showModelDrivers ? (
+        <AnalysisSection title="What drove this pick">
+          <Text style={styles.bodyLead}>Strongest model inputs for this version (not live odds).</Text>
+          {explanation.top_features!.map((feature: { feature: string; shap_value: number; description?: string }, index: number) => (
             <View key={index} style={styles.featureItem}>
               <View style={styles.featureHeader}>
                 <Text style={styles.featureName}>{feature.feature}</Text>
@@ -62,55 +337,48 @@ export const ExplanationView: React.FC<ExplanationViewProps> = ({
                     styles.shapBadge,
                     {
                       backgroundColor:
-                        feature.shap_value > 0 ? theme.colors.accent : theme.colors.secondary,
+                        feature.shap_value > 0 ? theme.colors.accentDim : theme.colors.secondaryDim,
                     },
                   ]}
                 >
-                  <Text style={styles.shapValue}>
+                  <Text
+                    style={[
+                      styles.shapValue,
+                      {
+                        color: feature.shap_value > 0 ? theme.colors.accent : theme.colors.secondary,
+                      },
+                    ]}
+                  >
                     {feature.shap_value > 0 ? '+' : ''}
                     {(feature.shap_value * 100).toFixed(1)}%
                   </Text>
                 </View>
               </View>
-              {feature.description && (
-                <Text style={styles.featureDescription}>
-                  {feature.description}
-                </Text>
-              )}
+              {feature.description ? (
+                <Text style={styles.featureDescription}>{feature.description}</Text>
+              ) : null}
             </View>
           ))}
-        </View>
-      )}
+        </AnalysisSection>
+      ) : null}
 
-      {/* Confidence Explanation */}
-      {explanation.confidence_explanation && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Confidence Level</Text>
-          <Text style={styles.explanationText}>
-            {explanation.confidence_explanation}
-          </Text>
-        </View>
-      )}
+      {confidenceText ? (
+        <AnalysisSection title="Confidence">
+          <Text style={styles.explanationText}>{confidenceText}</Text>
+          <Text style={styles.modelNote}>Picks are probabilistic, not guarantees.</Text>
+        </AnalysisSection>
+      ) : null}
 
-      {/* Model Info */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Model Information</Text>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Model Version:</Text>
-          <Text style={styles.infoValue}>
-            {explanation.model_version || 'v1.0.0'}
-          </Text>
-        </View>
-        {explanation.accuracy && (
+      {explanation.model_version ? (
+        <View style={[styles.sectionCard, styles.modelInfoCard]}>
+          <Text style={styles.sectionTitle}>Model</Text>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Historical Accuracy:</Text>
-            <Text style={styles.infoValue}>
-              {(explanation.accuracy * 100).toFixed(1)}%
-            </Text>
+            <Text style={styles.infoLabel}>Version</Text>
+            <Text style={styles.infoValue}>{explanation.model_version}</Text>
           </View>
-        )}
-      </View>
-    </ScrollView>
+        </View>
+      ) : null}
+    </View>
   );
 };
 
@@ -118,8 +386,8 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: theme.colors.backgroundCard,
     borderRadius: theme.radii.md,
-    padding: 16,
-    margin: 16,
+    padding: theme.spacing.md,
+    marginTop: theme.spacing.sm,
     borderWidth: 1,
     borderColor: theme.colors.borderSubtle,
   },
@@ -136,22 +404,187 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: theme.colors.text,
-    marginBottom: 16,
+    marginBottom: theme.spacing.xs,
   },
-  section: {
-    marginBottom: 24,
+  matchSubtitle: {
+    fontSize: 13,
+    color: theme.colors.textMuted,
+    marginBottom: theme.spacing.md,
+    lineHeight: 18,
+  },
+  freshnessNote: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    marginBottom: theme.spacing.md,
+    lineHeight: 17,
+  },
+  standingsCard: {
+    marginBottom: theme.spacing.sm,
+    paddingBottom: theme.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderSubtle,
+  },
+  standingsTeam: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.text,
+  },
+  standingsRank: {
+    fontWeight: '600',
+    color: theme.colors.accent,
+  },
+  standingsMeta: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    marginTop: 4,
+    lineHeight: 19,
+  },
+  h2hRow: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    lineHeight: 22,
+    marginBottom: theme.spacing.xs,
+  },
+  h2hSummary: {
+    marginTop: theme.spacing.sm,
+    fontSize: 13,
+    color: theme.colors.textMuted,
+    lineHeight: 19,
+  },
+  metricsHeaderRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderSubtle,
+    paddingBottom: 6,
+    marginBottom: 6,
+  },
+  metricsRow: {
+    flexDirection: 'row',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderSubtle,
+  },
+  metricsCell: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    lineHeight: 17,
+  },
+  metricsLabelCol: {
+    flex: 1.15,
+    paddingRight: 6,
+    fontWeight: '600',
+    color: theme.colors.text,
+  },
+  metricsTeamCol: {
+    flex: 0.75,
+    textAlign: 'center',
+  },
+  metricsFootnote: {
+    marginTop: theme.spacing.sm,
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    lineHeight: 17,
+  },
+  metricsDisclaimer: {
+    marginTop: theme.spacing.sm,
+    fontSize: 11,
+    color: theme.colors.textMuted,
+    lineHeight: 16,
+    fontStyle: 'italic',
+  },
+  playerCard: {
+    marginBottom: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderSubtle,
+  },
+  playerTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.text,
+  },
+  playerRole: {
+    fontWeight: '500',
+    color: theme.colors.textMuted,
+  },
+  playerTeam: {
+    fontSize: 13,
+    color: theme.colors.accent,
+    marginTop: 2,
+  },
+  playerSummary: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.xs,
+    lineHeight: 21,
+  },
+  sectionCard: {
+    marginBottom: theme.spacing.md,
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.backgroundElevated,
+    borderRadius: theme.radii.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSubtle,
+  },
+  modelInfoCard: {
+    marginBottom: 0,
+  },
+  analysisHeading: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginBottom: theme.spacing.sm,
+  },
+  placeholderText: {
+    fontSize: 14,
+    color: theme.colors.textMuted,
+    lineHeight: 21,
+  },
+  richBody: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    lineHeight: 22,
+    marginBottom: theme.spacing.xs,
+  },
+  paragraphSpacer: {
+    height: theme.spacing.sm,
+  },
+  bulletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: theme.spacing.sm,
+    paddingRight: 4,
+  },
+  bulletDot: {
+    fontSize: 14,
+    color: theme.colors.accent,
+    width: 18,
+    lineHeight: 22,
+    fontWeight: '700',
+  },
+  bulletText: {
+    flex: 1,
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    lineHeight: 22,
+  },
+  bodyLead: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    lineHeight: 21,
+    marginBottom: theme.spacing.sm,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: theme.colors.text,
-    marginBottom: 12,
+    marginBottom: theme.spacing.sm,
   },
   featureItem: {
-    marginBottom: 16,
-    paddingBottom: 16,
+    marginBottom: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderSubtle,
   },
@@ -166,40 +599,49 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.text,
     flex: 1,
+    paddingRight: 8,
   },
   shapBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: theme.radii.sm,
-    marginLeft: 8,
   },
   shapValue: {
-    color: theme.colors.background,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   featureDescription: {
-    fontSize: 12,
+    fontSize: 13,
     color: theme.colors.textSecondary,
     marginTop: 4,
+    lineHeight: 19,
   },
   explanationText: {
     fontSize: 14,
     color: theme.colors.textSecondary,
-    lineHeight: 20,
+    lineHeight: 22,
+  },
+  modelNote: {
+    marginTop: theme.spacing.sm,
+    fontSize: 13,
+    color: theme.colors.textMuted,
+    lineHeight: 19,
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 8,
+    gap: 12,
   },
   infoLabel: {
     fontSize: 14,
     color: theme.colors.textMuted,
+    flex: 1,
   },
   infoValue: {
     fontSize: 14,
     fontWeight: '600',
     color: theme.colors.text,
+    flexShrink: 0,
   },
 });

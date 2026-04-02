@@ -9,7 +9,12 @@ from datetime import datetime, timedelta
 from app.database import get_db
 from app.api.deps import get_current_user, get_current_user_optional, rate_limit_predictions
 from app.schemas.game import GameResponse, GameListResponse, TeamResponse
-from app.schemas.prediction import PredictionResponse, PredictionExplanationResponse, FeatureImportance
+from app.schemas.prediction import (
+    PredictionResponse,
+    PredictionExplanationResponse,
+    FeatureImportance,
+    RichAnalysisSections,
+)
 from app.schemas.common import PaginationParams, datetime_to_iso
 from app.constants.leagues import LEAGUES_LIST
 from app.models.game import Game
@@ -18,10 +23,36 @@ from app.models.user import User
 from app.models.user_prediction_view import UserPredictionView
 from app.services.prediction_service import PredictionService
 from app.services.explanation_service import get_model_feature_importance
+from app.services.analysis_context_service import enrich_rich_analysis, build_structured_game_analysis
 from app.services.share_image_service import generate_share_image
 from app.config import get_settings
 
 router = APIRouter()
+
+
+def _rich_analysis_from_prediction(prediction: Prediction) -> Optional[RichAnalysisSections]:
+    raw = prediction.rich_analysis
+    if not raw or not isinstance(raw, dict):
+        return None
+    try:
+        model = RichAnalysisSections.model_validate(raw)
+    except Exception:
+        return None
+    if not any(
+        [
+            model.real_time_analysis,
+            model.form_standings,
+            model.head_to_head,
+            model.key_players,
+            model.tactical,
+            model.h2h_history,
+            model.standings_context,
+            model.advanced_metrics,
+            model.scenario_outcomes,
+        ]
+    ):
+        return None
+    return model
 
 
 @router.get("/leagues")
@@ -211,6 +242,13 @@ async def get_prediction_explanation(
     if not prediction:
         raise HTTPException(status_code=404, detail="Prediction not found")
 
+    game = (
+        db.query(Game)
+        .options(joinedload(Game.home_team), joinedload(Game.away_team))
+        .filter(Game.id == prediction.game_id)
+        .first()
+    )
+
     # Record view for prediction history
     view = UserPredictionView(
         user_id=current_user.id,
@@ -242,13 +280,22 @@ async def get_prediction_explanation(
         ]
         confidence_explanation = (
             f"This prediction has {prediction.confidence_level} confidence. "
-            "Set EXPLANATION_MODEL_DIR to the path containing simple_model.pkl and feature_columns.pkl for real model factors."
+            "Factors below summarize how strongly the model leans on each side."
         )
+    rich_analysis = enrich_rich_analysis(
+        db,
+        game,
+        prediction,
+        _rich_analysis_from_prediction(prediction),
+    )
+    structured_analysis = build_structured_game_analysis(db, game)
     return PredictionExplanationResponse(
         top_features=top_features,
         confidence_explanation=confidence_explanation,
         model_version=prediction.model_version,
-        accuracy=0.68,
+        accuracy=None,
+        rich_analysis=rich_analysis,
+        structured_analysis=structured_analysis,
     )
 
 
@@ -295,7 +342,7 @@ async def get_live_predictions(
             status_code=403,
             detail="Live predictions require a premium subscription."
         )
-    prediction = PredictionService(db).get_latest_prediction(game_id)
+    prediction = PredictionService(db).get_latest_prediction(game_id, use_cache=False)
     if not prediction:
         raise HTTPException(status_code=404, detail="Prediction not found")
     return {

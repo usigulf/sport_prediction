@@ -13,6 +13,8 @@ from app.models.user import User
 from app.models.team import Team
 from app.models.game import Game
 from app.models.prediction import Prediction
+from app.models.team_standing import TeamStanding  # noqa: F401
+from app.models.game_player_spotlight import GamePlayerSpotlight  # noqa: F401
 from app.core.security import get_password_hash
 from uuid import uuid4
 from datetime import datetime, timedelta
@@ -26,6 +28,15 @@ engine = create_engine(
     poolclass=StaticPool,
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+@pytest.fixture(autouse=True)
+def _clear_cache_fallback_after_test():
+    """Avoid daily_prediction / rate-limit keys leaking between tests when using memory fallback."""
+    yield
+    from app.services.cache_service import clear_fallback_memory_store
+
+    clear_fallback_memory_store()
 
 
 @pytest.fixture(scope="function")

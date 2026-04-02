@@ -17,13 +17,19 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { PredictionCard } from '../components/PredictionCard';
 import { ExplanationView } from '../components/ExplanationView';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { fetchGameDetails, fetchPrediction, clearPredictionForGameChange } from '../store/slices/gamesSlice';
+import {
+  fetchGameDetails,
+  fetchPrediction,
+  fetchExplanation,
+  clearPredictionForGameChange,
+} from '../store/slices/gamesSlice';
 import { apiService } from '../services/api';
 import { Game } from '../types';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useLiveUpdates } from '../hooks/useLiveUpdates';
 import { theme } from '../constants/theme';
+import { formatLeagueLabel } from '../utils/predictionDisplay';
 
 interface FavoritesResponse {
   teams?: { id: string; name: string }[];
@@ -58,7 +64,9 @@ export const GameDetailScreen: React.FC = () => {
   const [playerPropsLoading, setPlayerPropsLoading] = useState(false);
   const [playerPropsError, setPlayerPropsError] = useState<string | null>(null);
 
-  const isPremium = subscriptionTier === 'premium' || subscriptionTier === 'premium_plus';
+  const t = (subscriptionTier || 'free').toLowerCase();
+  const isPremium =
+    t === 'premium' || t === 'premium_plus' || t === 'trialing' || t === 'pro';
   const { lastUpdate, connected, error: liveError } = useLiveUpdates(gameId, { enabled: isPremium });
 
   useEffect(() => {
@@ -115,6 +123,13 @@ export const GameDetailScreen: React.FC = () => {
     return () => { cancelled = true; };
   }, [gameId, subscriptionTier]);
 
+  /** When the server writes a new prediction (WS signals), refresh game + prediction so analysis text matches. */
+  useEffect(() => {
+    if (!isPremium || !lastUpdate?.prediction_updated_at) return;
+    dispatch(fetchGameDetails(gameId));
+    dispatch(fetchPrediction(gameId));
+  }, [lastUpdate?.prediction_updated_at, gameId, isPremium, dispatch]);
+
   const loadGameData = async () => {
     try {
       await Promise.all([
@@ -128,8 +143,18 @@ export const GameDetailScreen: React.FC = () => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadGameData();
-    setRefreshing(false);
+    try {
+      await loadGameData();
+      if (showExplanation && currentPrediction?.id && isPremium) {
+        await dispatch(
+          fetchExplanation({ gameId, predictionId: currentPrediction.id })
+        ).unwrap();
+      }
+    } catch {
+      // loadGameData / explanation errors are surfaced via Redux or existing UI
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const addTeamToFavorites = async (teamId: string) => {
@@ -185,6 +210,10 @@ export const GameDetailScreen: React.FC = () => {
     );
   }
 
+  const homeName = currentGame.home_team?.name ?? 'Home';
+  const awayName = currentGame.away_team?.name ?? 'Away';
+  const statusUpper = currentGame.status.toUpperCase();
+
   return (
     <ScrollView
       style={styles.container}
@@ -194,28 +223,55 @@ export const GameDetailScreen: React.FC = () => {
     >
       {/* Game Header */}
       <View style={styles.header}>
-        <Text style={styles.league}>{currentGame.league.toUpperCase()}</Text>
-        <Text style={styles.status}>{currentGame.status.toUpperCase()}</Text>
+        <View style={styles.headerLeft}>
+          <Text style={styles.league}>{formatLeagueLabel(currentGame.league)}</Text>
+          <Text style={styles.matchTitle} numberOfLines={2}>
+            {homeName} vs {awayName}
+          </Text>
+        </View>
+        <View
+          style={[
+            styles.statusBadge,
+            currentGame.status === 'live' && styles.statusBadgeLive,
+            currentGame.status === 'finished' && styles.statusBadgeFinished,
+          ]}
+        >
+          <Text
+            style={[
+              styles.statusBadgeText,
+              currentGame.status === 'live' && styles.statusBadgeTextLive,
+              currentGame.status === 'finished' && styles.statusBadgeTextFinished,
+            ]}
+          >
+            {statusUpper}
+          </Text>
+        </View>
       </View>
 
-      {/* Teams */}
+      {/* Teams / participants */}
       <View style={styles.teamsSection}>
         <View style={styles.teamContainer}>
-          <Text style={styles.teamName}>{currentGame.home_team?.name}</Text>
+          <Text style={styles.teamRole}>Home</Text>
+          <Text style={styles.teamName}>{homeName}</Text>
           {currentGame.status === 'live' && (
             <Text style={styles.score}>{currentGame.home_score}</Text>
           )}
           {currentGame.home_team?.id && (
             <TouchableOpacity
               style={[
-                styles.favButton,
-                (favoriteTeamIds.has(currentGame.home_team.id) || addingTeamId === currentGame.home_team.id) && styles.favButtonDisabled,
+                styles.favButtonGreen,
+                (favoriteTeamIds.has(currentGame.home_team.id) || addingTeamId === currentGame.home_team.id) &&
+                  styles.favButtonGreenDisabled,
               ]}
               onPress={() => addTeamToFavorites(currentGame.home_team!.id)}
               disabled={favoriteTeamIds.has(currentGame.home_team.id) || !!addingTeamId}
             >
-              <Text style={styles.favButtonText}>
-                {favoriteTeamIds.has(currentGame.home_team.id) ? '✓ In Favorites' : addingTeamId === currentGame.home_team.id ? 'Adding…' : '☆ Add to Favorites'}
+              <Text style={styles.favButtonGreenText}>
+                {favoriteTeamIds.has(currentGame.home_team.id)
+                  ? '✓ In favorites'
+                  : addingTeamId === currentGame.home_team.id
+                    ? 'Adding…'
+                    : '⭐ Add to favorites'}
               </Text>
             </TouchableOpacity>
           )}
@@ -224,30 +280,35 @@ export const GameDetailScreen: React.FC = () => {
         <Text style={styles.vs}>VS</Text>
 
         <View style={styles.teamContainer}>
-          <Text style={styles.teamName}>{currentGame.away_team?.name}</Text>
+          <Text style={styles.teamRole}>Away</Text>
+          <Text style={styles.teamName}>{awayName}</Text>
           {currentGame.status === 'live' && (
             <Text style={styles.score}>{currentGame.away_score}</Text>
           )}
           {currentGame.away_team?.id && (
             <TouchableOpacity
               style={[
-                styles.favButton,
-                (favoriteTeamIds.has(currentGame.away_team.id) || addingTeamId === currentGame.away_team.id) && styles.favButtonDisabled,
+                styles.favButtonGreen,
+                (favoriteTeamIds.has(currentGame.away_team.id) || addingTeamId === currentGame.away_team.id) &&
+                  styles.favButtonGreenDisabled,
               ]}
               onPress={() => addTeamToFavorites(currentGame.away_team!.id)}
               disabled={favoriteTeamIds.has(currentGame.away_team.id) || !!addingTeamId}
             >
-              <Text style={styles.favButtonText}>
-                {favoriteTeamIds.has(currentGame.away_team.id) ? '✓ In Favorites' : addingTeamId === currentGame.away_team.id ? 'Adding…' : '☆ Add to Favorites'}
+              <Text style={styles.favButtonGreenText}>
+                {favoriteTeamIds.has(currentGame.away_team.id)
+                  ? '✓ In favorites'
+                  : addingTeamId === currentGame.away_team.id
+                    ? 'Adding…'
+                    : '⭐ Add to favorites'}
               </Text>
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      {/* Prediction — premium: available for all games; tap shows full analysis */}
+      {/* Prediction — tap expands rich analysis */}
       <View style={styles.predictionSection}>
-        <Text style={styles.sectionTitle}>Prediction</Text>
         {loadingPrediction ? (
           <View style={styles.predictionPlaceholder}>
             <ActivityIndicator size="small" color={theme.colors.accent} />
@@ -255,6 +316,11 @@ export const GameDetailScreen: React.FC = () => {
           </View>
         ) : currentPrediction ? (
           <>
+            <View style={styles.predictionMetaRow}>
+              <Text style={styles.predictionMetaText}>
+                Updated: {new Date(currentPrediction.created_at).toLocaleTimeString()}
+              </Text>
+            </View>
             <TouchableOpacity
               activeOpacity={0.9}
               onPress={() => setShowExplanation(!showExplanation)}
@@ -262,14 +328,16 @@ export const GameDetailScreen: React.FC = () => {
             >
               <PredictionCard
                 prediction={currentPrediction}
-                onPress={() => setShowExplanation(!showExplanation)}
+                embedded
+                homeTeamName={homeName}
+                awayTeamName={awayName}
               />
               <View style={styles.whyButton}>
                 <Text style={styles.whyButtonText}>
-                  {showExplanation ? 'Hide full analysis' : 'Tap for full analysis'}
+                  {showExplanation ? 'Hide analysis' : 'Show analysis'}
                 </Text>
                 <Text style={styles.whyButtonSubtext}>
-                  Model reasoning, key factors & confidence
+                  Live context, standings, H2H, metrics & scenarios
                 </Text>
               </View>
             </TouchableOpacity>
@@ -280,6 +348,12 @@ export const GameDetailScreen: React.FC = () => {
               <ExplanationView
                 gameId={gameId}
                 predictionId={currentPrediction.id}
+                homeTeamName={homeName}
+                awayTeamName={awayName}
+                analysisAsOf={currentPrediction.created_at}
+                analysisRefreshToken={
+                  isPremium ? lastUpdate?.prediction_updated_at ?? null : null
+                }
               />
             )}
           </>
@@ -402,22 +476,56 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: theme.spacing.md,
     padding: theme.spacing.md,
     backgroundColor: theme.colors.backgroundElevated,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderSubtle,
   },
-  league: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.textSecondary,
-    letterSpacing: 1,
+  headerLeft: {
+    flex: 1,
+    minWidth: 0,
   },
-  status: {
-    fontSize: 12,
-    fontWeight: '600',
+  league: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: theme.colors.textMuted,
+    letterSpacing: 1.2,
+    marginBottom: 6,
+  },
+  matchTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: theme.colors.text,
+    lineHeight: 24,
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: theme.radii.sm,
+    backgroundColor: theme.colors.accentDim,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSubtle,
+  },
+  statusBadgeLive: {
+    backgroundColor: theme.colors.secondaryDim,
+    borderColor: theme.colors.secondary,
+  },
+  statusBadgeFinished: {
+    backgroundColor: theme.colors.borderSubtle,
+  },
+  statusBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
     color: theme.colors.accent,
+    letterSpacing: 0.8,
+  },
+  statusBadgeTextLive: {
+    color: theme.colors.secondary,
+  },
+  statusBadgeTextFinished: {
+    color: theme.colors.textMuted,
   },
   teamsSection: {
     backgroundColor: theme.colors.backgroundElevated,
@@ -428,12 +536,21 @@ const styles = StyleSheet.create({
   teamContainer: {
     alignItems: 'center',
     marginVertical: theme.spacing.sm,
+    width: '100%',
+  },
+  teamRole: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: theme.colors.textMuted,
+    letterSpacing: 1,
+    marginBottom: 4,
   },
   teamName: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '800',
     color: theme.colors.text,
     marginBottom: theme.spacing.sm,
+    textAlign: 'center',
   },
   score: {
     fontSize: 32,
@@ -446,20 +563,22 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     marginVertical: theme.spacing.sm,
   },
-  favButton: {
+  favButtonGreen: {
     marginTop: theme.spacing.sm,
-    paddingVertical: 6,
-    paddingHorizontal: theme.spacing.sm,
-    backgroundColor: theme.colors.accentDim,
+    paddingVertical: 10,
+    paddingHorizontal: theme.spacing.md,
+    backgroundColor: theme.colors.accent,
     borderRadius: theme.radii.sm,
+    minWidth: 200,
+    alignItems: 'center',
   },
-  favButtonDisabled: {
+  favButtonGreenDisabled: {
     backgroundColor: theme.colors.borderSubtle,
   },
-  favButtonText: {
-    fontSize: 12,
-    color: theme.colors.accent,
-    fontWeight: '600',
+  favButtonGreenText: {
+    fontSize: 13,
+    color: theme.colors.background,
+    fontWeight: '700',
   },
   predictionSection: {
     marginBottom: theme.spacing.md,
@@ -471,6 +590,14 @@ const styles = StyleSheet.create({
   },
   predictionTapArea: {
     marginHorizontal: theme.spacing.md,
+  },
+  predictionMetaRow: {
+    marginHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.xs,
+  },
+  predictionMetaText: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
   },
   whyButton: {
     marginTop: theme.spacing.xs,

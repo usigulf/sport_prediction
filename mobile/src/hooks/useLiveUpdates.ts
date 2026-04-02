@@ -4,7 +4,8 @@
  * Requires JWT in query for auth; premium tier required on backend.
  */
 import { useEffect, useState, useRef } from 'react';
-import { getApiOrigin, getAuthToken } from '../services/api';
+import { buildLiveWebSocketUrl, subscribeApiOriginChanged } from '../services/api';
+import { useAppSelector } from '../store/hooks';
 
 export interface LiveUpdateMessage {
   type: string;
@@ -14,6 +15,8 @@ export interface LiveUpdateMessage {
   home_win_probability: number;
   away_win_probability: number;
   confidence_level: string | null;
+  /** ISO timestamp of latest prediction row when server sends it */
+  prediction_updated_at?: string | null;
 }
 
 export function useLiveUpdates(
@@ -25,10 +28,18 @@ export function useLiveUpdates(
   error: string | null;
 } {
   const { enabled = true } = options;
+  const accessToken = useAppSelector((s) => s.auth.user?.token ?? null);
   const [lastUpdate, setLastUpdate] = useState<LiveUpdateMessage | null>(null);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [apiOriginTick, setApiOriginTick] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    return subscribeApiOriginChanged(() => {
+      setApiOriginTick((n) => n + 1);
+    });
+  }, []);
 
   useEffect(() => {
     if (!gameId || !enabled) {
@@ -37,11 +48,12 @@ export function useLiveUpdates(
       setError(null);
       return;
     }
-    const origin = getApiOrigin();
-    const wsScheme = origin.startsWith('https') ? 'wss' : 'ws';
-    const wsHost = origin.replace(/^https?:\/\//, '');
-    const token = getAuthToken();
-    const wsUrl = `${wsScheme}://${wsHost}/ws/live/${gameId}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+    if (!accessToken) {
+      setError('Sign in required for live updates');
+      setConnected(false);
+      return;
+    }
+    const wsUrl = buildLiveWebSocketUrl(gameId, accessToken);
 
     setError(null);
     const ws = new WebSocket(wsUrl);
@@ -68,6 +80,7 @@ export function useLiveUpdates(
             home_win_probability: data.home_win_probability ?? 0.5,
             away_win_probability: data.away_win_probability ?? 0.5,
             confidence_level: data.confidence_level ?? null,
+            prediction_updated_at: data.prediction_updated_at ?? null,
           });
           setError(null);
         }
@@ -77,12 +90,15 @@ export function useLiveUpdates(
     };
 
     ws.onerror = () => {
-      setError('Connection error');
+      setError('Live updates: connection failed (server must proxy WebSockets for /ws)');
     };
 
-    ws.onclose = () => {
+    ws.onclose = (ev) => {
       setConnected(false);
       wsRef.current = null;
+      if (ev.code === 1008 && ev.reason) {
+        setError(ev.reason);
+      }
     };
 
     return () => {
@@ -93,7 +109,7 @@ export function useLiveUpdates(
       setConnected(false);
       setLastUpdate(null);
     };
-  }, [gameId, enabled]);
+  }, [gameId, enabled, accessToken, apiOriginTick]);
 
   return { lastUpdate, connected, error };
 }

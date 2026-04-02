@@ -9,7 +9,7 @@ import { theme } from './src/constants/theme';
 import { store } from './src/store/store';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { getStoredAuth } from './src/utils/authStorage';
-import { setAuthToken, setOnUnauthorized } from './src/services/api';
+import { setAuthToken, setOnUnauthorized, setOnAccessTokenRefreshed } from './src/services/api';
 import { setUser, logout } from './src/store/slices/authSlice';
 import { registerPushTokenIfPossible } from './src/utils/pushNotifications';
 import { getPushNotificationsEnabled } from './src/utils/settingsStorage';
@@ -21,7 +21,13 @@ function AppContent() {
     setOnUnauthorized(() => {
       store.dispatch(logout());
     });
-    return () => setOnUnauthorized(null);
+    setOnAccessTokenRefreshed((p) => {
+      store.dispatch(setUser({ email: p.email, token: p.accessToken }));
+    });
+    return () => {
+      setOnUnauthorized(null);
+      setOnAccessTokenRefreshed(null);
+    };
   }, []);
 
   useEffect(() => {

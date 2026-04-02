@@ -17,6 +17,10 @@ export const theme = {
     textMuted: '#78909C',
     border: 'rgba(255, 255, 255, 0.12)',
     borderSubtle: 'rgba(255, 255, 255, 0.06)',
+    confidenceHigh: '#00E676',
+    confidenceMedium: '#FFB74D',
+    confidenceLow: '#FF5252',
+    drawNeutral: '#90A4AE',
   },
   radii: {
     xs: 4,

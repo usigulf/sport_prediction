@@ -1,9 +1,58 @@
 """
 Prediction schemas
 """
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
+
+
+class StandingsRowDetail(BaseModel):
+    team_name: str
+    league_rank: int
+    played: int
+    wins: int
+    draws: int
+    losses: int
+    points: Optional[int] = None
+    goals_for: Optional[int] = None
+    goals_against: Optional[int] = None
+    goal_difference: int
+
+
+class H2HMeetingDetail(BaseModel):
+    date_iso: str
+    home_team_name: str
+    away_team_name: str
+    home_score: int
+    away_score: int
+
+
+class MetricComparisonRow(BaseModel):
+    label: str
+    home_display: str
+    away_display: str
+    footnote: Optional[str] = None
+
+
+class PlayerSpotlightDetail(BaseModel):
+    player_name: str
+    team_name: str
+    role: Optional[str] = None
+    summary: str
+
+
+class StructuredGameAnalysis(BaseModel):
+    """Tabular / card-friendly breakdown; narrative remains in rich_analysis."""
+
+    league_label: Optional[str] = None
+    standings_rows: List[StandingsRowDetail] = Field(default_factory=list)
+    h2h_meetings: List[H2HMeetingDetail] = Field(default_factory=list)
+    h2h_series_summary: Optional[str] = None
+    metric_comparisons: List[MetricComparisonRow] = Field(default_factory=list)
+    player_spotlights: List[PlayerSpotlightDetail] = Field(default_factory=list)
+    data_freshness_note: Optional[str] = None
+    # When SPORTRADAR_API_KEY is set: NFL REG standings lines for the two teams (cached ~5m server-side).
+    provider_context_note: Optional[str] = None
 
 
 class PredictionResponse(BaseModel):
@@ -27,8 +76,25 @@ class FeatureImportance(BaseModel):
     description: Optional[str] = None
 
 
+class RichAnalysisSections(BaseModel):
+    """Optional narrative sections from job pipeline, DB context, and generated scenarios."""
+
+    real_time_analysis: Optional[str] = None
+    form_standings: Optional[str] = None
+    head_to_head: Optional[str] = None
+    key_players: Optional[str] = None
+    tactical: Optional[str] = None
+    # Enriched at read time (H2H from games, standings from team_standings, metrics/scenarios from model inputs)
+    h2h_history: Optional[str] = None
+    standings_context: Optional[str] = None
+    advanced_metrics: Optional[str] = None
+    scenario_outcomes: Optional[str] = None
+
+
 class PredictionExplanationResponse(BaseModel):
     top_features: List[FeatureImportance]
     confidence_explanation: Optional[str] = None
     model_version: str
     accuracy: Optional[float] = None
+    rich_analysis: Optional[RichAnalysisSections] = None
+    structured_analysis: Optional[StructuredGameAnalysis] = None
