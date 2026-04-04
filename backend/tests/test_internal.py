@@ -148,3 +148,25 @@ def test_sportradar_health_soccer_ok(monkeypatch, client):
 def test_sportradar_health_requires_secret(client):
     r = client.get("/internal/health/sportradar")
     assert r.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+def test_soccer_sync_schedules_route(monkeypatch, client):
+    from app.services.sportradar_soccer_schedule_sync import SoccerScheduleSyncResult
+
+    def fake_sync(db, app_league, settings):
+        return SoccerScheduleSyncResult(
+            app_league=app_league,
+            season_id="sr:season:test",
+            rows_fetched=2,
+            games_upserted=2,
+            rows_skipped=0,
+            errors=[],
+        )
+
+    monkeypatch.setattr("app.api.internal.sync_soccer_schedule_for_league", fake_sync)
+    r = client.post("/internal/soccer/sync-schedules", headers=_headers())
+    assert r.status_code == status.HTTP_200_OK
+    body = r.json()
+    assert len(body["results"]) == 2
+    assert body["results"][0]["league"] == "premier_league"
+    assert body["results"][0]["games_upserted"] == 2

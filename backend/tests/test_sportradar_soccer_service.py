@@ -177,7 +177,7 @@ def test_soccer_matchup_provider_note(monkeypatch):
     monkeypatch.setattr(
         soccer_svc,
         "_fetch_standings",
-        lambda base, access, season_id, api_key: payload,
+        lambda _settings, _season_id: payload,
     )
 
     note = soccer_matchup_provider_note(game, settings)

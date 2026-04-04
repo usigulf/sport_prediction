@@ -60,22 +60,73 @@ def _decode_response_body(resp, body: bytes) -> str:
     return body.decode("utf-8")
 
 
-def _fetch_standings(base: str, access: str, season_id: str, api_key: str) -> dict[str, Any] | None:
-    enc = urllib.parse.quote(season_id, safe="")
-    path = f"/soccer/{access}/v4/en/seasons/{enc}/standings.json"
-    url = base.rstrip("/") + path
-    req = urllib.request.Request(url, headers={"x-api-key": api_key})
+def _sportradar_get_json(
+    settings: Settings,
+    path: str,
+    *,
+    timeout: int = 20,
+    log_ctx: str = "",
+) -> dict[str, Any] | None:
+    """
+    GET JSON from Sportradar Global Soccer API. Path must include /soccer/{trial|production}/v4/...
+    """
+    key = (getattr(settings, "sportradar_api_key", "") or "").strip()
+    if not key:
+        return None
+    url = settings.sportradar_api_url.rstrip("/") + path
+    req = urllib.request.Request(url, headers={"x-api-key": key})
     try:
-        with urllib.request.urlopen(req, timeout=12) as resp:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             raw_bytes = resp.read()
             text = _decode_response_body(resp, raw_bytes)
             return json.loads(text)
     except urllib.error.HTTPError as e:
-        logger.debug("Sportradar soccer standings HTTP %s for season %s", e.code, season_id)
+        logger.debug("Sportradar soccer HTTP %s %s", e.code, log_ctx or path[:80])
         return None
     except Exception as e:
-        logger.debug("Sportradar soccer fetch failed: %s", e)
+        logger.debug("Sportradar soccer fetch failed %s: %s", log_ctx or "", e)
         return None
+
+
+def _fetch_standings(settings: Settings, season_id: str) -> dict[str, Any] | None:
+    access = _access_level(settings)
+    enc = urllib.parse.quote(season_id.strip(), safe="")
+    path = f"/soccer/{access}/v4/en/seasons/{enc}/standings.json"
+    return _sportradar_get_json(settings, path, timeout=12, log_ctx=f"standings {season_id}")
+
+
+def _fetch_schedule_page(
+    settings: Settings, season_id: str, start: int, limit: int
+) -> dict[str, Any] | None:
+    access = _access_level(settings)
+    enc = urllib.parse.quote(season_id.strip(), safe="")
+    q = urllib.parse.urlencode({"start": str(start), "limit": str(limit)})
+    path = f"/soccer/{access}/v4/en/seasons/{enc}/schedules.json?{q}"
+    return _sportradar_get_json(settings, path, timeout=45, log_ctx=f"schedules {season_id} start={start}")
+
+
+def fetch_season_schedule_summaries(settings: Settings, season_id: str) -> list[dict[str, Any]]:
+    """
+    All schedule rows for a season (paginated). Each row has sport_event + optional sport_event_status.
+    See: GET .../seasons/{season_id}/schedules.json
+    """
+    if not (season_id or "").strip():
+        return []
+    out: list[dict[str, Any]] = []
+    start = 0
+    limit = 1000
+    while True:
+        page = _fetch_schedule_page(settings, season_id.strip(), start, limit)
+        if not page:
+            break
+        rows = page.get("schedules") or []
+        if not isinstance(rows, list) or not rows:
+            break
+        out.extend(r for r in rows if isinstance(r, dict))
+        if len(rows) < limit:
+            break
+        start += limit
+    return out
 
 
 def fetch_soccer_standings_json(
@@ -97,9 +148,7 @@ def fetch_soccer_standings_json(
         if now < expires_at:
             return payload, label
 
-    access = _access_level(settings)
-    base = settings.sportradar_api_url.rstrip("/")
-    data = _fetch_standings(base, access, sid, key)
+    data = _fetch_standings(settings, sid)
     label = sid
     if data is not None:
         _CACHE[ck] = (now + _SUCCESS_TTL_SEC, data, label)

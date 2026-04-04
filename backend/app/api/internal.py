@@ -16,6 +16,7 @@ from app.services.push_trigger_service import send_game_starting_reminders, send
 from app.services.prediction_inference_service import run_prediction_job
 from app.services.sportradar_nfl_service import fetch_nfl_standings_json
 from app.services.sportradar_soccer_service import soccer_health_probe
+from app.services.sportradar_soccer_schedule_sync import sync_soccer_schedule_for_league
 
 router = APIRouter(prefix="/internal", tags=["internal"])
 
@@ -143,6 +144,33 @@ async def clear_game_player_spotlights(
     n = db.query(GamePlayerSpotlight).filter(GamePlayerSpotlight.game_id == gid).delete()
     db.commit()
     return {"game_id": game_id, "spotlights_deleted": n}
+
+
+@router.post("/soccer/sync-schedules")
+async def soccer_sync_schedules(
+    db: Session = Depends(get_db),
+    _: None = Depends(_require_cron_secret),
+):
+    """
+    Import Premier League and Champions League fixtures from Sportradar season schedules into `teams` / `games`.
+    Uses the same season env vars as standings (`SPORTRADAR_SOCCER_SEASON_*`). Game IDs are stable (uuid5 of Sportradar sport_event id).
+    After sync, run POST /internal/predictions/run to generate predictions for upcoming/live games.
+    """
+    settings = get_settings()
+    results = []
+    for lg in ("premier_league", "champions_league"):
+        r = sync_soccer_schedule_for_league(db, lg, settings)
+        results.append(
+            {
+                "league": r.app_league,
+                "season_id": r.season_id or None,
+                "rows_fetched": r.rows_fetched,
+                "games_upserted": r.games_upserted,
+                "rows_skipped": r.rows_skipped,
+                "errors": r.errors,
+            }
+        )
+    return {"results": results}
 
 
 @router.get("/health/sportradar")
