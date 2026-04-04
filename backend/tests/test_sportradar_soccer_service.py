@@ -1,4 +1,5 @@
 """Sportradar soccer standings parsing and provider note helpers."""
+import gzip
 from unittest.mock import MagicMock
 
 from app.config import Settings
@@ -227,3 +228,17 @@ def test_soccer_health_probe_one_fails(monkeypatch):
     assert out["soccer_standings_ok"] is False
     assert out["soccer_probe"] == "champions_league:sr:season:cl"
     assert [p["ok"] for p in out["soccer_probes"]] == [True, False]
+
+
+def test_decode_response_body_gzip():
+    resp = MagicMock()
+    resp.headers.get = lambda key, _default=None: "gzip" if key == "Content-Encoding" else None
+    plain = b'{"standings":[]}'
+    gzipped = gzip.compress(plain)
+    assert soccer_svc._decode_response_body(resp, gzipped) == '{"standings":[]}'
+
+
+def test_decode_response_body_plain():
+    resp = MagicMock()
+    resp.headers.get = lambda key, _default=None: None
+    assert soccer_svc._decode_response_body(resp, b'{"a":1}') == '{"a":1}'

@@ -8,6 +8,7 @@ See: https://developer.sportradar.com/soccer/reference/soccer-season-standings
 """
 from __future__ import annotations
 
+import gzip
 import json
 import logging
 import time
@@ -46,6 +47,19 @@ def _cache_key(settings: Settings, season_id: str) -> str:
     return f"{_access_level(settings)}:{season_id}"
 
 
+def _decode_response_body(resp, body: bytes) -> str:
+    """Sportradar may send gzip; urllib does not always decompress (unlike curl)."""
+    if not body:
+        return ""
+    enc = (resp.headers.get("Content-Encoding") or "").lower()
+    if "gzip" in enc or body[:2] == b"\x1f\x8b":
+        try:
+            body = gzip.decompress(body)
+        except OSError:
+            pass
+    return body.decode("utf-8")
+
+
 def _fetch_standings(base: str, access: str, season_id: str, api_key: str) -> dict[str, Any] | None:
     enc = urllib.parse.quote(season_id, safe="")
     path = f"/soccer/{access}/v4/en/seasons/{enc}/standings.json"
@@ -53,8 +67,9 @@ def _fetch_standings(base: str, access: str, season_id: str, api_key: str) -> di
     req = urllib.request.Request(url, headers={"x-api-key": api_key})
     try:
         with urllib.request.urlopen(req, timeout=12) as resp:
-            raw = resp.read().decode()
-            return json.loads(raw)
+            raw_bytes = resp.read()
+            text = _decode_response_body(resp, raw_bytes)
+            return json.loads(text)
     except urllib.error.HTTPError as e:
         logger.debug("Sportradar soccer standings HTTP %s for season %s", e.code, season_id)
         return None
@@ -86,7 +101,7 @@ def fetch_soccer_standings_json(
     base = settings.sportradar_api_url.rstrip("/")
     data = _fetch_standings(base, access, sid, key)
     label = sid
-    if data:
+    if data is not None:
         _CACHE[ck] = (now + _SUCCESS_TTL_SEC, data, label)
         return data, label
     _CACHE[ck] = (now + _ERROR_TTL_SEC, None, None)
