@@ -62,6 +62,12 @@ services:
       EXPLANATION_MODEL_DIR: /models
       # Same secret as prediction-scheduler / scripts/run_predictions_job.py
       PUSH_CRON_SECRET: ${PUSH_CRON_SECRET:-changeme}
+      # Optional: NFL standings snippet on game explanations (see .env.example)
+      SPORTRADAR_API_KEY: ${SPORTRADAR_API_KEY:-}
+      SPORTRADAR_API_URL: ${SPORTRADAR_API_URL:-https://api.sportradar.com}
+      SPORTRADAR_ACCESS_LEVEL: ${SPORTRADAR_ACCESS_LEVEL:-trial}
+      SPORTRADAR_SOCCER_SEASON_PREMIER_LEAGUE: ${SPORTRADAR_SOCCER_SEASON_PREMIER_LEAGUE:-}
+      SPORTRADAR_SOCCER_SEASON_CHAMPIONS_LEAGUE: ${SPORTRADAR_SOCCER_SEASON_CHAMPIONS_LEAGUE:-}
     # Bind to loopback so host nginx can proxy; not exposed on the public interface.
     ports:
       - "127.0.0.1:8000:8000"

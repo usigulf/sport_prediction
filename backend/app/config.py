@@ -69,6 +69,9 @@ class Settings(BaseSettings):
     # NFL v7 standings: /nfl/official/{access}/v7/en/seasons/{year}/REG/standings/season.json
     sportradar_access_level: str = "trial"  # trial | production
     sportradar_nfl_season_year: Optional[int] = None  # default: current UTC calendar year
+    # Soccer v4 standings: /soccer/{access}/v4/en/seasons/{sr:season:...}/standings.json
+    sportradar_soccer_season_premier_league: Optional[str] = None
+    sportradar_soccer_season_champions_league: Optional[str] = None
     weather_api_key: str = ""
     
     # Monitoring

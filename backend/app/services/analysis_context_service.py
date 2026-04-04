@@ -397,11 +397,19 @@ def build_structured_game_analysis(db: Session, game: Game | None) -> Structured
         player_spotlights=load_player_spotlights(db, game.id),
         data_freshness_note=note,
     )
-    if (game.league or "").lower() == "nfl":
+    league_l = (game.league or "").lower()
+    if league_l == "nfl":
         from app.config import get_settings
         from app.services.sportradar_nfl_service import nfl_matchup_provider_note
 
         pn = nfl_matchup_provider_note(game, get_settings())
+        if pn:
+            out = out.model_copy(update={"provider_context_note": pn})
+    elif league_l in ("premier_league", "champions_league"):
+        from app.config import get_settings
+        from app.services.sportradar_soccer_service import soccer_matchup_provider_note
+
+        pn = soccer_matchup_provider_note(game, get_settings())
         if pn:
             out = out.model_copy(update={"provider_context_note": pn})
     return out

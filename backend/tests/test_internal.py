@@ -92,6 +92,8 @@ def test_sportradar_health_not_configured(monkeypatch, client):
     body = r.json()
     assert body["configured"] is False
     assert body["nfl_standings_ok"] is False
+    assert body["soccer_configured"] is False
+    assert body["soccer_standings_ok"] is None
 
 
 def test_sportradar_health_ok(monkeypatch, client):
@@ -108,6 +110,34 @@ def test_sportradar_health_ok(monkeypatch, client):
     assert body["configured"] is True
     assert body["nfl_standings_ok"] is True
     assert body["standings_source"] == "REG 2025"
+    assert body["soccer_configured"] is False
+    assert body["soccer_standings_ok"] is None
+
+
+def test_sportradar_health_soccer_ok(monkeypatch, client):
+    monkeypatch.setenv("SPORTRADAR_API_KEY", "fake-key-for-test")
+    monkeypatch.setenv("SPORTRADAR_SOCCER_SEASON_PREMIER_LEAGUE", "sr:season:1")
+    get_settings.cache_clear()
+    monkeypatch.setattr(
+        "app.api.internal.fetch_nfl_standings_json",
+        lambda _s: (None, None),
+    )
+    monkeypatch.setattr(
+        "app.api.internal.soccer_health_probe",
+        lambda _s: {
+            "soccer_configured": True,
+            "soccer_standings_ok": True,
+            "soccer_probe": "premier_league:sr:season:1",
+        },
+    )
+
+    r = client.get("/internal/health/sportradar", headers=_headers())
+    assert r.status_code == status.HTTP_200_OK
+    body = r.json()
+    assert body["configured"] is True
+    assert body["nfl_standings_ok"] is False
+    assert body["soccer_standings_ok"] is True
+    assert body["soccer_probe"] == "premier_league:sr:season:1"
 
 
 def test_sportradar_health_requires_secret(client):

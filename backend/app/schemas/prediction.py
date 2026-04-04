@@ -51,7 +51,7 @@ class StructuredGameAnalysis(BaseModel):
     metric_comparisons: List[MetricComparisonRow] = Field(default_factory=list)
     player_spotlights: List[PlayerSpotlightDetail] = Field(default_factory=list)
     data_freshness_note: Optional[str] = None
-    # When SPORTRADAR_API_KEY is set: NFL REG standings lines for the two teams (cached ~5m server-side).
+    # Sportradar snapshot when configured: NFL and/or soccer season standings for the two teams.
     provider_context_note: Optional[str] = None
 
 

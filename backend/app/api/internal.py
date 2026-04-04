@@ -15,6 +15,7 @@ from app.models.game_player_spotlight import GamePlayerSpotlight
 from app.services.push_trigger_service import send_game_starting_reminders, send_high_confidence_picks
 from app.services.prediction_inference_service import run_prediction_job
 from app.services.sportradar_nfl_service import fetch_nfl_standings_json
+from app.services.sportradar_soccer_service import soccer_health_probe
 
 router = APIRouter(prefix="/internal", tags=["internal"])
 
@@ -147,8 +148,8 @@ async def clear_game_player_spotlights(
 @router.get("/health/sportradar")
 async def sportradar_health(_: None = Depends(_require_cron_secret)):
     """
-    Verify Sportradar NFL standings can be fetched (same X-Cron-Secret as other internal routes).
-    Does not persist data; uses the same cache as explanation enrichment.
+    Verify Sportradar NFL and (optionally) soccer standings can be fetched (same X-Cron-Secret).
+    Does not persist data; uses the same caches as explanation enrichment.
     """
     settings = get_settings()
     key = (settings.sportradar_api_key or "").strip()
@@ -158,12 +159,15 @@ async def sportradar_health(_: None = Depends(_require_cron_secret)):
             "nfl_standings_ok": False,
             "standings_source": None,
             "detail": "SPORTRADAR_API_KEY not set",
+            **soccer_health_probe(settings),
         }
     data, label = fetch_nfl_standings_json(settings)
-    return {
+    out = {
         "configured": True,
         "nfl_standings_ok": data is not None,
         "standings_source": label,
         "access_level": settings.sportradar_access_level,
         "season_year_effective": settings.sportradar_nfl_season_year,
     }
+    out.update(soccer_health_probe(settings))
+    return out
