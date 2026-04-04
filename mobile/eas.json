@@ -3,14 +3,6 @@
     "version": ">= 18.4.0",
     "appVersionSource": "remote"
   },
-  "update": {
-    "production": {
-      "channel": "production"
-    },
-    "preview": {
-      "channel": "preview"
-    }
-  },
   "build": {
     "development": {
       "developmentClient": true,
