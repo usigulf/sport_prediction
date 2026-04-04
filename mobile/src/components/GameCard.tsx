@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Game } from '../types';
 import { theme } from '../constants/theme';
+import { formatLeagueLabel } from '../utils/leagueDisplay';
 
 interface GameCardProps {
   game: Game;
@@ -40,7 +41,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onPress }) => {
       activeOpacity={0.7}
     >
       <View style={styles.header}>
-        <Text style={styles.league}>{game.league.toUpperCase()}</Text>
+        <Text style={styles.league}>{formatLeagueLabel(game.league)}</Text>
         <View
           style={[
             styles.statusBadge,

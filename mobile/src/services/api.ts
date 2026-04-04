@@ -360,6 +360,8 @@ class ApiService {
     league?: string;
     leagues?: string;
     date?: string;
+    /** IANA zone (e.g. America/New_York). Send with date so the server buckets the correct local calendar day. */
+    time_zone?: string;
     skip?: number;
     limit?: number;
     signal?: AbortSignal;
@@ -369,6 +371,7 @@ class ApiService {
     if (rest.league) queryParams.append('league', rest.league);
     if (rest.leagues) queryParams.append('leagues', rest.leagues);
     if (rest.date) queryParams.append('date', rest.date);
+    if (rest.time_zone) queryParams.append('time_zone', rest.time_zone);
     if (rest.skip != null) queryParams.append('skip', rest.skip.toString());
     if (rest.limit != null) queryParams.append('limit', rest.limit.toString());
 

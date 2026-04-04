@@ -40,7 +40,15 @@ export interface GamesCachePayload {
 // Async thunks
 export const fetchUpcomingGames = createAsyncThunk<
   GamesCachePayload,
-  { league?: string; leagues?: string; date?: string; limit?: number; signal?: AbortSignal } | undefined
+  | {
+      league?: string;
+      leagues?: string;
+      date?: string;
+      time_zone?: string;
+      limit?: number;
+      signal?: AbortSignal;
+    }
+  | undefined
 >(
   'games/fetchUpcoming',
   async (params) => {

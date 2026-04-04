@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,12 @@ import { RootStackParamList, MainTabParamList } from '../navigation/AppNavigator
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { SPORT_OPTIONS, MY_LEAGUES_ID, SOCCER_LEAGUE_IDS } from '../constants/leagues';
 import { theme } from '../constants/theme';
+import {
+  buildSoccerWeekDays,
+  formatLocalYMD,
+  mondayBasedIndexInWeek,
+  weekRangeLabel,
+} from '../utils/soccerWeek';
 
 /** BetQL-style sub-views within Games (per sport). */
 type GamesViewType = 'model' | 'trending' | 'props';
@@ -53,6 +59,16 @@ export const GamesScreen: React.FC = () => {
     const league = route.params?.league;
     if (league != null) setSelectedLeague(league);
   }, [route.params?.league]);
+
+  useEffect(() => {
+    const prev = prevLeagueRef.current;
+    prevLeagueRef.current = selectedLeague;
+    if (selectedLeague === 'soccer' && prev !== 'soccer') {
+      setSoccerWeekOffset(0);
+      setSoccerDayIndex(mondayBasedIndexInWeek(new Date()));
+      setSoccerSubLeague('all');
+    }
+  }, [selectedLeague]);
   const [gamesView, setGamesView] = useState<GamesViewType>('model');
   const [loadError, setLoadError] = useState<string | null>(null);
   const [trendingPicks, setTrendingPicks] = useState<any[]>([]);
@@ -60,6 +76,16 @@ export const GamesScreen: React.FC = () => {
   const [previewGame, setPreviewGame] = useState<any | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const insets = useSafeAreaInsets();
+  const prevLeagueRef = useRef<string | null | undefined>(undefined);
+
+  /** Soccer hub: Monday-start week offset, selected day 0–6, competition filter */
+  const [soccerWeekOffset, setSoccerWeekOffset] = useState(0);
+  const [soccerDayIndex, setSoccerDayIndex] = useState(() => mondayBasedIndexInWeek(new Date()));
+  const [soccerSubLeague, setSoccerSubLeague] = useState<'all' | 'premier_league' | 'champions_league'>('all');
+
+  const soccerWeekDays = useMemo(() => buildSoccerWeekDays(soccerWeekOffset), [soccerWeekOffset]);
+  const selectedSoccerYmd =
+    soccerWeekDays[soccerDayIndex]?.ymd ?? formatLocalYMD(new Date());
 
   useEffect(() => {
     dispatch(restoreGamesFromCache());
@@ -84,8 +110,19 @@ export const GamesScreen: React.FC = () => {
           await dispatch(fetchUpcomingGames(opts)).unwrap();
         }
       } else if (selectedLeague === 'soccer') {
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const leaguesArg =
+          soccerSubLeague === 'all'
+            ? SOCCER_LEAGUE_IDS.join(',')
+            : soccerSubLeague;
         await dispatch(
-          fetchUpcomingGames({ ...opts, leagues: SOCCER_LEAGUE_IDS.join(',') })
+          fetchUpcomingGames({
+            ...opts,
+            leagues: leaguesArg,
+            date: selectedSoccerYmd,
+            time_zone: tz,
+            limit: Math.max(opts.limit ?? 50, 100),
+          })
         ).unwrap();
       } else {
         await dispatch(
@@ -104,14 +141,18 @@ export const GamesScreen: React.FC = () => {
     abortRef.current = controller;
     loadGames(controller.signal);
     return () => controller.abort();
-  }, [selectedLeague]);
+  }, [selectedLeague, selectedSoccerYmd, soccerSubLeague]);
 
   const getLeaguesParam = useCallback((): string | undefined => {
     if (selectedLeague === null) return undefined;
     if (selectedLeague === MY_LEAGUES_ID) return undefined;
-    if (selectedLeague === 'soccer') return SOCCER_LEAGUE_IDS.join(',');
+    if (selectedLeague === 'soccer') {
+      return soccerSubLeague === 'all'
+        ? SOCCER_LEAGUE_IDS.join(',')
+        : soccerSubLeague;
+    }
     return selectedLeague;
-  }, [selectedLeague]);
+  }, [selectedLeague, soccerSubLeague]);
 
   useEffect(() => {
     if (gamesView !== 'trending') return;
@@ -188,7 +229,11 @@ export const GamesScreen: React.FC = () => {
       <View style={styles.headerSection}>
         <View style={styles.headerTextRow}>
           <Text style={styles.headerTitle}>Games</Text>
-          <Text style={styles.headerSubtitle}>Pick a sport, then a view</Text>
+          <Text style={styles.headerSubtitle}>
+            {selectedLeague === 'soccer'
+              ? 'Pick a day — all soccer competitions for that date'
+              : 'Pick a sport, then a view'}
+          </Text>
         </View>
         <ScrollView
           horizontal
@@ -221,6 +266,95 @@ export const GamesScreen: React.FC = () => {
             </TouchableOpacity>
           ))}
         </ScrollView>
+
+        {selectedLeague === 'soccer' && (
+          <View style={styles.soccerHub}>
+            <View style={styles.weekNavRow}>
+              <TouchableOpacity
+                onPress={() => setSoccerWeekOffset((w) => w - 1)}
+                style={styles.weekNavBtn}
+                hitSlop={8}
+              >
+                <Ionicons name="chevron-back" size={22} color={theme.colors.accent} />
+              </TouchableOpacity>
+              <Text style={styles.weekNavLabel}>{weekRangeLabel(soccerWeekDays)}</Text>
+              <TouchableOpacity
+                onPress={() => setSoccerWeekOffset((w) => w + 1)}
+                style={styles.weekNavBtn}
+                hitSlop={8}
+              >
+                <Ionicons name="chevron-forward" size={22} color={theme.colors.accent} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.dayStrip}
+            >
+              {soccerWeekDays.map((d, i) => (
+                <TouchableOpacity
+                  key={d.ymd}
+                  style={[
+                    styles.dayChip,
+                    soccerDayIndex === i && styles.dayChipActive,
+                    d.isToday && styles.dayChipToday,
+                  ]}
+                  onPress={() => setSoccerDayIndex(i)}
+                >
+                  <Text
+                    style={[
+                      styles.dayChipWeekday,
+                      soccerDayIndex === i && styles.dayChipTextActive,
+                    ]}
+                  >
+                    {d.weekdayShort}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.dayChipNum,
+                      soccerDayIndex === i && styles.dayChipTextActive,
+                    ]}
+                  >
+                    {d.dayNum}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <Text style={styles.soccerFilterLabel}>Competition</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.soccerSubLeagueRow}
+            >
+              {(
+                [
+                  { id: 'all' as const, label: 'All soccer' },
+                  { id: 'premier_league' as const, label: 'Premier League' },
+                  { id: 'champions_league' as const, label: 'Champions League' },
+                ]
+              ).map((opt) => (
+                <TouchableOpacity
+                  key={opt.id}
+                  style={[
+                    styles.soccerSubPill,
+                    soccerSubLeague === opt.id && styles.soccerSubPillActive,
+                  ]}
+                  onPress={() => setSoccerSubLeague(opt.id)}
+                >
+                  <Text
+                    style={[
+                      styles.soccerSubPillText,
+                      soccerSubLeague === opt.id && styles.soccerSubPillTextActive,
+                    ]}
+                  >
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         {/* BetQL-style sub-tabs: Model Picks | Trending Picks | Player Props */}
         <View style={styles.subTabRow}>
           {subTabs.map(({ key, label }) => (
@@ -261,7 +395,13 @@ export const GamesScreen: React.FC = () => {
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>{loading ? 'Loading games...' : 'No games found'}</Text>
+              <Text style={styles.emptyText}>
+                {loading
+                  ? 'Loading games...'
+                  : selectedLeague === 'soccer'
+                    ? 'No soccer matches on this day'
+                    : 'No games found'}
+              </Text>
             </View>
           }
         />
@@ -401,6 +541,99 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
   },
   sportPillTextActive: {
+    color: theme.colors.accent,
+  },
+  soccerHub: {
+    paddingTop: theme.spacing.sm,
+    paddingBottom: theme.spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderSubtle,
+    marginTop: theme.spacing.sm,
+  },
+  weekNavRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+  },
+  weekNavBtn: {
+    padding: theme.spacing.xs,
+    minWidth: theme.minTouchSize,
+    alignItems: 'center',
+  },
+  weekNavLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+  },
+  dayStrip: {
+    flexDirection: 'row',
+    paddingHorizontal: theme.spacing.sm,
+    gap: 8,
+    paddingBottom: theme.spacing.sm,
+  },
+  dayChip: {
+    width: 48,
+    paddingVertical: 10,
+    borderRadius: theme.radii.md,
+    backgroundColor: theme.colors.backgroundCard,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.borderSubtle,
+  },
+  dayChipToday: {
+    borderColor: theme.colors.accent,
+  },
+  dayChipActive: {
+    backgroundColor: theme.colors.accentDim,
+    borderColor: theme.colors.accent,
+  },
+  dayChipWeekday: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: theme.colors.textMuted,
+  },
+  dayChipNum: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginTop: 2,
+  },
+  dayChipTextActive: {
+    color: theme.colors.accent,
+  },
+  soccerFilterLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textMuted,
+    paddingHorizontal: theme.spacing.md,
+    marginBottom: 6,
+  },
+  soccerSubLeagueRow: {
+    flexDirection: 'row',
+    paddingHorizontal: theme.spacing.sm,
+    gap: 8,
+    paddingBottom: theme.spacing.sm,
+  },
+  soccerSubPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: theme.colors.backgroundCard,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSubtle,
+  },
+  soccerSubPillActive: {
+    backgroundColor: theme.colors.accentDim,
+    borderColor: theme.colors.accent,
+  },
+  soccerSubPillText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+  },
+  soccerSubPillTextActive: {
     color: theme.colors.accent,
   },
   subTabRow: {

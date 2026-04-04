@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, desc
 from typing import Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from app.database import get_db
 from app.api.deps import get_current_user, get_current_user_optional, rate_limit_predictions
 from app.schemas.game import GameResponse, GameListResponse, TeamResponse
@@ -75,35 +76,60 @@ def _team_to_response(team):
 async def get_upcoming_games(
     league: Optional[str] = Query(None, description="Filter by single league"),
     leagues: Optional[str] = Query(None, description="Filter by leagues (comma-separated, e.g. nfl,nba)"),
-    date: Optional[str] = Query(None, description="Filter by date (YYYY-MM-DD)"),
+    date: Optional[str] = Query(
+        None,
+        description="Calendar day (YYYY-MM-DD). With time_zone, that day in the user's zone; without it, UTC midnight–midnight. Includes scheduled, live, and finished on that day.",
+    ),
+    time_zone: Optional[str] = Query(
+        None,
+        description="IANA timezone (e.g. America/New_York). Use with date so the day matches the device calendar.",
+    ),
     pagination: PaginationParams = Depends(),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
-    """Get upcoming games with predictions"""
+    """Get games with predictions. Without date: future scheduled only. With date: all games that local calendar day."""
     prediction_service = PredictionService(db)
-    
-    query = db.query(Game).filter(
-        Game.status == "scheduled",
-        Game.scheduled_time >= datetime.now()
-    )
-    
+    now = datetime.now(timezone.utc)
+
+    if date:
+        try:
+            date_obj = datetime.strptime(date, "%Y-%m-%d").date()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+        tz_name = (time_zone or "").strip()
+        if tz_name:
+            try:
+                tz = ZoneInfo(tz_name)
+            except Exception:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid time_zone; use an IANA name (e.g. America/New_York, Europe/London)",
+                )
+            start_local = datetime.combine(date_obj, datetime.min.time(), tzinfo=tz)
+            end_local = start_local + timedelta(days=1)
+            start_utc = start_local.astimezone(timezone.utc)
+            end_utc = end_local.astimezone(timezone.utc)
+        else:
+            start_utc = datetime.combine(date_obj, datetime.min.time(), tzinfo=timezone.utc)
+            end_utc = start_utc + timedelta(days=1)
+        query = db.query(Game).filter(
+            Game.scheduled_time >= start_utc,
+            Game.scheduled_time < end_utc,
+            Game.status.in_(("scheduled", "live", "finished")),
+        )
+    else:
+        query = db.query(Game).filter(
+            Game.status == "scheduled",
+            Game.scheduled_time >= now,
+        )
+
     if leagues:
         league_list = [s.strip().lower() for s in leagues.split(",") if s.strip()]
         if league_list:
             query = query.filter(Game.league.in_(league_list))
     elif league:
         query = query.filter(Game.league == league)
-    
-    if date:
-        try:
-            date_obj = datetime.strptime(date, "%Y-%m-%d").date()
-            query = query.filter(
-                Game.scheduled_time >= datetime.combine(date_obj, datetime.min.time()),
-                Game.scheduled_time < datetime.combine(date_obj, datetime.min.time()) + timedelta(days=1)
-            )
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
     
     total = query.count()
     games = (

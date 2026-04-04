@@ -2,6 +2,8 @@
 Tests for games API: leagues, pagination, scheduled_time ISO 8601
 """
 import re
+from datetime import datetime, timedelta, timezone
+
 import pytest
 from fastapi import status
 
@@ -67,3 +69,27 @@ def test_get_game_scheduled_time_iso(client, test_game):
     assert st is not None
     assert "T" in st
     assert re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}", st)
+
+
+def test_upcoming_date_filter_with_time_zone(client, db, test_game):
+    """date + time_zone returns games on that calendar day (scheduled/live/finished)."""
+    fixed = datetime(2030, 6, 15, 18, 30, tzinfo=timezone.utc)
+    test_game.scheduled_time = fixed
+    test_game.status = "scheduled"
+    db.commit()
+
+    r = client.get(
+        "/api/v1/games/upcoming",
+        params={"date": "2030-06-15", "time_zone": "UTC", "limit": 50},
+    )
+    assert r.status_code == status.HTTP_200_OK
+    ids = [g["id"] for g in r.json().get("games", [])]
+    assert str(test_game.id) in ids
+
+
+def test_upcoming_invalid_time_zone(client):
+    r = client.get(
+        "/api/v1/games/upcoming",
+        params={"date": "2030-01-01", "time_zone": "Not/A_Real_Zone", "limit": 10},
+    )
+    assert r.status_code == status.HTTP_400_BAD_REQUEST
