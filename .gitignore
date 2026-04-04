@@ -104,3 +104,4 @@ secrets/
 tmp/
 temp/
 *.tmp
+.env.production
