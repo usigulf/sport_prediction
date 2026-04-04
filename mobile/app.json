@@ -19,6 +19,12 @@
       "package": "com.sportsprediction.app",
       "usesCleartextTraffic": true
     },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/1c6a5910-f9f8-43fe-8aea-da17ac3331fb"
+    },
     "extra": {
       "eas": {
         "projectId": "1c6a5910-f9f8-43fe-8aea-da17ac3331fb"
