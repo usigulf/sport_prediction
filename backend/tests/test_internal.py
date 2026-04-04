@@ -94,6 +94,7 @@ def test_sportradar_health_not_configured(monkeypatch, client):
     assert body["nfl_standings_ok"] is False
     assert body["soccer_configured"] is False
     assert body["soccer_standings_ok"] is None
+    assert body.get("soccer_probes") == []
 
 
 def test_sportradar_health_ok(monkeypatch, client):
@@ -112,6 +113,7 @@ def test_sportradar_health_ok(monkeypatch, client):
     assert body["standings_source"] == "REG 2025"
     assert body["soccer_configured"] is False
     assert body["soccer_standings_ok"] is None
+    assert body.get("soccer_probes") == []
 
 
 def test_sportradar_health_soccer_ok(monkeypatch, client):
@@ -128,6 +130,9 @@ def test_sportradar_health_soccer_ok(monkeypatch, client):
             "soccer_configured": True,
             "soccer_standings_ok": True,
             "soccer_probe": "premier_league:sr:season:1",
+            "soccer_probes": [
+                {"league": "premier_league", "season_id": "sr:season:1", "ok": True, "label": "sr:season:1"},
+            ],
         },
     )
 

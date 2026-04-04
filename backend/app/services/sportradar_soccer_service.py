@@ -199,7 +199,8 @@ def soccer_matchup_provider_note(game, settings: Settings) -> str | None:
 
 def soccer_health_probe(settings: Settings) -> dict[str, Any]:
     """
-    Ops helper: try configured competition season ids until one standings payload succeeds.
+    Ops helper: fetch standings for each configured season id (PL and/or UCL).
+    soccer_standings_ok is true only when every configured probe succeeds.
     """
     probes: list[tuple[str, str]] = []
     pl = (settings.sportradar_soccer_season_premier_league or "").strip()
@@ -213,17 +214,30 @@ def soccer_health_probe(settings: Settings) -> dict[str, Any]:
             "soccer_configured": False,
             "soccer_standings_ok": None,
             "soccer_probe": None,
+            "soccer_probes": [],
         }
+    results: list[dict[str, Any]] = []
+    all_ok = True
     for comp, sid in probes:
         data, label = fetch_soccer_standings_json(settings, sid)
-        if data is not None:
-            return {
-                "soccer_configured": True,
-                "soccer_standings_ok": True,
-                "soccer_probe": f"{comp}:{label or sid}",
+        ok = data is not None
+        all_ok = all_ok and ok
+        results.append(
+            {
+                "league": comp,
+                "season_id": sid,
+                "ok": ok,
+                "label": label if ok else None,
             }
+        )
+    if all_ok:
+        soccer_probe = "+".join(f"{r['league']}:{r.get('label') or r['season_id']}" for r in results)
+    else:
+        failed = next(r for r in results if not r["ok"])
+        soccer_probe = f"{failed['league']}:{failed['season_id']}"
     return {
         "soccer_configured": True,
-        "soccer_standings_ok": False,
-        "soccer_probe": f"{probes[0][0]}:{probes[0][1]}",
+        "soccer_standings_ok": all_ok,
+        "soccer_probe": soccer_probe,
+        "soccer_probes": results,
     }

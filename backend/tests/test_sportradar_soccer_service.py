@@ -7,6 +7,7 @@ from app.services.sportradar_soccer_service import (
     find_soccer_standing_row,
     flatten_soccer_standings_rows,
     format_soccer_standings_line,
+    soccer_health_probe,
     soccer_matchup_provider_note,
     soccer_season_id_for_league,
 )
@@ -183,3 +184,46 @@ def test_soccer_matchup_provider_note(monkeypatch):
     assert "Sportradar soccer" in note
     assert "Liverpool FC" in note
     assert "Arsenal FC" in note
+
+
+def test_soccer_health_probe_empty():
+    out = soccer_health_probe(Settings())
+    assert out["soccer_configured"] is False
+    assert out["soccer_standings_ok"] is None
+    assert out["soccer_probe"] is None
+    assert out["soccer_probes"] == []
+
+
+def test_soccer_health_probe_all_configured_ok(monkeypatch):
+    def fake_fetch(_settings, season_id: str):
+        return ({"standings": []}, f"ok-{season_id}")
+
+    monkeypatch.setattr(soccer_svc, "fetch_soccer_standings_json", fake_fetch)
+    settings = Settings(
+        sportradar_soccer_season_premier_league="sr:season:pl",
+        sportradar_soccer_season_champions_league="sr:season:cl",
+    )
+    out = soccer_health_probe(settings)
+    assert out["soccer_configured"] is True
+    assert out["soccer_standings_ok"] is True
+    assert "premier_league:ok-sr:season:pl" in out["soccer_probe"]
+    assert "champions_league:ok-sr:season:cl" in out["soccer_probe"]
+    assert len(out["soccer_probes"]) == 2
+    assert all(p["ok"] for p in out["soccer_probes"])
+
+
+def test_soccer_health_probe_one_fails(monkeypatch):
+    def fake_fetch(_settings, season_id: str):
+        if "pl" in season_id:
+            return ({"standings": []}, "pl-ok")
+        return (None, None)
+
+    monkeypatch.setattr(soccer_svc, "fetch_soccer_standings_json", fake_fetch)
+    settings = Settings(
+        sportradar_soccer_season_premier_league="sr:season:pl",
+        sportradar_soccer_season_champions_league="sr:season:cl",
+    )
+    out = soccer_health_probe(settings)
+    assert out["soccer_standings_ok"] is False
+    assert out["soccer_probe"] == "champions_league:sr:season:cl"
+    assert [p["ok"] for p in out["soccer_probes"]] == [True, False]
