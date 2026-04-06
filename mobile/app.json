@@ -16,8 +16,7 @@
       }
     },
     "android": {
-      "package": "com.sportsprediction.app",
-      "usesCleartextTraffic": true
+      "package": "com.sportsprediction.app"
     },
     "runtimeVersion": {
       "policy": "appVersion"
@@ -29,6 +28,17 @@
       "eas": {
         "projectId": "1c6a5910-f9f8-43fe-8aea-da17ac3331fb"
       }
-    }
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
+    ]
   }
 }
