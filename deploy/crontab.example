@@ -1,0 +1,17 @@
+# Sport prediction — host crontab snippets (adjust paths and times).
+# Install: chmod +x scripts/cron/*.sh && crontab -e
+#
+# Requires: PUSH_CRON_SECRET in ~/sport_prediction/.env
+# Optional: API_INTERNAL_URL=http://127.0.0.1:8000 (default)
+#
+# After deploy, verify Sportradar + soccer seasons (must cd to repo — not from ~):
+#   cd /home/YOU/sport_prediction && VERIFY_API_BASE=https://127.0.0.1:8000 ./scripts/verify_sportradar_prod.sh .env.production
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Predictions refresh every 20 minutes (pick 15–60 to taste)
+*/20 * * * * /home/YOU/sport_prediction/scripts/cron/internal_predictions_run.sh >> /tmp/sport-prediction-cron.log 2>&1
+
+# Soccer fixtures from Sportradar ~3x daily (UTC); change hours for your timezone
+30 6,14,22 * * * /home/YOU/sport_prediction/scripts/cron/internal_soccer_sync_schedules.sh >> /tmp/sport-prediction-cron.log 2>&1
