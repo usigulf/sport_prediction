@@ -34,6 +34,14 @@ class MetricComparisonRow(BaseModel):
     footnote: Optional[str] = None
 
 
+class ProbabilityTrendPoint(BaseModel):
+    timestamp_iso: str
+    home_win_probability: float
+    away_win_probability: float
+    draw_probability: Optional[float] = None
+    confidence_level: Optional[str] = None
+
+
 class PlayerSpotlightDetail(BaseModel):
     player_name: str
     team_name: str
@@ -49,6 +57,9 @@ class StructuredGameAnalysis(BaseModel):
     h2h_meetings: List[H2HMeetingDetail] = Field(default_factory=list)
     h2h_series_summary: Optional[str] = None
     metric_comparisons: List[MetricComparisonRow] = Field(default_factory=list)
+    probability_trend: List[ProbabilityTrendPoint] = Field(default_factory=list)
+    # Last up to 5 finished league games per team (W–D–L) before kickoff, when present in DB.
+    recent_form_snapshot: Optional[str] = None
     player_spotlights: List[PlayerSpotlightDetail] = Field(default_factory=list)
     data_freshness_note: Optional[str] = None
     # Sportradar snapshot when configured: NFL and/or soccer season standings for the two teams.

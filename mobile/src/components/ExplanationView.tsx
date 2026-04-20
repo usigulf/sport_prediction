@@ -3,9 +3,12 @@ import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchExplanation } from '../store/slices/gamesSlice';
 import { theme } from '../constants/theme';
+import { isSoccerLeague } from '../constants/leagues';
+import { impliedDrawForSoccer, normalizeThreeWay } from '../utils/predictionDisplay';
 import type {
   H2HMeetingDetail,
   MetricComparisonRow,
+  ProbabilityTrendPoint,
   PlayerSpotlightDetail,
   StandingsRowDetail,
 } from '../types';
@@ -19,6 +22,10 @@ interface ExplanationViewProps {
   analysisAsOf?: string;
   /** Bumps when live WS reports a prediction refresh — refetches explanation for up-to-date tables. */
   analysisRefreshToken?: string | null;
+  /** Game league id — soccer competitions get an explicit 1X2 block when probs are set. */
+  league?: string;
+  homeWinProbability?: number;
+  awayWinProbability?: number;
 }
 
 /** Backend returns these three when no ML artifact dir is configured — not real SHAP factors. */
@@ -182,8 +189,102 @@ function StructuredMetricsBlock({
         </Text>
       ) : null}
       <Text style={styles.metricsDisclaimer}>
-        Values reflect model inputs; connect league APIs for official advanced stats.
+        Row footnotes describe each input. Soccer uses standings and last-5 league results in the DB when
+        synced.
       </Text>
+    </AnalysisSection>
+  );
+}
+
+function OneX2AnalysisBlock({
+  homeLabel,
+  awayLabel,
+  home,
+  away,
+  draw,
+}: {
+  homeLabel: string;
+  awayLabel: string;
+  home: number;
+  away: number;
+  draw: number;
+}) {
+  return (
+    <AnalysisSection title="1X2 — three-way probabilities">
+      <Text style={styles.bodyLead}>
+        Draw (X) is the residual mass: 1 − P(home) − P(away). Values below are renormalized to sum to 100%.
+      </Text>
+      <View style={styles.oneX2Grid}>
+        <View style={styles.oneX2Cell}>
+          <Text style={styles.oneX2Code}>1</Text>
+          <Text style={styles.oneX2Team} numberOfLines={2}>
+            {homeLabel}
+          </Text>
+          <Text style={styles.oneX2Pct}>{(home * 100).toFixed(1)}%</Text>
+        </View>
+        <View style={styles.oneX2Cell}>
+          <Text style={styles.oneX2Code}>X</Text>
+          <Text style={styles.oneX2Team}>Draw</Text>
+          <Text style={styles.oneX2Pct}>{(draw * 100).toFixed(1)}%</Text>
+        </View>
+        <View style={styles.oneX2Cell}>
+          <Text style={styles.oneX2Code}>2</Text>
+          <Text style={styles.oneX2Team} numberOfLines={2}>
+            {awayLabel}
+          </Text>
+          <Text style={styles.oneX2Pct}>{(away * 100).toFixed(1)}%</Text>
+        </View>
+      </View>
+    </AnalysisSection>
+  );
+}
+
+function StructuredRecentFormBlock({ text }: { text: string }) {
+  const t = text.trim();
+  if (!t) return null;
+  return (
+    <AnalysisSection title="Recent league form (last 5 in DB)">
+      <RichFormattedBody text={t} />
+    </AnalysisSection>
+  );
+}
+
+function StructuredProbabilityTrendBlock({
+  homeLabel,
+  awayLabel,
+  points,
+}: {
+  homeLabel: string;
+  awayLabel: string;
+  points: ProbabilityTrendPoint[];
+}) {
+  if (points.length < 2) return null;
+  return (
+    <AnalysisSection title="Probability trend (latest model snapshots)">
+      <View style={styles.metricsHeaderRow}>
+        <Text style={[styles.metricsCell, styles.trendTimeCol]}>As of</Text>
+        <Text style={[styles.metricsCell, styles.metricsTeamCol]}>{homeLabel}</Text>
+        <Text style={[styles.metricsCell, styles.metricsTeamCol]}>Draw</Text>
+        <Text style={[styles.metricsCell, styles.metricsTeamCol]}>{awayLabel}</Text>
+      </View>
+      {points.map((p) => {
+        const t = formatAsOf(p.timestamp_iso) ?? p.timestamp_iso.slice(11, 16);
+        return (
+          <View key={p.timestamp_iso} style={styles.metricsRow}>
+            <Text style={[styles.metricsCell, styles.trendTimeCol]}>{t}</Text>
+            <Text style={[styles.metricsCell, styles.metricsTeamCol]}>
+              {(p.home_win_probability * 100).toFixed(1)}%
+            </Text>
+            <Text style={[styles.metricsCell, styles.metricsTeamCol]}>
+              {typeof p.draw_probability === 'number' ? `${(p.draw_probability * 100).toFixed(1)}%` : '—'}
+            </Text>
+            <Text style={[styles.metricsCell, styles.metricsTeamCol]}>
+              {(p.away_win_probability * 100).toFixed(1)}%
+            </Text>
+          </View>
+        );
+      })}
+      <Text style={styles.metricsDisclaimer}>Shows up to the last 6 prediction recalculations for this game.</Text>
     </AnalysisSection>
   );
 }
@@ -217,6 +318,9 @@ export const ExplanationView: React.FC<ExplanationViewProps> = ({
   awayTeamName = 'Away',
   analysisAsOf,
   analysisRefreshToken,
+  league,
+  homeWinProbability,
+  awayWinProbability,
 }) => {
   const dispatch = useAppDispatch();
   const { explanation, loadingExplanation } = useAppSelector((state) => state.games);
@@ -228,6 +332,21 @@ export const ExplanationView: React.FC<ExplanationViewProps> = ({
   const narrativeSections = useMemo(() => {
     const ra = explanation?.rich_analysis;
     if (!ra) return [];
+    const sa = explanation?.structured_analysis;
+    const standingsRows = sa?.standings_rows ?? [];
+    const h2hMeetings = sa?.h2h_meetings ?? [];
+    const h2hSummary = sa?.h2h_series_summary?.trim() ?? '';
+    const metricRows = sa?.metric_comparisons ?? [];
+    const playerRows = sa?.player_spotlights ?? [];
+    const recentFormSnap = sa?.recent_form_snapshot?.trim() ?? '';
+
+    /** When structured UI already covers a topic, skip redundant rich_analysis prose. */
+    const skipStandingsNarrative = standingsRows.length > 0;
+    const skipH2hNarrative = h2hMeetings.length > 0 || Boolean(h2hSummary);
+    const skipMetricsNarrative = metricRows.length > 0;
+    const skipPlayersNarrative = playerRows.length > 0;
+    const skipFormStandingsNarrative = Boolean(recentFormSnap);
+
     const defs: { title: string; text: string | null | undefined }[] = [
       { title: 'Live & match context', text: ra.real_time_analysis },
       { title: 'Current form & standings', text: ra.standings_context },
@@ -239,8 +358,22 @@ export const ExplanationView: React.FC<ExplanationViewProps> = ({
       { title: 'Venue, rest & tactics', text: ra.tactical },
       { title: 'Possible outcomes & scenarios', text: ra.scenario_outcomes },
     ];
-    return defs.filter((d) => d.text?.trim());
-  }, [explanation?.rich_analysis]);
+    return defs.filter((d) => {
+      if (!d.text?.trim()) return false;
+      if (skipStandingsNarrative && (d.title === 'Current form & standings' || d.title === 'Form & team inputs')) {
+        return false;
+      }
+      if (skipFormStandingsNarrative && d.title === 'Form & team inputs') {
+        return false;
+      }
+      if (skipH2hNarrative && (d.title === 'Head-to-head history' || d.title === 'Strength matchup')) {
+        return false;
+      }
+      if (skipMetricsNarrative && d.title === 'Advanced metrics') return false;
+      if (skipPlayersNarrative && d.title === 'Performer & scoring profile') return false;
+      return true;
+    });
+  }, [explanation?.rich_analysis, explanation?.structured_analysis]);
 
   if (loadingExplanation) {
     return (
@@ -273,12 +406,28 @@ export const ExplanationView: React.FC<ExplanationViewProps> = ({
   const h2hMeetings = sa?.h2h_meetings ?? [];
   const metricRows = sa?.metric_comparisons ?? [];
   const playerRows = sa?.player_spotlights ?? [];
+  const trendPoints = sa?.probability_trend ?? [];
+  const recentFormSnap = sa?.recent_form_snapshot?.trim() ?? '';
   const hasStructuredDetail =
     standingsRows.length > 0 ||
     h2hMeetings.length > 0 ||
     Boolean(sa?.h2h_series_summary?.trim()) ||
     metricRows.length > 0 ||
+    trendPoints.length > 1 ||
+    Boolean(recentFormSnap) ||
     playerRows.length > 0;
+
+  const showOneX2 =
+    isSoccerLeague(league) &&
+    typeof homeWinProbability === 'number' &&
+    typeof awayWinProbability === 'number';
+  const oneX2Split = showOneX2
+    ? normalizeThreeWay(
+        homeWinProbability,
+        awayWinProbability,
+        impliedDrawForSoccer(homeWinProbability, awayWinProbability)
+      )
+    : null;
 
   return (
     <View style={styles.container}>
@@ -287,6 +436,16 @@ export const ExplanationView: React.FC<ExplanationViewProps> = ({
         {homeTeamName} vs {awayTeamName}
         {asOf ? ` · ${asOf}` : ''}
       </Text>
+
+      {oneX2Split ? (
+        <OneX2AnalysisBlock
+          homeLabel={homeTeamName}
+          awayLabel={awayTeamName}
+          home={oneX2Split.home}
+          away={oneX2Split.away}
+          draw={oneX2Split.draw}
+        />
+      ) : null}
 
       {sa?.data_freshness_note ? (
         <Text style={styles.freshnessNote}>{sa.data_freshness_note}</Text>
@@ -301,6 +460,12 @@ export const ExplanationView: React.FC<ExplanationViewProps> = ({
       {hasStructuredDetail ? (
         <>
           <StructuredStandingsBlock leagueLabel={sa?.league_label} rows={standingsRows} />
+          <StructuredProbabilityTrendBlock
+            homeLabel={homeTeamName}
+            awayLabel={awayTeamName}
+            points={trendPoints}
+          />
+          {recentFormSnap ? <StructuredRecentFormBlock text={recentFormSnap} /> : null}
           <StructuredH2HBlock meetings={h2hMeetings} summary={sa?.h2h_series_summary} />
           <StructuredPlayersBlock spotlights={playerRows} />
           <StructuredMetricsBlock
@@ -481,6 +646,9 @@ const styles = StyleSheet.create({
     flex: 0.75,
     textAlign: 'center',
   },
+  trendTimeCol: {
+    flex: 0.9,
+  },
   metricsFootnote: {
     marginTop: theme.spacing.sm,
     fontSize: 12,
@@ -575,6 +743,39 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     lineHeight: 21,
     marginBottom: theme.spacing.sm,
+  },
+  oneX2Grid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.xs,
+  },
+  oneX2Cell: {
+    flex: 1,
+    backgroundColor: theme.colors.backgroundElevated,
+    borderRadius: theme.radii.md,
+    padding: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSubtle,
+    alignItems: 'center',
+  },
+  oneX2Code: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: theme.colors.accent,
+    marginBottom: 4,
+  },
+  oneX2Team: {
+    fontSize: 11,
+    color: theme.colors.textMuted,
+    textAlign: 'center',
+    marginBottom: 6,
+    minHeight: 28,
+  },
+  oneX2Pct: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.text,
   },
   sectionTitle: {
     fontSize: 16,

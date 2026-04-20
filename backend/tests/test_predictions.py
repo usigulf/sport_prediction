@@ -118,6 +118,7 @@ def test_explanation_enriches_h2h_and_standings(client, premium_auth_headers, db
     """DB-backed H2H + standings appear on explanation when rows exist."""
     from uuid import uuid4
     from app.models.game import Game
+    from app.models.prediction import Prediction
     from app.models.team_standing import TeamStanding
 
     for i in range(2):
@@ -148,6 +149,19 @@ def test_explanation_enriches_h2h_and_standings(client, premium_auth_headers, db
                 goals_against=200,
             )
         )
+    db.add(
+        Prediction(
+            id=uuid4(),
+            game_id=test_game.id,
+            model_version="v1.0.0",
+            home_win_probability=0.61,
+            away_win_probability=0.39,
+            expected_home_score=24.1,
+            expected_away_score=20.3,
+            confidence_level="medium",
+            created_at=datetime.now() - timedelta(hours=2),
+        )
+    )
     db.commit()
 
     response = client.get(
@@ -171,6 +185,11 @@ def test_explanation_enriches_h2h_and_standings(client, premium_auth_headers, db
     assert len(struct.get("h2h_meetings") or []) == 2
     assert struct.get("h2h_series_summary")
     assert len(struct.get("metric_comparisons") or []) >= 3
+    assert len(struct.get("probability_trend") or []) >= 2
+    snap = struct.get("recent_form_snapshot")
+    assert snap
+    assert "2W-0D-0L" in snap
+    assert "0W-0D-2L" in snap
     assert struct.get("data_freshness_note")
 
 

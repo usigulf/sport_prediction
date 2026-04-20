@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, desc, or_
 
+from app.constants.soccer import SOCCER_LEAGUES_SET
 from app.models.game import Game
 from app.models.game_player_spotlight import GamePlayerSpotlight
 from app.models.prediction import Prediction
@@ -16,12 +17,19 @@ from app.models.team_standing import TeamStanding
 from app.schemas.prediction import (
     H2HMeetingDetail,
     MetricComparisonRow,
+    ProbabilityTrendPoint,
     PlayerSpotlightDetail,
     RichAnalysisSections,
     StandingsRowDetail,
     StructuredGameAnalysis,
 )
-from app.services.feature_builder import build_feature_dict
+from app.config import get_settings
+from app.services.feature_builder import (
+    FeatureSource,
+    build_game_features,
+    format_recent_wdl_for_matchup,
+)
+from app.services.sportradar_soccer_service import soccer_season_id_for_league
 
 
 def implied_draw_probability(home_p: float, away_p: float) -> float:
@@ -312,7 +320,9 @@ def build_h2h_structured(db: Session, game: Game) -> tuple[list[H2HMeetingDetail
 
 
 def build_metric_comparison_rows(
-    game: Game, features: dict[str, float | int]
+    game: Game,
+    features: dict[str, float | int],
+    feature_source: FeatureSource = "synthetic",
 ) -> list[MetricComparisonRow]:
     home = game.home_team.name if game.home_team else "Home"
     away = game.away_team.name if game.away_team else "Away"
@@ -329,32 +339,57 @@ def build_metric_comparison_rows(
     momentum = (
         f"Lean {home}" if form_gap > 0.02 else f"Lean {away}" if form_gap < -0.02 else "Neutral"
     )
+    soccer_table = feature_source in ("soccer_db_standings", "soccer_sportradar_api")
+    if soccer_table:
+        season_label = "Season strength (table)"
+        season_fn = "(Wins + ½ draws) ÷ matches played — from league standings."
+        recent_label = "Form index (last 5 league games)"
+        recent_fn = (
+            f"{momentum} Index = points per game (win = 1, draw = ½) over recent league matches in our DB."
+        )
+        off_label = "Goals per match (table)"
+        off_fn = "Goals scored ÷ matches played in the standings snapshot."
+        rest_fn = "Days since each side's previous league match in our DB (capped 1–14)."
+        adv_fn = "Home edge scaled slightly by table rank gap."
+    else:
+        season_label = "Season win-rate prior (demo)"
+        season_fn = "Synthetic prior until real standings and results are connected for this league."
+        recent_label = "Recent-form index (demo)"
+        recent_fn = f"{momentum} Synthetic roll-up (not tied to a fixed last-N window)."
+        off_label = "Offensive input (demo)"
+        off_fn = "Synthetic scoring prior — becomes table goals/match when soccer standings sync."
+        rest_fn = "Synthetic rest spacing for demo."
+        adv_fn = "Synthetic home-field tilt."
     return [
         MetricComparisonRow(
-            label="Season win-rate prior",
+            label=season_label,
             home_display=_pct(h_wr),
             away_display=_pct(a_wr),
+            footnote=season_fn,
         ),
         MetricComparisonRow(
-            label="Recent-form index",
+            label=recent_label,
             home_display=_pct(h_form),
             away_display=_pct(a_form),
-            footnote=momentum,
+            footnote=recent_fn,
         ),
         MetricComparisonRow(
-            label="Offensive input (avg score prior)",
+            label=off_label,
             home_display=f"{h_pts:.1f}",
             away_display=f"{a_pts:.1f}",
+            footnote=off_fn,
         ),
         MetricComparisonRow(
             label="Rest days",
             home_display=str(rest_h),
             away_display=str(rest_a),
+            footnote=rest_fn,
         ),
         MetricComparisonRow(
             label="Home venue bump (model)",
             home_display=f"+{adv:.3f} logit",
             away_display="—",
+            footnote=adv_fn,
         ),
     ]
 
@@ -377,6 +412,33 @@ def load_player_spotlights(db: Session, game_id) -> list[PlayerSpotlightDetail]:
     ]
 
 
+def build_probability_trend(db: Session, game: Game, limit: int = 6) -> list[ProbabilityTrendPoint]:
+    preds = (
+        db.query(Prediction)
+        .filter(Prediction.game_id == game.id)
+        .order_by(desc(Prediction.created_at))
+        .limit(limit)
+        .all()
+    )
+    if not preds:
+        return []
+    points: list[ProbabilityTrendPoint] = []
+    for p in reversed(preds):
+        hp = float(p.home_win_probability)
+        ap = float(p.away_win_probability)
+        dp = implied_draw_probability(hp, ap) if (game.league or "").lower() in SOCCER_LEAGUES_SET else None
+        points.append(
+            ProbabilityTrendPoint(
+                timestamp_iso=p.created_at.isoformat() if p.created_at else "",
+                home_win_probability=hp,
+                away_win_probability=ap,
+                draw_probability=dp,
+                confidence_level=p.confidence_level,
+            )
+        )
+    return [pt for pt in points if pt.timestamp_iso]
+
+
 def build_structured_game_analysis(db: Session, game: Game | None) -> StructuredGameAnalysis:
     """Rows for tables/cards; complements narrative rich_analysis."""
     note = (
@@ -385,7 +447,7 @@ def build_structured_game_analysis(db: Session, game: Game | None) -> Structured
     )
     if not game or not game.home_team or not game.away_team:
         return StructuredGameAnalysis(data_freshness_note=note)
-    feats = build_feature_dict(game)
+    feats, src = build_game_features(game, db)
     league_label = (game.league or "").upper() or None
     h2h_meetings, h2h_series_summary = build_h2h_structured(db, game)
     out = StructuredGameAnalysis(
@@ -393,7 +455,9 @@ def build_structured_game_analysis(db: Session, game: Game | None) -> Structured
         standings_rows=build_standings_row_details(db, game),
         h2h_meetings=h2h_meetings,
         h2h_series_summary=h2h_series_summary,
-        metric_comparisons=build_metric_comparison_rows(game, feats),
+        metric_comparisons=build_metric_comparison_rows(game, feats, src),
+        probability_trend=build_probability_trend(db, game),
+        recent_form_snapshot=format_recent_wdl_for_matchup(db, game),
         player_spotlights=load_player_spotlights(db, game.id),
         data_freshness_note=note,
     )
@@ -405,8 +469,7 @@ def build_structured_game_analysis(db: Session, game: Game | None) -> Structured
         pn = nfl_matchup_provider_note(game, get_settings())
         if pn:
             out = out.model_copy(update={"provider_context_note": pn})
-    elif league_l in ("premier_league", "champions_league"):
-        from app.config import get_settings
+    elif soccer_season_id_for_league(league_l, get_settings()):
         from app.services.sportradar_soccer_service import soccer_matchup_provider_note
 
         pn = soccer_matchup_provider_note(game, get_settings())
@@ -424,7 +487,7 @@ def enrich_rich_analysis(
     """Merge job narrative with DB context (H2H, standings) and generated metrics/scenarios."""
     extra: dict[str, str | None] = {}
     if game and game.home_team and game.away_team:
-        feats = build_feature_dict(game)
+        feats, _ = build_game_features(game, db)
         extra["h2h_history"] = build_h2h_history_text(db, game)
         extra["standings_context"] = build_standings_text(db, game)
         extra["advanced_metrics"] = build_advanced_metrics_text(game, feats)

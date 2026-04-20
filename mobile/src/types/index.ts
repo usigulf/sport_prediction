@@ -84,6 +84,14 @@ export interface MetricComparisonRow {
   footnote?: string | null;
 }
 
+export interface ProbabilityTrendPoint {
+  timestamp_iso: string;
+  home_win_probability: number;
+  away_win_probability: number;
+  draw_probability?: number | null;
+  confidence_level?: string | null;
+}
+
 export interface PlayerSpotlightDetail {
   player_name: string;
   team_name: string;
@@ -97,6 +105,9 @@ export interface StructuredGameAnalysis {
   h2h_meetings: H2HMeetingDetail[];
   h2h_series_summary?: string | null;
   metric_comparisons: MetricComparisonRow[];
+  probability_trend: ProbabilityTrendPoint[];
+  /** Last up to 5 finished league games per team (W–D–L) before kickoff when in DB */
+  recent_form_snapshot?: string | null;
   player_spotlights: PlayerSpotlightDetail[];
   data_freshness_note?: string | null;
   /** NFL: Sportradar REG standings snapshot when API key configured */
