@@ -1,13 +1,15 @@
 """
 Games and predictions endpoints
 """
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, desc
 from typing import Optional
-from datetime import datetime, timedelta, timezone
-from zoneinfo import ZoneInfo
+from datetime import datetime, timezone
 from app.database import get_db
+from app.utils.calendar_window import utc_bounds_for_calendar_day
 from app.api.deps import get_current_user, get_current_user_optional, rate_limit_predictions
 from app.schemas.game import GameResponse, GameListResponse, TeamResponse
 from app.schemas.prediction import (
@@ -29,6 +31,7 @@ from app.services.share_image_service import generate_share_image
 from app.config import get_settings
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 def _rich_analysis_from_prediction(prediction: Prediction) -> Optional[RichAnalysisSections]:
@@ -94,25 +97,9 @@ async def get_upcoming_games(
 
     if date:
         try:
-            date_obj = datetime.strptime(date, "%Y-%m-%d").date()
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
-        tz_name = (time_zone or "").strip()
-        if tz_name:
-            try:
-                tz = ZoneInfo(tz_name)
-            except Exception:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Invalid time_zone; use an IANA name (e.g. America/New_York, Europe/London)",
-                )
-            start_local = datetime.combine(date_obj, datetime.min.time(), tzinfo=tz)
-            end_local = start_local + timedelta(days=1)
-            start_utc = start_local.astimezone(timezone.utc)
-            end_utc = end_local.astimezone(timezone.utc)
-        else:
-            start_utc = datetime.combine(date_obj, datetime.min.time(), tzinfo=timezone.utc)
-            end_utc = start_utc + timedelta(days=1)
+            start_utc, end_utc = utc_bounds_for_calendar_day(date, time_zone)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
         query = db.query(Game).filter(
             Game.scheduled_time >= start_utc,
             Game.scheduled_time < end_utc,
@@ -308,13 +295,28 @@ async def get_prediction_explanation(
             f"This prediction has {prediction.confidence_level} confidence. "
             "Factors below summarize how strongly the model leans on each side."
         )
-    rich_analysis = enrich_rich_analysis(
-        db,
-        game,
-        prediction,
-        _rich_analysis_from_prediction(prediction),
-    )
-    structured_analysis = build_structured_game_analysis(db, game)
+    base_rich_analysis = _rich_analysis_from_prediction(prediction)
+    rich_analysis = base_rich_analysis
+    structured_analysis = None
+    try:
+        rich_analysis = enrich_rich_analysis(
+            db,
+            game,
+            prediction,
+            base_rich_analysis,
+        )
+    except Exception:
+        logger.exception(
+            "Failed to enrich rich analysis; falling back to stored narrative",
+            extra={"game_id": game_id, "prediction_id": str(prediction.id)},
+        )
+    try:
+        structured_analysis = build_structured_game_analysis(db, game)
+    except Exception:
+        logger.exception(
+            "Failed to build structured analysis; returning explanation without structured block",
+            extra={"game_id": game_id, "prediction_id": str(prediction.id)},
+        )
     return PredictionExplanationResponse(
         top_features=top_features,
         confidence_explanation=confidence_explanation,
