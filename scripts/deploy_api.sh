@@ -18,17 +18,23 @@ echo "[deploy] Rebuilding and restarting API..."
 docker compose up -d --build api
 
 echo "[deploy] Waiting for container health..."
-for _ in {1..20}; do
-  STATUS="$(docker compose ps --format json api | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[0].get("Health",""))' 2>/dev/null || true)"
-  if [[ "$STATUS" == "healthy" ]]; then
+for _ in {1..30}; do
+  if docker compose ps api | python3 -c 'import sys; s=sys.stdin.read().lower(); raise SystemExit(0 if "healthy" in s or "up" in s else 1)'; then
     break
   fi
-  sleep 3
+  sleep 2
 done
 
 echo "[deploy] API status:"
 docker compose ps api
 
 echo "[deploy] Verifying /health..."
-curl -fsS "http://127.0.0.1:8000/health" >/dev/null
-echo "[deploy] Success."
+for _ in {1..30}; do
+  if curl -fsS "http://127.0.0.1:8000/health" >/dev/null; then
+    echo "[deploy] Success."
+    exit 0
+  fi
+  sleep 2
+done
+echo "[deploy] ERROR: /health failed after waiting."
+exit 1

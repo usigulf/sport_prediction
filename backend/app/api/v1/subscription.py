@@ -53,6 +53,20 @@ def _db_tier_from_checkout_metadata(session: dict) -> str:
     return "premium"
 
 
+def _as_plain_dict(obj) -> dict:
+    """Convert Stripe SDK objects into plain dicts for safe .get() access."""
+    if isinstance(obj, dict):
+        return obj
+    to_dict = getattr(obj, "to_dict_recursive", None)
+    if callable(to_dict):
+        try:
+            out = to_dict()
+            return out if isinstance(out, dict) else {}
+        except Exception:
+            return {}
+    return {}
+
+
 @router.post("/create-checkout")
 async def create_checkout_session(
     body: CreateCheckoutBody,
@@ -120,13 +134,14 @@ async def stripe_webhook(
     except stripe.error.SignatureVerificationError:
         logger.warning("Stripe webhook signature verification failed")
         raise HTTPException(status_code=400, detail="Invalid signature")
-    event_id = event.get("id", "unknown")
-    event_type = event.get("type", "unknown")
+    event_data = _as_plain_dict(event)
+    event_id = event_data.get("id", "unknown")
+    event_type = event_data.get("type", "unknown")
     logger.info("Stripe webhook received", extra={"event_id": event_id, "event_type": event_type})
-    if event["type"] == "checkout.session.completed":
-        session_obj = event["data"]["object"]
+    if event_type == "checkout.session.completed":
+        session_obj = _as_plain_dict((event_data.get("data") or {}).get("object"))
         # Thin webhook payloads may omit fields; fetch full session when needed.
-        sid = session_obj.get("id") if isinstance(session_obj, dict) else None
+        sid = session_obj.get("id")
         if (
             req_settings.stripe_secret_key
             and sid
@@ -136,7 +151,7 @@ async def stripe_webhook(
             )
         ):
             stripe.api_key = req_settings.stripe_secret_key
-            session_obj = stripe.checkout.Session.retrieve(sid)
+            session_obj = _as_plain_dict(stripe.checkout.Session.retrieve(sid))
         user_id = session_obj.get("client_reference_id")
         db_tier = _db_tier_from_checkout_metadata(session_obj)
         if user_id:
