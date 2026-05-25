@@ -61,6 +61,36 @@ def test_normalize_clearsports_epl_flat_payload():
     assert fx["away"]["abbreviation"] == "BOU"
 
 
+def test_normalize_rejects_non_epl_team_ids():
+    raw = {
+        "id": 1,
+        "home_team_abbreviation": "KEV",
+        "away_team_abbreviation": "GAB",
+        "home_team_id": "other_kev",
+        "away_team_id": "other_gab",
+        "time_utc": "2025-08-15T13:00:00Z",
+        "status": "SETTLED",
+        "is_closed": True,
+    }
+    assert normalize_clearsports_game(raw, "epl") is None
+
+
+def test_normalize_past_scheduled_becomes_finished():
+    raw = {
+        "id": 2,
+        "home_team_abbreviation": "LIV",
+        "away_team_abbreviation": "BOU",
+        "home_team_id": "epl_liv",
+        "away_team_id": "epl_bou",
+        "time_utc": "2020-01-01T15:00:00Z",
+        "status": "SCHEDULED",
+        "is_closed": False,
+    }
+    fx = normalize_clearsports_game(raw, "epl")
+    assert fx is not None
+    assert fx["game_status"] == "finished"
+
+
 def test_use_sportradar_when_both_keys():
     s = Settings(clearsports_api_key="k", sportradar_api_key="sr")
     assert use_clearsports_soccer(s) is False

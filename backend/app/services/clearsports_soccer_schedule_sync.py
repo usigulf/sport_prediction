@@ -79,13 +79,40 @@ def _team_competitor(obj: Any) -> dict[str, Any] | None:
     return comp
 
 
+def _abbr_from_clearsports_team_id(team_id: Any, fallback_abbr: Any) -> str | None:
+    """Prefer stable suffix from epl_liv-style ids so LIV/LFC duplicates do not split teams."""
+    if isinstance(team_id, str) and "_" in team_id:
+        suffix = team_id.split("_", 1)[-1].strip().upper()
+        if suffix:
+            return suffix[:10]
+    if isinstance(fallback_abbr, str) and fallback_abbr.strip():
+        return fallback_abbr.strip()[:10]
+    return None
+
+
+def _clearsports_row_allowed(game: dict[str, Any], league_slug: str) -> bool:
+    """Drop mis-tagged rows (e.g. non-English teams) from league-specific feeds."""
+    if league_slug == "epl":
+        for key in ("home_team_id", "away_team_id"):
+            tid = game.get(key)
+            if isinstance(tid, str) and tid.strip() and not tid.strip().lower().startswith("epl_"):
+                return False
+        raw_league = (game.get("league") or "").upper()
+        if raw_league and raw_league not in ("EPL", "SOCCER"):
+            return False
+    return True
+
+
 def _extract_team(game: dict[str, Any], side: str) -> dict[str, Any] | None:
     prefix = "home" if side == "home" else "away"
     abbr = game.get(f"{prefix}_team_abbreviation") or game.get(f"{prefix}TeamAbbreviation")
     tid = game.get(f"{prefix}_team_id") or game.get(f"{prefix}TeamId")
-    if isinstance(abbr, str) and abbr.strip():
-        name = abbr.strip()
-        comp: dict[str, Any] = {"name": name[:255], "abbreviation": name.strip()[:10]}
+    stable_abbr = _abbr_from_clearsports_team_id(tid, abbr)
+    if stable_abbr:
+        name = stable_abbr
+        if isinstance(abbr, str) and len(abbr.strip()) > 3:
+            name = abbr.strip()[:255]
+        comp: dict[str, Any] = {"name": name[:255], "abbreviation": stable_abbr}
         if tid is not None:
             comp["id"] = str(tid)
         return comp
@@ -117,6 +144,8 @@ def _game_external_id(game: dict[str, Any]) -> str | None:
 
 
 def normalize_clearsports_game(game: dict[str, Any], league_slug: str) -> dict[str, Any] | None:
+    if not _clearsports_row_allowed(game, league_slug):
+        return None
     gid = _game_external_id(game)
     if not gid:
         return None
@@ -164,13 +193,18 @@ def normalize_clearsports_game(game: dict[str, Any], league_slug: str) -> dict[s
     elif isinstance(vobj, str) and vobj.strip():
         venue = vobj.strip()[:255]
 
+    game_status = _map_clearsports_status(
+        game.get("status") or game.get("game_status"),
+        is_closed=bool(game.get("is_closed")),
+    )
+    now = datetime.now(timezone.utc)
+    if game_status == "scheduled" and start < now:
+        game_status = "finished"
+
     return {
         "sport_event_id": f"clearsports:{league_slug}:{gid}",
         "scheduled_time": start,
-        "game_status": _map_clearsports_status(
-            game.get("status") or game.get("game_status"),
-            is_closed=bool(game.get("is_closed")),
-        ),
+        "game_status": game_status,
         "home_score": hs,
         "away_score": aws,
         "venue": venue,
