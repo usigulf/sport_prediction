@@ -10,6 +10,7 @@ import {
   Alert,
   Share,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -30,6 +31,16 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { useLiveUpdates } from '../hooks/useLiveUpdates';
 import { theme } from '../constants/theme';
 import { formatLeagueLabel } from '../utils/predictionDisplay';
+import { hasPremiumAccess } from '../utils/subscription';
+import { teamLogoUriCandidates } from '../utils/teamLogoUrl';
+import { TeamCrestImage } from '../components/TeamCrestImage';
+import { useRewardedUnlock } from '../ads/engine/RewardedUnlockContext';
+import { RewardedUnlockCTA } from '../ads/components/RewardedUnlockCTA';
+import { NativeFeedAdCard } from '../ads/components/NativeFeedAdCard';
+import { BannerStrip } from '../ads/components/BannerStrip';
+import { HousePromotionCard } from '../ads/components/HousePromotionCard';
+import { useGameExitInterstitial } from '../ads/hooks/useGameExitInterstitial';
+import { useAdEngine } from '../ads/engine/AdEngineContext';
 
 interface FavoritesResponse {
   teams?: { id: string; name: string }[];
@@ -48,6 +59,11 @@ export interface PlayerPropItem {
 export const GameDetailScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const adEngine = useAdEngine();
+  const rewardedUnlock = useRewardedUnlock();
+  const insets = useSafeAreaInsets();
+
+  useGameExitInterstitial(navigation);
   const dispatch = useAppDispatch();
   const { gameId } = route.params as { gameId: string };
 
@@ -64,9 +80,9 @@ export const GameDetailScreen: React.FC = () => {
   const [playerPropsLoading, setPlayerPropsLoading] = useState(false);
   const [playerPropsError, setPlayerPropsError] = useState<string | null>(null);
 
-  const t = (subscriptionTier || 'free').toLowerCase();
-  const isPremium =
-    t === 'premium' || t === 'premium_plus' || t === 'trialing' || t === 'pro';
+  const isPremium = hasPremiumAccess(subscriptionTier);
+  const unlockedByAd = rewardedUnlock.isUnlockedForGame(gameId);
+  const advancedLockedFree = !isPremium && !unlockedByAd;
   const { lastUpdate, connected, error: liveError } = useLiveUpdates(gameId, { enabled: isPremium });
 
   useEffect(() => {
@@ -106,7 +122,7 @@ export const GameDetailScreen: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (subscriptionTier !== 'premium' && subscriptionTier !== 'premium_plus') return;
+    if (!hasPremiumAccess(subscriptionTier)) return;
     let cancelled = false;
     setPlayerPropsError(null);
     setPlayerPropsLoading(true);
@@ -142,6 +158,8 @@ export const GameDetailScreen: React.FC = () => {
   };
 
   const onRefresh = async () => {
+    await rewardedUnlock.invalidateForGame(gameId);
+    void adEngine.bumpPredictionEngagement();
     setRefreshing(true);
     try {
       await loadGameData();
@@ -174,18 +192,18 @@ export const GameDetailScreen: React.FC = () => {
     try {
       const res = await apiService.sharePick(gameId);
       if (res.image_base64 && (await Sharing.isAvailableAsync())) {
-        const uri = `${FileSystem.cacheDirectory}octobet-share-${gameId}.png`;
+        const uri = `${FileSystem.cacheDirectory}octobetiq-share-${gameId}.png`;
         await FileSystem.writeAsStringAsync(uri, res.image_base64, {
           encoding: FileSystem.EncodingType.Base64,
         });
         await Sharing.shareAsync(uri, {
           mimeType: 'image/png',
-          dialogTitle: 'Share Octobet pick',
+          dialogTitle: 'Share octobetiQ pick',
         });
       } else {
         await Share.share({
           message: res.message,
-          title: 'Octobet pick',
+          title: 'octobetiQ pick',
         });
       }
     } catch (e) {
@@ -212,11 +230,15 @@ export const GameDetailScreen: React.FC = () => {
 
   const homeName = currentGame.home_team?.name ?? 'Home';
   const awayName = currentGame.away_team?.name ?? 'Away';
+  const homeCrestCandidates = teamLogoUriCandidates(currentGame.home_team, currentGame.league);
+  const awayCrestCandidates = teamLogoUriCandidates(currentGame.away_team, currentGame.league);
   const statusUpper = currentGame.status.toUpperCase();
 
   return (
+    <View style={styles.screenRoot}>
     <ScrollView
       style={styles.container}
+      contentContainerStyle={{ paddingBottom: 72 + insets.bottom }}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
@@ -248,11 +270,16 @@ export const GameDetailScreen: React.FC = () => {
         </View>
       </View>
 
-      {/* Teams / participants */}
+      {/* Teams / participants — horizontal matchup */}
       <View style={styles.teamsSection}>
-        <View style={styles.teamContainer}>
+        <View style={styles.teamColumn}>
           <Text style={styles.teamRole}>Home</Text>
-          <Text style={styles.teamName}>{homeName}</Text>
+          {homeCrestCandidates.length > 0 ? (
+            <TeamCrestImage candidates={homeCrestCandidates} style={styles.teamLogo} contentFit="contain" />
+          ) : null}
+          <Text style={styles.teamName} numberOfLines={2}>
+            {homeName}
+          </Text>
           {currentGame.status === 'live' && (
             <Text style={styles.score}>{currentGame.home_score}</Text>
           )}
@@ -277,11 +304,18 @@ export const GameDetailScreen: React.FC = () => {
           )}
         </View>
 
-        <Text style={styles.vs}>VS</Text>
+        <View style={styles.vsDivider}>
+          <Text style={styles.vs}>VS</Text>
+        </View>
 
-        <View style={styles.teamContainer}>
+        <View style={styles.teamColumn}>
           <Text style={styles.teamRole}>Away</Text>
-          <Text style={styles.teamName}>{awayName}</Text>
+          {awayCrestCandidates.length > 0 ? (
+            <TeamCrestImage candidates={awayCrestCandidates} style={styles.teamLogo} contentFit="contain" />
+          ) : null}
+          <Text style={styles.teamName} numberOfLines={2}>
+            {awayName}
+          </Text>
           {currentGame.status === 'live' && (
             <Text style={styles.score}>{currentGame.away_score}</Text>
           )}
@@ -329,8 +363,10 @@ export const GameDetailScreen: React.FC = () => {
               <PredictionCard
                 prediction={currentPrediction}
                 embedded
+                league={currentGame.league}
                 homeTeamName={homeName}
                 awayTeamName={awayName}
+                advancedInsightsLocked={advancedLockedFree}
               />
               <View style={styles.whyButton}>
                 <Text style={styles.whyButtonText}>
@@ -344,7 +380,23 @@ export const GameDetailScreen: React.FC = () => {
             <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
               <Text style={styles.shareButtonText}>Share this pick</Text>
             </TouchableOpacity>
-            {showExplanation && (
+            <NativeFeedAdCard surface="game_detail" screenLabel="GameDetailNative" />
+            {showExplanation && advancedLockedFree ? (
+              <RewardedUnlockCTA
+                gameId={gameId}
+                onUnlock={() => {
+                  /* state from context; optional local refresh */
+                }}
+                onSubscribePress={() =>
+                  navigation.navigate('Paywall', {
+                    emphasizeTier: 'premium',
+                    contextMessage:
+                      'Premium unlocks full analysis without ads. Rewarded unlock is optional.',
+                  })
+                }
+              />
+            ) : null}
+            {showExplanation && !advancedLockedFree ? (
               <ExplanationView
                 gameId={gameId}
                 predictionId={currentPrediction.id}
@@ -354,8 +406,11 @@ export const GameDetailScreen: React.FC = () => {
                 analysisRefreshToken={
                   isPremium ? lastUpdate?.prediction_updated_at ?? null : null
                 }
+                league={currentGame.league}
+                homeWinProbability={currentPrediction.home_win_probability}
+                awayWinProbability={currentPrediction.away_win_probability}
               />
-            )}
+            ) : null}
           </>
         ) : (
           <View style={styles.predictionPlaceholder}>
@@ -398,7 +453,7 @@ export const GameDetailScreen: React.FC = () => {
       {/* Player Props */}
       <View style={styles.infoSection}>
         <Text style={styles.sectionTitle}>Player props</Text>
-        {(subscriptionTier === 'premium' || subscriptionTier === 'premium_plus') ? (
+        {isPremium ? (
           <>
             {playerPropsLoading ? (
               <ActivityIndicator size="small" color={theme.colors.accent} style={styles.playerPropsLoader} />
@@ -425,9 +480,15 @@ export const GameDetailScreen: React.FC = () => {
             <Text style={styles.mutedText}>Upgrade to Premium to view player prop predictions.</Text>
             <TouchableOpacity
               style={styles.upgradeButton}
-              onPress={() => navigation.navigate('Paywall')}
+              onPress={() =>
+                navigation.navigate('Paywall', {
+                  emphasizeTier: 'premium',
+                  contextMessage:
+                    'Premium unlocks unlimited picks, full analysis, live updates, and player props.',
+                })
+              }
             >
-              <Text style={styles.upgradeButtonText}>View subscription</Text>
+              <Text style={styles.upgradeButtonText}>View Premium</Text>
             </TouchableOpacity>
           </>
         )}
@@ -449,11 +510,48 @@ export const GameDetailScreen: React.FC = () => {
           </View>
         )}
       </View>
+
+      {currentGame.status === 'finished' ? (
+        <View style={styles.resultsSponsor}>
+          <Text style={styles.resultsSponsorLabel}>After the match</Text>
+          <HousePromotionCard
+            surface="results"
+            title="See what the model learned"
+            subtitle="Review accuracy and explore the next slate while demand partners support free insights."
+          />
+        </View>
+      ) : null}
     </ScrollView>
+    <View style={[styles.bannerDock, { paddingBottom: insets.bottom }]}>
+      <BannerStrip screen="GameDetail" />
+    </View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  screenRoot: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  bannerDock: {
+    backgroundColor: theme.colors.backgroundElevated,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.colors.borderSubtle,
+  },
+  resultsSponsor: {
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
+  },
+  resultsSponsorLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.colors.textMuted,
+    marginHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.xs,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
@@ -528,15 +626,24 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
   },
   teamsSection: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    justifyContent: 'space-between',
+    gap: theme.spacing.sm,
     backgroundColor: theme.colors.backgroundElevated,
     padding: theme.spacing.lg,
-    alignItems: 'center',
     marginBottom: theme.spacing.md,
   },
-  teamContainer: {
+  teamColumn: {
+    flex: 1,
+    minWidth: 0,
     alignItems: 'center',
-    marginVertical: theme.spacing.sm,
-    width: '100%',
+  },
+  vsDivider: {
+    width: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'stretch',
   },
   teamRole: {
     fontSize: 11,
@@ -545,8 +652,13 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: 4,
   },
+  teamLogo: {
+    width: 80,
+    height: 80,
+    marginBottom: theme.spacing.sm,
+  },
   teamName: {
-    fontSize: 22,
+    fontSize: 17,
     fontWeight: '800',
     color: theme.colors.text,
     marginBottom: theme.spacing.sm,
@@ -558,18 +670,18 @@ const styles = StyleSheet.create({
     color: theme.colors.accent,
   },
   vs: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
     color: theme.colors.textMuted,
-    marginVertical: theme.spacing.sm,
+    letterSpacing: 1,
   },
   favButtonGreen: {
     marginTop: theme.spacing.sm,
     paddingVertical: 10,
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.spacing.sm,
     backgroundColor: theme.colors.accent,
     borderRadius: theme.radii.sm,
-    minWidth: 200,
+    alignSelf: 'stretch',
     alignItems: 'center',
   },
   favButtonGreenDisabled: {

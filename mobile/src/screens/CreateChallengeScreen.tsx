@@ -11,13 +11,14 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { apiService } from '../services/api';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { theme } from '../constants/theme';
+import { hasProAccess } from '../utils/subscription';
 
 const MAX_GAMES = 10;
 
@@ -29,6 +30,7 @@ export const CreateChallengeScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [subscriptionTier, setSubscriptionTier] = useState<string | null>(null);
 
   const loadGames = useCallback(async () => {
     setLoading(true);
@@ -48,6 +50,21 @@ export const CreateChallengeScreen: React.FC = () => {
   useEffect(() => {
     loadGames();
   }, [loadGames]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const u = await apiService.getCurrentUser() as { subscription_tier?: string };
+        if (!cancelled) setSubscriptionTier(u?.subscription_tier ?? 'free');
+      } catch {
+        if (!cancelled) setSubscriptionTier('free');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const toggle = (gameId: string) => {
     setSelected((prev) => {
@@ -74,6 +91,39 @@ export const CreateChallengeScreen: React.FC = () => {
       setSubmitting(false);
     }
   };
+
+  if (subscriptionTier === null) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color={theme.colors.accent} />
+      </View>
+    );
+  }
+
+  if (!hasProAccess(subscriptionTier)) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.proGate}>
+          <Ionicons name="trophy-outline" size={56} color={theme.colors.accent} />
+          <Text style={styles.proGateTitle}>Create challenge — Pro only</Text>
+          <Text style={styles.proGateText}>
+            Challenges are included with Pro. Upgrade to pick multiple games and track model performance.
+          </Text>
+          <TouchableOpacity
+            style={styles.proGateButton}
+            onPress={() =>
+              navigation.navigate('Paywall', {
+                emphasizeTier: 'premium_plus',
+                contextMessage: 'Pro unlocks Challenges and everything in Premium.',
+              })
+            }
+          >
+            <Text style={styles.proGateButtonText}>View Pro</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   const formatTime = (dateStr: string) => {
     try {
@@ -174,6 +224,39 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  proGate: {
+    flex: 1,
+    padding: theme.spacing.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  proGateTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginTop: theme.spacing.md,
+    textAlign: 'center',
+  },
+  proGateText: {
+    fontSize: 15,
+    color: theme.colors.textMuted,
+    textAlign: 'center',
+    marginTop: theme.spacing.sm,
+    lineHeight: 22,
+    paddingHorizontal: theme.spacing.md,
+  },
+  proGateButton: {
+    marginTop: theme.spacing.xl,
+    backgroundColor: theme.colors.accent,
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.radii.md,
+  },
+  proGateButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.background,
   },
   empty: {
     color: theme.colors.textMuted,

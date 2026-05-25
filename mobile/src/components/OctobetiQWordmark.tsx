@@ -1,9 +1,8 @@
 /**
- * Reusable Octobet wordmark: "O" in accent green + "ctobet" in text color.
- * Use for header, login, profile, and any branded title.
+ * octobetiQ wordmark: leading "o" and trailing "Q" in accent; "ctobeti" in text color.
  */
 import React from 'react';
-import { Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import { Text, StyleSheet, TextStyle } from 'react-native';
 import { theme } from '../constants/theme';
 
 export type WordmarkVariant = 'header' | 'title' | 'small';
@@ -36,16 +35,18 @@ const VARIANT_STYLES: Record<WordmarkVariant, { wordmark: TextStyle }> = {
   },
 };
 
-export interface OctobetWordmarkProps {
+export interface OctobetiQWordmarkProps {
   variant?: WordmarkVariant;
   style?: TextStyle;
 }
 
-export function OctobetWordmark({ variant = 'header', style }: OctobetWordmarkProps) {
+export function OctobetiQWordmark({ variant = 'header', style }: OctobetiQWordmarkProps) {
   const base = VARIANT_STYLES[variant].wordmark;
   return (
     <Text style={[base, style]}>
-      <Text style={styles.accent}>O</Text>ctobet
+      <Text style={styles.accent}>o</Text>
+      ctobeti
+      <Text style={styles.accent}>Q</Text>
     </Text>
   );
 }

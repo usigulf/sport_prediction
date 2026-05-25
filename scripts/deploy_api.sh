@@ -14,8 +14,8 @@ cd "$ROOT_DIR"
 echo "[deploy] Pulling latest code..."
 git pull
 
-echo "[deploy] Rebuilding and restarting API..."
-docker compose up -d --build api
+echo "[deploy] Rebuilding and restarting API (production overlay)..."
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build api
 
 echo "[deploy] Waiting for container to report healthy in docker compose ps..."
 for _ in {1..45}; do

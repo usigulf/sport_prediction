@@ -11,28 +11,44 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { apiService, setAuthToken } from '../services/api';
-import { clearStoredAuth } from '../utils/authStorage';
+import { getStoredAuth, clearStoredAuth } from '../utils/authStorage';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
-import { logout } from '../store/slices/authSlice';
+import { logout, fetchUserProfile } from '../store/slices/authSlice';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { theme } from '../constants/theme';
-import { OctobetWordmark } from '../components/OctobetWordmark';
+import { OctobetiQWordmark } from '../components/OctobetiQWordmark';
 
 type ProfileScreenNavigationProp = StackNavigationProp<RootStackParamList>;
+
+function subscriptionTierLabel(tier: string | undefined): string {
+  switch (tier) {
+    case 'premium_plus':
+    case 'pro':
+      return 'Pro';
+    case 'premium':
+      return 'Premium';
+    default:
+      return 'Free';
+  }
+}
+
+function subscriptionMenuSubtext(tier: string | undefined): string {
+  if (!tier || tier === 'free') return 'Upgrade to Premium';
+  if (tier === 'premium') return 'Upgrade to Pro';
+  return 'Manage';
+}
 
 export const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
-  const [userInfo, setUserInfo] = useState<any>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadUserInfo = async () => {
     setLoadError(null);
     try {
-      const info = await apiService.getCurrentUser();
-      setUserInfo(info);
+      await dispatch(fetchUserProfile()).unwrap();
     } catch (error) {
       setLoadError(getUserFriendlyMessage(error));
     }
@@ -42,6 +58,8 @@ export const ProfileScreen: React.FC = () => {
     loadUserInfo();
   }, []);
 
+  const tier = user?.subscriptionTier ?? 'free';
+
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
@@ -49,10 +67,15 @@ export const ProfileScreen: React.FC = () => {
         text: 'Logout',
         style: 'destructive',
         onPress: async () => {
+          try {
+            const stored = await getStoredAuth();
+            await apiService.logout(stored?.refreshToken, stored?.accessToken);
+          } catch {
+            // still clear local session
+          }
           await clearStoredAuth();
           setAuthToken(null);
           dispatch(logout());
-          // Navigator switches to unauthenticated stack (Landing) when isAuthenticated becomes false
         },
       },
     ]);
@@ -86,6 +109,7 @@ export const ProfileScreen: React.FC = () => {
   const getTierColor = (tier: string) => {
     switch (tier) {
       case 'premium_plus':
+      case 'pro':
         return theme.colors.secondary;
       case 'premium':
         return theme.colors.accent;
@@ -105,21 +129,21 @@ export const ProfileScreen: React.FC = () => {
         </View>
       ) : null}
       <View style={styles.header}>
-        <OctobetWordmark variant="small" style={styles.brandWordmark} />
+        <OctobetiQWordmark variant="small" style={styles.brandWordmark} />
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>
-            {userInfo?.email?.[0]?.toUpperCase() || 'U'}
+            {user?.email?.[0]?.toUpperCase() || 'U'}
           </Text>
         </View>
-        <Text style={styles.email}>{userInfo?.email || user?.email}</Text>
+        <Text style={styles.email}>{user?.email}</Text>
         <View
           style={[
             styles.tierBadge,
-            { backgroundColor: getTierColor(userInfo?.subscription_tier || 'free') },
+            { backgroundColor: getTierColor(tier) },
           ]}
         >
           <Text style={styles.tierText}>
-            {userInfo?.subscription_tier?.toUpperCase() || 'FREE'}
+            {subscriptionTierLabel(tier).toUpperCase()}
           </Text>
         </View>
       </View>
@@ -128,11 +152,20 @@ export const ProfileScreen: React.FC = () => {
         <Text style={styles.sectionTitle}>Account</Text>
         <TouchableOpacity
           style={styles.menuItem}
-          onPress={() => navigation.navigate('Paywall')}
+          onPress={() => {
+            const t = tier;
+            if (t === 'free') {
+              navigation.navigate('Paywall', { emphasizeTier: 'premium' });
+            } else if (t === 'premium') {
+              navigation.navigate('Paywall', { emphasizeTier: 'premium_plus' });
+            } else {
+              navigation.navigate('Paywall');
+            }
+          }}
         >
           <Text style={styles.menuText}>Subscription</Text>
           <Text style={styles.menuSubtext}>
-            {userInfo?.subscription_tier === 'free' ? 'Upgrade to Premium' : 'Manage'}
+            {subscriptionMenuSubtext(tier)}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -180,7 +213,7 @@ export const ProfileScreen: React.FC = () => {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.menuItem}
-          onPress={() => Linking.openURL('mailto:support@sportsprediction.com?subject=Sports%20Prediction%20App').catch(() => {})}
+          onPress={() => Linking.openURL('mailto:support@sportsprediction.com?subject=octobetiQ%20support').catch(() => {})}
         >
           <Text style={styles.menuText}>Contact Us</Text>
         </TouchableOpacity>

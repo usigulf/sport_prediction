@@ -1,14 +1,28 @@
 """
 User schemas
 """
+import re
 from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional, Any
 from datetime import datetime
 
 
+_PASSWORD_MIN_LEN = 8
+_PASSWORD_PATTERN = re.compile(r"^(?=.*[A-Za-z])(?=.*\d).+$")
+
+
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
+
+    @field_validator("password")
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        if len(v) < _PASSWORD_MIN_LEN:
+            raise ValueError("Password must be at least 8 characters")
+        if not _PASSWORD_PATTERN.match(v):
+            raise ValueError("Password must include at least one letter and one number")
+        return v
 
 
 class UserResponse(BaseModel):
@@ -36,3 +50,8 @@ class Token(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
+
+
+class LogoutRequest(BaseModel):
+    refresh_token: Optional[str] = None
+    access_token: Optional[str] = None

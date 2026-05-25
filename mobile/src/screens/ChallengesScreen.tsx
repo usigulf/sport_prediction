@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { apiService } from '../services/api';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { theme } from '../constants/theme';
+import { hasProAccess } from '../utils/subscription';
 
 type ChallengeItem = {
   id: string;
@@ -36,13 +37,21 @@ export const ChallengesScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [challenges, setChallenges] = useState<ChallengeItem[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [subscriptionTier, setSubscriptionTier] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
       setError(null);
+      try {
+        const u = await apiService.getCurrentUser() as { subscription_tier?: string };
+        setSubscriptionTier(u?.subscription_tier ?? 'free');
+      } catch {
+        setSubscriptionTier('free');
+      }
       const res = await apiService.getChallenges({ limit: 20 });
       setChallenges(res.challenges ?? []);
     } catch (e) {
+      setSubscriptionTier((t) => t ?? 'free');
       setChallenges([]);
       setError((e as Error)?.message ?? 'Failed to load challenges');
     } finally {
@@ -65,6 +74,39 @@ export const ChallengesScreen: React.FC = () => {
     setRefreshing(true);
     load();
   };
+
+  if (subscriptionTier === null) {
+    return (
+      <View style={[styles.container, styles.centered]} accessibilityLabel="Loading challenges">
+        <ActivityIndicator size="large" color={theme.colors.accent} />
+      </View>
+    );
+  }
+
+  if (!hasProAccess(subscriptionTier)) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.proGate}>
+          <Ionicons name="trophy-outline" size={56} color={theme.colors.accent} />
+          <Text style={styles.proGateTitle}>Challenges are a Pro feature</Text>
+          <Text style={styles.proGateText}>
+            Upgrade to Pro to create multi-game challenges and track how the model performs on your picks.
+          </Text>
+          <TouchableOpacity
+            style={styles.proGateButton}
+            onPress={() =>
+              navigation.navigate('Paywall', {
+                emphasizeTier: 'premium_plus',
+                contextMessage: 'Pro includes Challenges, leaderboards, and everything in Premium.',
+              })
+            }
+          >
+            <Text style={styles.proGateButtonText}>View Pro</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   const formatDate = (iso: string | null) => {
     if (!iso) return '—';
@@ -205,8 +247,43 @@ const styles = StyleSheet.create({
     borderRadius: theme.radii.md,
   },
   centered: {
-    paddingVertical: 48,
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: 48,
+  },
+  proGate: {
+    flex: 1,
+    padding: theme.spacing.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  proGateTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginTop: theme.spacing.md,
+    textAlign: 'center',
+  },
+  proGateText: {
+    fontSize: 15,
+    color: theme.colors.textMuted,
+    textAlign: 'center',
+    marginTop: theme.spacing.sm,
+    lineHeight: 22,
+    paddingHorizontal: theme.spacing.md,
+  },
+  proGateButton: {
+    marginTop: theme.spacing.xl,
+    backgroundColor: theme.colors.accent,
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.radii.md,
+  },
+  proGateButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.background,
   },
   empty: {
     alignItems: 'center',

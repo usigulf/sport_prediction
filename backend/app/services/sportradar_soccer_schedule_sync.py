@@ -22,6 +22,7 @@ from app.services.sportradar_soccer_service import (
     fetch_season_schedule_summaries,
     soccer_season_id_for_league,
 )
+from app.utils.team_logo_urls import default_team_logo_url
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +128,24 @@ def _team_display_name(comp: dict[str, Any]) -> str:
     return "Unknown"
 
 
+def _logo_from_competitor(comp: dict[str, Any]) -> str | None:
+    """Use logo URL from Sportradar competitor payload when present."""
+    for key in ("logo", "avatar", "image", "thumbnail"):
+        v = comp.get(key)
+        if isinstance(v, str) and v.startswith(("http://", "https://")):
+            return v[:500]
+    return None
+
+
+def _apply_team_logo(team: Team, comp: dict[str, Any], app_league: str) -> None:
+    url = _logo_from_competitor(comp) or default_team_logo_url(app_league, team.abbreviation)
+    if not url:
+        return
+    old = (team.logo_url or "").strip()
+    if not old or old.startswith("https://example.com"):
+        team.logo_url = url
+
+
 def get_or_create_team(db: Session, app_league: str, comp: dict[str, Any]) -> Team:
     abbr = _abbr(comp)
     name = _team_display_name(comp)
@@ -134,14 +153,17 @@ def get_or_create_team(db: Session, app_league: str, comp: dict[str, Any]) -> Te
     if abbr:
         existing = q.filter(Team.abbreviation == abbr).first()
         if existing:
+            _apply_team_logo(existing, comp, app_league)
             return existing
     else:
         existing = q.filter(Team.name == name).first()
         if existing:
+            _apply_team_logo(existing, comp, app_league)
             return existing
     team = Team(name=name, league=app_league, abbreviation=abbr)
     db.add(team)
     db.flush()
+    _apply_team_logo(team, comp, app_league)
     return team
 
 

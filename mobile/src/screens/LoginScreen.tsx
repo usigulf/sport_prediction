@@ -16,12 +16,13 @@ import { apiService, setAuthToken, checkBackendHealth } from '../services/api';
 import { setStoredAuth } from '../utils/authStorage';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useAppDispatch } from '../store/hooks';
-import { setUser } from '../store/slices/authSlice';
+import { setUser, fetchUserProfile } from '../store/slices/authSlice';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { registerPushTokenIfPossible } from '../utils/pushNotifications';
 import { getPushNotificationsEnabled } from '../utils/settingsStorage';
 import { theme } from '../constants/theme';
-import { OctobetWordmark } from '../components/OctobetWordmark';
+import { OctobetiQWordmark } from '../components/OctobetiQWordmark';
+import { AuthTrustLinks } from '../components/AuthTrustLinks';
 
 type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -57,6 +58,7 @@ export const LoginScreen: React.FC = () => {
         refreshToken: response.refresh_token,
         email,
       });
+      await dispatch(fetchUserProfile()).unwrap().catch(() => {});
 
       const pushEnabled = await getPushNotificationsEnabled();
       if (pushEnabled) registerPushTokenIfPossible();
@@ -78,7 +80,7 @@ export const LoginScreen: React.FC = () => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
-        <OctobetWordmark variant="title" style={styles.title} />
+        <OctobetiQWordmark variant="title" style={styles.title} />
         <Text style={styles.subtitle}>AI-Powered Predictions</Text>
 
         {backendStatus && (
@@ -139,6 +141,8 @@ export const LoginScreen: React.FC = () => {
               Don't have an account? <Text style={styles.linkTextBold}>Sign Up</Text>
             </Text>
           </TouchableOpacity>
+
+          <AuthTrustLinks />
         </View>
       </View>
     </KeyboardAvoidingView>

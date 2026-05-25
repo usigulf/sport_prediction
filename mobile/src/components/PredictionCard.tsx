@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Prediction } from '../types';
 import { theme } from '../constants/theme';
+import { isSoccerLeague } from '../constants/leagues';
 import {
   impliedDrawProbability,
+  impliedDrawForSoccer,
   normalizeThreeWay,
 } from '../utils/predictionDisplay';
 
@@ -27,8 +29,12 @@ interface PredictionCardProps {
   onPress?: () => void;
   homeTeamName?: string;
   awayTeamName?: string;
+  /** Backend league id (e.g. premier_league) — soccer uses projected-goals label + one decimal. */
+  league?: string;
   /** Tighter margins when nested inside game detail tap area */
   embedded?: boolean;
+  /** Hide confidence % , pick strength stars, projections & model quality until Premium / rewarded unlock */
+  advancedInsightsLocked?: boolean;
 }
 
 function confidenceBadgeStyle(level: string) {
@@ -62,11 +68,16 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
   onPress,
   homeTeamName = 'Home',
   awayTeamName = 'Away',
+  league,
   embedded = false,
+  advancedInsightsLocked = false,
 }) => {
   const { home_win_probability, away_win_probability, confidence_level } = prediction;
   const pickStrength = confidenceToPickStrength(confidence_level);
-  const rawDraw = impliedDrawProbability(home_win_probability, away_win_probability);
+  const soccer = isSoccerLeague(league);
+  const rawDraw = soccer
+    ? impliedDrawForSoccer(home_win_probability, away_win_probability)
+    : impliedDrawProbability(home_win_probability, away_win_probability);
   const { home, away, draw } = normalizeThreeWay(
     home_win_probability,
     away_win_probability,
@@ -78,7 +89,7 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
     const h = home_win_probability;
     const a = away_win_probability;
     const d = rawDraw;
-    if (d >= 0.005) {
+    if (soccer || d >= 0.005) {
       const { home: nh, away: na, draw: nd } = normalizeThreeWay(h, a, d);
       if (nh >= na && nh >= nd) return `${homeTeamName} win`;
       if (na >= nh && na >= nd) return `${awayTeamName} win`;
@@ -86,33 +97,56 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
     }
     return h >= a ? `${homeTeamName} win` : `${awayTeamName} win`;
   })();
-
+  // One decimal: soccer reads as expected-goals style; other sports keep the same precision.
   const expectedLine =
     prediction.expected_home_score != null && prediction.expected_away_score != null
       ? `${prediction.expected_home_score.toFixed(1)} – ${prediction.expected_away_score.toFixed(1)}`
       : null;
+  const expectedScoreLabel = soccer ? 'Projected goals' : 'Expected score';
+  const qualityLabel = prediction.data_quality_label
+    ? `Data quality: ${prediction.data_quality_label.toUpperCase()}`
+    : null;
 
   const content = (
     <>
       <View style={styles.header}>
-        <Text style={styles.title}>Prediction</Text>
+        <View style={styles.headerTitleCol}>
+          <Text style={styles.title}>Prediction</Text>
+          {soccer ? <Text style={styles.oneX2Hint}>1X2 — model probabilities (home · draw · away)</Text> : null}
+        </View>
         <View style={styles.headerRight}>
-          <View style={[styles.confidenceBadge, { backgroundColor: badge.bg }]}>
-            <Text style={[styles.confidenceText, { color: badge.fg }]}>
-              {confidenceLabel(confidence_level)}
+          <View
+            style={[
+              styles.confidenceBadge,
+              advancedInsightsLocked
+                ? { backgroundColor: theme.colors.borderSubtle }
+                : { backgroundColor: badge.bg },
+            ]}
+          >
+            <Text
+              style={[
+                styles.confidenceText,
+                advancedInsightsLocked
+                  ? { color: theme.colors.textMuted }
+                  : { color: badge.fg },
+              ]}
+            >
+              {advancedInsightsLocked ? 'Unlock for confidence' : confidenceLabel(confidence_level)}
             </Text>
           </View>
-          <View style={styles.starRow}>
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Ionicons
-                key={i}
-                name={i <= pickStrength ? 'star' : 'star-outline'}
-                size={14}
-                color={i <= pickStrength ? theme.colors.accent : theme.colors.textMuted}
-                style={styles.star}
-              />
-            ))}
-          </View>
+          {!advancedInsightsLocked ? (
+            <View style={styles.starRow}>
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Ionicons
+                  key={i}
+                  name={i <= pickStrength ? 'star' : 'star-outline'}
+                  size={14}
+                  color={i <= pickStrength ? theme.colors.accent : theme.colors.textMuted}
+                  style={styles.star}
+                />
+              ))}
+            </View>
+          ) : null}
         </View>
       </View>
 
@@ -130,12 +164,14 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
               ]}
             />
           </View>
-          <Text style={styles.probabilityText}>{(home * 100).toFixed(1)}%</Text>
+          <Text style={styles.probabilityText}>
+            {advancedInsightsLocked ? '—' : `${(home * 100).toFixed(1)}%`}
+          </Text>
         </View>
 
-        {rawDraw >= 0.005 ? (
+        {soccer || rawDraw >= 0.005 ? (
           <View style={styles.probabilityItem}>
-            <Text style={styles.teamLabel}>Draw</Text>
+            <Text style={styles.teamLabel}>{soccer ? 'Draw (X)' : 'Draw'}</Text>
             <View style={styles.probabilityBar}>
               <View
                 style={[
@@ -147,7 +183,9 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
                 ]}
               />
             </View>
-            <Text style={styles.probabilityText}>{(draw * 100).toFixed(1)}%</Text>
+            <Text style={styles.probabilityText}>
+              {advancedInsightsLocked ? '—' : `${(draw * 100).toFixed(1)}%`}
+            </Text>
           </View>
         ) : null}
 
@@ -164,13 +202,15 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
               ]}
             />
           </View>
-          <Text style={styles.probabilityText}>{(away * 100).toFixed(1)}%</Text>
+          <Text style={styles.probabilityText}>
+            {advancedInsightsLocked ? '—' : `${(away * 100).toFixed(1)}%`}
+          </Text>
         </View>
       </View>
 
-      {expectedLine ? (
+      {expectedLine && !advancedInsightsLocked ? (
         <View style={styles.scorePrediction}>
-          <Text style={styles.scoreLabel}>Expected score</Text>
+          <Text style={styles.scoreLabel}>{expectedScoreLabel}</Text>
           <Text style={styles.scoreText}>{expectedLine}</Text>
         </View>
       ) : null}
@@ -179,6 +219,9 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
         <Text style={styles.mostLikelyLabel}>Most likely result</Text>
         <Text style={styles.mostLikelyValue}>{mostLikelyLabel}</Text>
       </View>
+      {qualityLabel && !advancedInsightsLocked ? (
+        <Text style={styles.qualityMeta}>{qualityLabel}</Text>
+      ) : null}
     </>
   );
 
@@ -217,13 +260,23 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: theme.spacing.md,
+  },
+  headerTitleCol: {
+    flex: 1,
+    marginRight: theme.spacing.sm,
   },
   title: {
     fontSize: 18,
     fontWeight: 'bold',
     color: theme.colors.text,
+  },
+  oneX2Hint: {
+    fontSize: 11,
+    color: theme.colors.textMuted,
+    marginTop: 2,
+    maxWidth: 220,
   },
   headerRight: {
     flexDirection: 'row',
@@ -310,5 +363,10 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     color: theme.colors.accent,
+  },
+  qualityMeta: {
+    fontSize: 11,
+    color: theme.colors.textMuted,
+    marginTop: theme.spacing.xs,
   },
 });

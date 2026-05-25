@@ -1,7 +1,7 @@
 /**
  * Landing screen: Hero + Today's Picks Teaser + Core Features + Pricing + Sticky CTA.
  */
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { theme } from '../constants/theme';
+import { AuthTrustLinks } from '../components/AuthTrustLinks';
+import {
+  LANDING_FEATURE_PREDICTIONS_DESC,
+  LANDING_HERO_SUBHEADLINE,
+  PRICING_FREE_LEAGUES_LINE,
+} from '../constants/leagues';
+import { apiService } from '../services/api';
 
 type LandingScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -28,22 +35,60 @@ const PICK_CARD_WIDTH = 300;
 
 const FALLBACK_BG = 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1200&q=80';
 
-const TEASER_PICKS = [
-  { match: 'Lakers -4.5 vs Celtics', confidence: 68, reason: 'Strong home defense trend', locked: false },
-  { match: 'Chiefs -3 vs Bills', confidence: 72, reason: 'QB matchup edge', locked: true },
-  { match: 'Man City vs Arsenal', confidence: 61, reason: 'Form & xG trend', locked: false },
-  { match: 'Bucks -2.5 vs Suns', confidence: 65, reason: 'Rest advantage', locked: true },
+const FALLBACK_TEASER_PICKS = [
+  { match: 'Lakers vs Celtics', confidence: 68, reason: 'Matchup & pace inputs', locked: false },
+  { match: 'Chiefs vs Bills', confidence: 72, reason: 'Strength vs strength', locked: true },
+  { match: 'Man City vs Arsenal', confidence: 61, reason: 'Form & table context', locked: false },
+  { match: 'Real Madrid vs Barcelona', confidence: 65, reason: 'Rivalry form snapshot', locked: true },
 ];
 
 const FEATURES = [
-  { icon: 'analytics-outline' as const, title: 'AI Predictions', desc: 'ML-powered match outcomes & prop forecasts' },
-  { icon: 'person-outline' as const, title: 'Player Props', desc: 'Daily projections, trends & stats' },
-  { icon: 'ribbon-outline' as const, title: 'Expert Picks', desc: 'Follow verified handicappers with track records' },
-  { icon: 'notifications-outline' as const, title: 'Live Alerts', desc: 'Push notifications for top-confidence plays' },
+  {
+    icon: 'analytics-outline' as const,
+    title: 'AI predictions',
+    desc: LANDING_FEATURE_PREDICTIONS_DESC,
+  },
+  {
+    icon: 'person-outline' as const,
+    title: 'Deep context',
+    desc: 'Standings, form, and freshness notes where data is licensed and synced.',
+  },
+  {
+    icon: 'ribbon-outline' as const,
+    title: 'Challenges',
+    desc: 'Pick games and compare your results to the model.',
+  },
+  {
+    icon: 'notifications-outline' as const,
+    title: 'Alerts',
+    desc: 'Optional pushes for high-confidence plays.',
+  },
 ];
 
 export const LandingScreen: React.FC = () => {
   const navigation = useNavigation<LandingScreenNavigationProp>();
+  const [teaserPicks, setTeaserPicks] = useState(FALLBACK_TEASER_PICKS);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiService.getTopPicks({ limit: 4 });
+        const mapped = (res.picks ?? []).slice(0, 4).map((p, i) => ({
+          match: `${p.home_team_name} vs ${p.away_team_name}`,
+          confidence: Math.round(Math.max(p.home_win_probability, p.away_win_probability) * 100),
+          reason: `${p.league} · ${p.confidence_level} confidence`,
+          locked: i % 2 === 1,
+        }));
+        if (!cancelled && mapped.length > 0) setTeaserPicks(mapped);
+      } catch {
+        // keep fallback picks
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleGetFreePicks = () => navigation.navigate('Register');
   const handleDownloadApp = () => {
@@ -71,9 +116,7 @@ export const LandingScreen: React.FC = () => {
             </TouchableOpacity>
             <View style={styles.copyBlock}>
               <Text style={styles.headline}>Smarter Sports Predictions</Text>
-              <Text style={styles.subheadline}>
-                AI picks, player props & expert insights – get the edge without betting.
-              </Text>
+              <Text style={styles.subheadline}>{LANDING_HERO_SUBHEADLINE}</Text>
             </View>
             <View style={styles.buttons}>
               <TouchableOpacity style={styles.primaryButton} onPress={handleGetFreePicks} activeOpacity={0.85}>
@@ -87,13 +130,15 @@ export const LandingScreen: React.FC = () => {
                 </View>
               </TouchableOpacity>
             </View>
-            <Text style={styles.proofLine}>Join 500K+ fans • NFL: 59% ATS accuracy</Text>
+            <Text style={styles.proofLine}>Informational picks · Methodology & accuracy tracked in the app</Text>
+            <AuthTrustLinks style={{ marginTop: theme.spacing.md }} />
           </SafeAreaView>
         </ImageBackground>
 
         {/* Today's Picks Teaser */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>High-Confidence Picks Today</Text>
+          <Text style={styles.sectionDisclaimer}>Illustrative examples — not live predictions</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -102,7 +147,7 @@ export const LandingScreen: React.FC = () => {
             snapToAlignment="start"
             decelerationRate="fast"
           >
-            {TEASER_PICKS.map((pick, i) => (
+            {teaserPicks.map((pick, i) => (
               <View key={i} style={styles.pickCard}>
                 {pick.locked && <View style={styles.pickCardLock}><Text style={styles.pickCardLockText}>Premium Unlock</Text></View>}
                 <Text style={styles.pickMatch} numberOfLines={2}>{pick.match}</Text>
@@ -121,7 +166,7 @@ export const LandingScreen: React.FC = () => {
 
         {/* Core Features */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Why Octobet</Text>
+          <Text style={styles.sectionTitle}>Why octobetiQ</Text>
           {FEATURES.map((f, i) => (
             <View key={i} style={styles.featureCard}>
               <Ionicons name={f.icon} size={28} color={theme.colors.accent} />
@@ -139,7 +184,7 @@ export const LandingScreen: React.FC = () => {
           <View style={styles.pricingRow}>
             <View style={styles.pricingCard}>
               <Text style={styles.pricingName}>Free</Text>
-              <Text style={styles.pricingDesc}>Basic picks, limited sports, ads</Text>
+              <Text style={styles.pricingDesc}>{PRICING_FREE_LEAGUES_LINE}</Text>
             </View>
             <View style={[styles.pricingCard, styles.pricingCardHighlight]}>
               <Text style={styles.pricingName}>Premium</Text>
@@ -147,6 +192,19 @@ export const LandingScreen: React.FC = () => {
               <Text style={styles.pricingDesc}>Unlimited AI, ad-free, priority props, custom alerts</Text>
               <Text style={styles.pricingTrial}>7-Day Free Trial • Cancel anytime</Text>
             </View>
+          </View>
+          <View style={styles.pricingCardPro}>
+            <View style={styles.proAvailableRow}>
+              <Text style={styles.proAvailablePill}>Available now</Text>
+            </View>
+            <Text style={styles.pricingName}>Pro</Text>
+            <Text style={styles.pricingPrice}>$29.99/mo</Text>
+            <Text style={styles.pricingDesc}>
+              Everything in Premium, plus challenges, leaderboards, and the full player-props experience.
+            </Text>
+            <TouchableOpacity style={styles.proCtaOutline} onPress={handleStartTrial} activeOpacity={0.85}>
+              <Text style={styles.proCtaOutlineText}>Get Pro in the app</Text>
+            </TouchableOpacity>
           </View>
           <TouchableOpacity style={styles.trialButton} onPress={handleStartTrial}>
             <Text style={styles.trialButtonText}>Start 7-Day Free Trial</Text>
@@ -286,6 +344,13 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     marginBottom: theme.spacing.md,
   },
+  sectionDisclaimer: {
+    fontSize: 13,
+    color: theme.colors.textMuted,
+    lineHeight: 18,
+    marginTop: -theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+  },
   picksScroll: {
     paddingRight: theme.spacing.lg,
     gap: theme.spacing.md,
@@ -419,6 +484,43 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.colors.accent,
     fontWeight: '600',
+  },
+  pricingCardPro: {
+    marginTop: theme.spacing.md,
+    backgroundColor: theme.colors.backgroundCard,
+    borderRadius: theme.radii.lg,
+    padding: theme.spacing.md,
+    borderWidth: 2,
+    borderColor: theme.colors.secondary,
+  },
+  proAvailableRow: {
+    marginBottom: theme.spacing.sm,
+  },
+  proAvailablePill: {
+    alignSelf: 'flex-start',
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.colors.accent,
+    backgroundColor: theme.colors.accentDim,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: theme.radii.sm,
+    overflow: 'hidden',
+  },
+  proCtaOutline: {
+    marginTop: theme.spacing.md,
+    minHeight: 44,
+    borderRadius: theme.radii.lg,
+    borderWidth: 2,
+    borderColor: theme.colors.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.sm,
+  },
+  proCtaOutlineText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.accent,
   },
   trialButton: {
     backgroundColor: theme.colors.accent,

@@ -19,3 +19,7 @@ scikit-learn>=1.0.0
 Pillow>=10.0.0
 # Stripe payments
 stripe>=8.0.0
+# Error monitoring (optional — set SENTRY_DSN)
+sentry-sdk[fastapi]>=1.40.0
+
+# Tests & coverage (pytest.ini): pip install -r requirements-dev.txt

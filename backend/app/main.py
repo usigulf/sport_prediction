@@ -14,7 +14,9 @@ from sqlalchemy.orm import joinedload
 from app.api.v1.router import api_router
 from app.api.internal import router as internal_router
 from app.core.exceptions import setup_exception_handlers
-from app.core.security import verify_token
+from contextlib import asynccontextmanager
+
+from app.core.security import verify_access_token
 from app.config import get_settings
 from app.database import SessionLocal
 from app.models.game import Game
@@ -37,12 +39,46 @@ class CORSMiddlewareHTTPOnly(StarletteCORSMiddleware):
         await super().__call__(scope, receive, send)
 
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup/shutdown lifecycle."""
+    from app.core.jwt_constants import is_weak_jwt_secret
+    from app.database import init_sqlite_tables
+
+    init_sqlite_tables()
+    if getattr(settings, "environment", "").lower() == "production":
+        if is_weak_jwt_secret(settings.jwt_secret):
+            logging.getLogger(__name__).critical(
+                "Production requires a strong JWT_SECRET (min 32 chars, not a default). Set JWT_SECRET in env."
+            )
+        if settings.redis_url.strip().lower() in ("", "disabled", "false"):
+            logging.getLogger(__name__).critical(
+                "Production requires REDIS_URL for shared rate limits and token revocation."
+            )
+    if settings.sentry_dsn:
+        try:
+            import sentry_sdk
+            from sentry_sdk.integrations.fastapi import FastApiIntegration
+
+            sentry_sdk.init(
+                dsn=settings.sentry_dsn,
+                environment=settings.environment,
+                integrations=[FastApiIntegration()],
+                traces_sample_rate=0.1,
+            )
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Sentry init failed: %s", exc)
+    yield
+
+
 app = FastAPI(
     title="Octobet API",
     description="AI-powered sports prediction API",
     version="1.0.0",
     docs_url="/docs" if getattr(settings, "openapi_docs_enabled", True) else None,
     redoc_url="/redoc" if getattr(settings, "openapi_docs_enabled", True) else None,
+    lifespan=lifespan,
 )
 
 # CORS middleware
@@ -60,21 +96,6 @@ setup_exception_handlers(app)
 # Include routers
 app.include_router(api_router, prefix=settings.api_v1_prefix)
 app.include_router(internal_router)
-
-
-DEV_JWT_SECRET = "dev-secret-key-change-in-production-minimum-32-characters-long"
-
-
-@app.on_event("startup")
-def on_startup():
-    """Create SQLite tables if using SQLite (dev). Validate production config."""
-    from app.database import init_sqlite_tables
-    init_sqlite_tables()
-    if getattr(settings, "environment", "").lower() == "production":
-        if settings.jwt_secret == DEV_JWT_SECRET or len(settings.jwt_secret) < 32:
-            logging.getLogger(__name__).critical(
-                "Production requires a strong JWT_SECRET (min 32 chars). Set JWT_SECRET in env."
-            )
 
 
 @app.get("/health")
@@ -128,7 +149,7 @@ async def websocket_live_updates(
             await websocket.send_json({"error": "Missing token. Use ?token=<access_token>"})
             await websocket.close(code=1008, reason="Missing token. Use ?token=<access_token>")
             return
-        payload = verify_token(token)
+        payload = verify_access_token(token)
         if not payload:
             await websocket.send_json({"error": "Invalid or expired token"})
             await websocket.close(code=1008, reason="Invalid or expired token")

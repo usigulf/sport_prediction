@@ -150,8 +150,50 @@ def test_sportradar_health_requires_secret(client):
     assert r.status_code == status.HTTP_401_UNAUTHORIZED
 
 
+def test_clearsports_health_not_configured(monkeypatch, client):
+    monkeypatch.delenv("CLEARSPORTS_API_KEY", raising=False)
+    monkeypatch.setenv("CLEARSPORTS_API_KEY", "")
+    get_settings.cache_clear()
+    r = client.get("/internal/health/clearsports", headers=_headers())
+    assert r.status_code == status.HTTP_200_OK
+    body = r.json()
+    assert body["clearsports_configured"] is False
+    assert body["clearsports_ok"] is False
+
+
+def test_clearsports_health_ok(monkeypatch, client):
+    monkeypatch.setenv("CLEARSPORTS_API_KEY", "fake-key-for-test")
+    get_settings.cache_clear()
+    monkeypatch.setattr(
+        "app.api.internal.clearsports_health_probe",
+        lambda _s: {
+            "clearsports_configured": True,
+            "clearsports_ok": True,
+            "clearsports_http_status": 200,
+            "sample_games_count": 3,
+            "clearsports_base_url": "https://api.clearsportsapi.com",
+        },
+    )
+    r = client.get("/internal/health/clearsports", headers=_headers())
+    assert r.status_code == status.HTTP_200_OK
+    body = r.json()
+    assert body["clearsports_ok"] is True
+    assert body["sample_games_count"] == 3
+
+
+def test_clearsports_health_requires_secret(client):
+    r = client.get("/internal/health/clearsports")
+    assert r.status_code == status.HTTP_401_UNAUTHORIZED
+
+
 def test_soccer_sync_schedules_route(monkeypatch, client):
     from app.services.sportradar_soccer_schedule_sync import SoccerScheduleSyncResult
+    from app.services.sportradar_soccer_standings_sync import SoccerStandingsSyncResult
+
+    monkeypatch.setattr(
+        "app.api.internal.configured_soccer_league_codes",
+        lambda _settings: ["premier_league", "champions_league"],
+    )
 
     def fake_sync(db, app_league, settings):
         return SoccerScheduleSyncResult(
@@ -163,10 +205,22 @@ def test_soccer_sync_schedules_route(monkeypatch, client):
             errors=[],
         )
 
+    def fake_standings(db, app_league, settings):
+        return SoccerStandingsSyncResult(
+            app_league=app_league,
+            season_id="sr:season:test",
+            rows_seen=20,
+            upserted=18,
+            skipped=2,
+            errors=[],
+        )
+
     monkeypatch.setattr("app.api.internal.sync_soccer_schedule_for_league", fake_sync)
+    monkeypatch.setattr("app.api.internal.sync_soccer_standings_for_league", fake_standings)
     r = client.post("/internal/soccer/sync-schedules", headers=_headers())
     assert r.status_code == status.HTTP_200_OK
     body = r.json()
     assert len(body["results"]) == 2
     assert body["results"][0]["league"] == "premier_league"
     assert body["results"][0]["games_upserted"] == 2
+    assert body["results"][0]["standings_upserted"] == 18

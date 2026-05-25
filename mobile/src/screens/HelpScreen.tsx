@@ -7,14 +7,23 @@ import {
   TouchableOpacity,
   Linking,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { Ionicons } from '@expo/vector-icons';
+import { RootStackParamList } from '../navigation/AppNavigator';
 import { theme } from '../constants/theme';
+import { AVAILABLE_LEAGUES_COUNT, PRODUCT_SCOPE_LONG_DESCRIPTION } from '../constants/leagues';
 
 const SUPPORT_EMAIL = 'support@sportsprediction.com';
 
 const FAQ = [
   {
+    q: 'Which sports does octobetiQ cover?',
+    a: `We cover ${AVAILABLE_LEAGUES_COUNT} leagues — six soccer competitions plus NFL and NBA (names match your league picker and Favorites). Coverage depth varies by competition depending on licensed data and sync jobs.`,
+  },
+  {
     q: 'How do predictions work?',
-    a: 'We use machine learning models trained on historical game data to estimate win probabilities. Each game gets a home win probability, away win probability, and a confidence level (low, medium, high).',
+    a: 'We use machine learning models trained on historical game data to estimate win probabilities. Each game gets a home win probability, away win probability, and a confidence level (low, medium, high). Soccer uses three-way (1X2) style probabilities where applicable.',
   },
   {
     q: 'What is the daily prediction limit?',
@@ -30,7 +39,8 @@ const FAQ = [
   },
   {
     q: 'How is "Model accuracy" calculated?',
-    a: 'We compare our predicted winner (home or away) to the actual result for finished games. The percentage shows how often we got the winner right. View it in Profile → Model accuracy.',
+    a:
+      'For finished games we compare the latest stored prediction to the final score. Soccer uses three-way outcomes (home / draw / away), including implied draw probability; other sports use the predicted favorite vs the winner (ties do not match either side). Numbers are informational, not betting advice. Open Model accuracy (from the welcome page, Home, Profile, or Settings) for methodology, a 30-day rollup, confidence buckets, and data coverage.',
   },
   {
     q: 'How do I add favorite teams?',
@@ -39,13 +49,31 @@ const FAQ = [
 ];
 
 export const HelpScreen: React.FC = () => {
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+
   const openContact = () => {
-    Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=Sports%20Prediction%20App%20Support`).catch(() => {});
+    Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=octobetiQ%20support`).catch(() => {});
   };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Help & FAQ</Text>
+
+      <View style={styles.trustCard}>
+        <Text style={styles.trustTitle}>Trust & transparency</Text>
+        <Text style={styles.trustBody}>
+          {PRODUCT_SCOPE_LONG_DESCRIPTION}. See how we score picks against final results, rolling accuracy (
+          {AVAILABLE_LEAGUES_COUNT} leagues), and which competitions have standings data in the app right now.
+        </Text>
+        <TouchableOpacity
+          style={styles.trustButton}
+          onPress={() => navigation.navigate('Accuracy')}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.trustButtonText}>Model accuracy & methodology</Text>
+          <Ionicons name="chevron-forward" size={18} color={theme.colors.background} />
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Frequently asked questions</Text>
@@ -84,6 +112,44 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: theme.colors.text,
     marginBottom: 20,
+  },
+  trustCard: {
+    backgroundColor: theme.colors.backgroundCard,
+    padding: 16,
+    borderRadius: theme.radii.sm,
+    marginBottom: 24,
+    borderLeftWidth: 4,
+    borderLeftColor: theme.colors.accent,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSubtle,
+  },
+  trustTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginBottom: 8,
+  },
+  trustBody: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    lineHeight: 21,
+    marginBottom: 14,
+  },
+  trustButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    alignSelf: 'stretch',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: theme.colors.accent,
+    borderRadius: theme.radii.sm,
+  },
+  trustButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.background,
   },
   section: {
     marginBottom: 24,

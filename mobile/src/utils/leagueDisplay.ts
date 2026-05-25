@@ -5,14 +5,12 @@
 const LABELS: Record<string, string> = {
   nfl: 'NFL',
   nba: 'NBA',
-  mlb: 'MLB',
-  nhl: 'NHL',
   premier_league: 'Premier League',
   champions_league: 'Champions League',
-  boxing: 'Boxing',
-  tennis: 'Tennis',
-  golf: 'Golf',
-  mma: 'MMA',
+  la_liga: 'La Liga',
+  serie_a: 'Serie A',
+  bundesliga: 'Bundesliga',
+  mls: 'MLS',
 };
 
 export function formatLeagueLabel(league: string): string {

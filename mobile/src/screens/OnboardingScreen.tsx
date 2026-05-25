@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { theme } from '../constants/theme';
-import { AVAILABLE_LEAGUES } from '../constants/leagues';
+import { AVAILABLE_LEAGUES, ONBOARDING_LEAGUES_SUBTITLE } from '../constants/leagues';
 import { apiService } from '../services/api';
 import { setOnboardingComplete } from '../utils/onboardingStorage';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
@@ -71,9 +71,7 @@ export function OnboardingScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.title}>Choose your leagues</Text>
-        <Text style={styles.subtitle}>
-          We'll use these for Best Picks and your Favorites. You can change them anytime in Favorites.
-        </Text>
+        <Text style={styles.subtitle}>{ONBOARDING_LEAGUES_SUBTITLE}</Text>
         <View style={styles.chips}>
           {AVAILABLE_LEAGUES.map((league) => {
             const isSelected = selected.has(league.id);

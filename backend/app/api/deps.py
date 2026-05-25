@@ -7,9 +7,12 @@ from fastapi.security import OAuth2PasswordBearer, HTTPBearer, HTTPAuthorization
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
-from app.core.security import verify_token
+from app.core.security import verify_access_token
 from app.config import get_settings
 from app.services.rate_limit_service import is_over_limit
+
+# Pro / premium_plus (and legacy "pro" string) — e.g. Challenges.
+_PRO_TIERS = frozenset({"premium_plus", "pro"})
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 # Optional Bearer token: no 403 when header is missing (for public endpoints).
@@ -18,10 +21,10 @@ optional_bearer = HTTPBearer(auto_error=False)
 
 def get_current_user(
     token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> User:
     """Get current authenticated user"""
-    payload = verify_token(token)
+    payload = verify_access_token(token)
     if not payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -44,6 +47,19 @@ def get_current_user(
         )
     
     return user
+
+
+def require_pro_subscription(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Challenges and other Pro-only features: `premium_plus` (or legacy `pro`)."""
+    t = (current_user.subscription_tier or "free").strip().lower()
+    if t in _PRO_TIERS:
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="This feature requires a Pro subscription (tier premium_plus).",
+    )
 
 
 def get_current_user_optional(

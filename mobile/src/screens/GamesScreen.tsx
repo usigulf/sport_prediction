@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
+  Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -17,13 +18,20 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { GameCard } from '../components/GameCard';
 import { PredictionCard } from '../components/PredictionCard';
+import { ExplanationView } from '../components/ExplanationView';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchUpcomingGames, restoreGamesFromCache } from '../store/slices/gamesSlice';
 import { apiService } from '../services/api';
 import { RootStackParamList, MainTabParamList } from '../navigation/AppNavigator';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
-import { SPORT_OPTIONS, MY_LEAGUES_ID, SOCCER_LEAGUE_IDS } from '../constants/leagues';
+import {
+  SPORT_OPTIONS,
+  MY_LEAGUES_ID,
+  SOCCER_LEAGUE_IDS,
+  GAMES_ALL_SPORTS_SUBTITLE,
+} from '../constants/leagues';
 import { theme } from '../constants/theme';
+import type { PredictionExplanation } from '../types';
 import {
   buildSoccerWeekDays,
   formatLocalYMD,
@@ -33,6 +41,8 @@ import {
 
 /** BetQL-style sub-views within Games (per sport). */
 type GamesViewType = 'model' | 'trending' | 'props';
+
+type SoccerSubFilter = 'all' | (typeof SOCCER_LEAGUE_IDS)[number];
 
 type GamesScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -74,14 +84,22 @@ export const GamesScreen: React.FC = () => {
   const [trendingPicks, setTrendingPicks] = useState<any[]>([]);
   const [trendingLoading, setTrendingLoading] = useState(false);
   const [previewGame, setPreviewGame] = useState<any | null>(null);
+  const [previewHydrated, setPreviewHydrated] = useState<any | null>(null);
+  const [previewExplanation, setPreviewExplanation] = useState<PredictionExplanation | null>(null);
+  const [previewExplanationLoading, setPreviewExplanationLoading] = useState(false);
+  const [previewExplanationError, setPreviewExplanationError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const sheetMaxHeight = useMemo(
+    () => Math.round(Dimensions.get('window').height * 0.9),
+    []
+  );
   const insets = useSafeAreaInsets();
   const prevLeagueRef = useRef<string | null | undefined>(undefined);
 
   /** Soccer hub: Monday-start week offset, selected day 0–6, competition filter */
   const [soccerWeekOffset, setSoccerWeekOffset] = useState(0);
   const [soccerDayIndex, setSoccerDayIndex] = useState(() => mondayBasedIndexInWeek(new Date()));
-  const [soccerSubLeague, setSoccerSubLeague] = useState<'all' | 'premier_league' | 'champions_league'>('all');
+  const [soccerSubLeague, setSoccerSubLeague] = useState<SoccerSubFilter>('all');
 
   const soccerWeekDays = useMemo(() => buildSoccerWeekDays(soccerWeekOffset), [soccerWeekOffset]);
   const selectedSoccerYmd =
@@ -159,7 +177,17 @@ export const GamesScreen: React.FC = () => {
     let cancelled = false;
     setTrendingLoading(true);
     const leaguesParam = getLeaguesParam();
-    apiService.getTopPicks({ leagues: leaguesParam, limit: 30 }).then((res) => {
+    const soccerTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const topPicksOpts =
+      selectedLeague === 'soccer'
+        ? {
+            leagues: leaguesParam,
+            limit: 30,
+            date: selectedSoccerYmd,
+            time_zone: soccerTz,
+          }
+        : { leagues: leaguesParam, limit: 30 };
+    apiService.getTopPicks(topPicksOpts).then((res) => {
       if (!cancelled) setTrendingPicks(res.picks ?? []);
     }).catch(() => {
       if (!cancelled) setTrendingPicks([]);
@@ -167,24 +195,38 @@ export const GamesScreen: React.FC = () => {
       if (!cancelled) setTrendingLoading(false);
     });
     return () => { cancelled = true; };
-  }, [gamesView, selectedLeague, getLeaguesParam]);
+  }, [gamesView, selectedLeague, getLeaguesParam, selectedSoccerYmd]);
 
   const onRefresh = async () => {
     setRefreshing(true);
     await loadGames();
     if (gamesView === 'trending') {
       const leaguesParam = getLeaguesParam();
-      const res = await apiService.getTopPicks({ leagues: leaguesParam, limit: 30 }).catch(() => ({ picks: [] }));
+      const soccerTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const topPicksOpts =
+        selectedLeague === 'soccer'
+          ? {
+              leagues: leaguesParam,
+              limit: 30,
+              date: selectedSoccerYmd,
+              time_zone: soccerTz,
+            }
+          : { leagues: leaguesParam, limit: 30 };
+      const res = await apiService.getTopPicks(topPicksOpts).catch(() => ({ picks: [] }));
       setTrendingPicks(res.picks ?? []);
     }
     setRefreshing(false);
   };
 
-  /** Tap game → open bottom sheet preview; "See full analysis" pushes to Game Detail. Set to true for sheet, false for direct push. */
+  /** Tap game → bottom sheet with prediction + full analysis; CTA opens Game Detail for props / live / share. */
   const useBottomSheetPreview = true;
 
   const handleGamePress = (game: any) => {
     if (useBottomSheetPreview) {
+      setPreviewHydrated(null);
+      setPreviewExplanation(null);
+      setPreviewExplanationError(null);
+      setPreviewExplanationLoading(true);
       setPreviewGame(game);
     } else {
       navigation.navigate('GameDetail', { gameId: game.id });
@@ -193,7 +235,54 @@ export const GamesScreen: React.FC = () => {
 
   const closePreview = () => {
     setPreviewGame(null);
+    setPreviewHydrated(null);
+    setPreviewExplanation(null);
+    setPreviewExplanationError(null);
+    setPreviewExplanationLoading(false);
   };
+
+  /** Hydrate from GET /games/:id (list rows often omit prediction) + fetch full explanation by game id. */
+  useEffect(() => {
+    if (!previewGame?.id) {
+      setPreviewHydrated(null);
+      setPreviewExplanation(null);
+      setPreviewExplanationError(null);
+      setPreviewExplanationLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setPreviewExplanationLoading(true);
+    setPreviewExplanationError(null);
+    setPreviewExplanation(null);
+    setPreviewHydrated(null);
+
+    (async () => {
+      try {
+        const game = await apiService.getGame(previewGame.id);
+        if (!cancelled) setPreviewHydrated(game as any);
+      } catch {
+        if (!cancelled) setPreviewHydrated(null);
+      }
+      try {
+        const expl = await apiService.getPredictionExplanation(previewGame.id);
+        if (!cancelled) setPreviewExplanation(expl as PredictionExplanation);
+      } catch (e: unknown) {
+        if (!cancelled) setPreviewExplanationError(getUserFriendlyMessage(e));
+      } finally {
+        if (!cancelled) setPreviewExplanationLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [previewGame?.id]);
+
+  /** Merged list row + GET /games/:id so preview has prediction & teams when the list omitted them. */
+  const previewSheetGame = useMemo(
+    () => (previewGame ? previewHydrated ?? previewGame : null),
+    [previewGame, previewHydrated]
+  );
 
   const openFullAnalysis = (gameId: string) => {
     closePreview();
@@ -210,7 +299,7 @@ export const GamesScreen: React.FC = () => {
         <GameCard game={item} onPress={() => handleGamePress(item)} />
         {item.prediction && (
           <View style={styles.trendingPrediction}>
-            <PredictionCard prediction={item.prediction} />
+            <PredictionCard prediction={item.prediction} league={item.league} />
           </View>
         )}
       </View>
@@ -232,7 +321,9 @@ export const GamesScreen: React.FC = () => {
           <Text style={styles.headerSubtitle}>
             {selectedLeague === 'soccer'
               ? 'Pick a day — all soccer competitions for that date'
-              : 'Pick a sport, then a view'}
+              : selectedLeague == null
+                ? GAMES_ALL_SPORTS_SUBTITLE
+                : 'Pick a sport, then a view'}
           </Text>
         </View>
         <ScrollView
@@ -286,6 +377,10 @@ export const GamesScreen: React.FC = () => {
                 <Ionicons name="chevron-forward" size={22} color={theme.colors.accent} />
               </TouchableOpacity>
             </View>
+            <Text style={styles.soccerWeekHint}>
+              Fixtures shown here are from your server database (Sportradar sync), not live TV listings. Use
+              arrows to move weeks — e.g. mid‑April games are often one or more weeks ahead of “today”.
+            </Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -331,7 +426,11 @@ export const GamesScreen: React.FC = () => {
                   { id: 'all' as const, label: 'All soccer' },
                   { id: 'premier_league' as const, label: 'Premier League' },
                   { id: 'champions_league' as const, label: 'Champions League' },
-                ]
+                  { id: 'la_liga' as const, label: 'La Liga' },
+                  { id: 'serie_a' as const, label: 'Serie A' },
+                  { id: 'bundesliga' as const, label: 'Bundesliga' },
+                  { id: 'mls' as const, label: 'MLS' },
+                ] satisfies { id: SoccerSubFilter; label: string }[]
               ).map((opt) => (
                 <TouchableOpacity
                   key={opt.id}
@@ -369,7 +468,7 @@ export const GamesScreen: React.FC = () => {
         </View>
       </View>
 
-      {gamesView === 'model' && (
+      {(gamesView === 'model' || gamesView === 'props') && (
         <FlatList
           data={upcomingGames}
           renderItem={renderGame}
@@ -378,6 +477,13 @@ export const GamesScreen: React.FC = () => {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListHeaderComponent={
             <>
+              {gamesView === 'props' ? (
+                <View style={styles.propsTabHint}>
+                  <Text style={styles.propsTabHintText}>
+                    Tap a game, then scroll to Player Props on the game screen (Premium or Pro).
+                  </Text>
+                </View>
+              ) : null}
               {loadError ? (
                 <View style={styles.errorBanner}>
                   <Text style={styles.errorText}>{loadError}</Text>
@@ -399,7 +505,7 @@ export const GamesScreen: React.FC = () => {
                 {loading
                   ? 'Loading games...'
                   : selectedLeague === 'soccer'
-                    ? 'No soccer matches on this day'
+                    ? 'No games for this day in the app. Try the week arrows — or sync schedules on the server (see note above).'
                     : 'No games found'}
               </Text>
             </View>
@@ -429,19 +535,7 @@ export const GamesScreen: React.FC = () => {
         )
       )}
 
-      {gamesView === 'props' && (
-        <View style={styles.propsPlaceholder}>
-          <Text style={styles.propsTitle}>Player Props</Text>
-          <Text style={styles.propsText}>
-            Open any game and scroll to the Player Props section for individual player predictions (Premium).
-          </Text>
-          <TouchableOpacity style={styles.propsButton} onPress={() => setGamesView('model')}>
-            <Text style={styles.propsButtonText}>Show Model Picks</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* Bottom sheet preview: tap game → quick preview; "See full analysis" → push to Game Detail */}
+      {/* Bottom sheet: matchup + prediction + full ExplanationView; CTA opens Game Detail */}
       <Modal
         visible={!!previewGame}
         transparent
@@ -449,36 +543,88 @@ export const GamesScreen: React.FC = () => {
         onRequestClose={closePreview}
       >
         <Pressable style={styles.sheetBackdrop} onPress={closePreview}>
-          <Pressable style={[styles.sheetContent, { paddingBottom: insets.bottom + theme.spacing.md }]} onPress={(e) => e.stopPropagation()}>
+          <Pressable
+            style={[
+              styles.sheetContent,
+              {
+                paddingBottom: insets.bottom + theme.spacing.md,
+                height: sheetMaxHeight,
+                maxHeight: sheetMaxHeight,
+                flexDirection: 'column',
+              },
+            ]}
+            onPress={(e) => e.stopPropagation()}
+          >
             <View style={styles.sheetHandle} />
-            {previewGame && (
-              <>
+            {previewSheetGame && (
+              <View style={styles.sheetInner}>
                 <View style={styles.sheetHeader}>
                   <Text style={styles.sheetTitle}>Game preview</Text>
                   <TouchableOpacity onPress={closePreview} hitSlop={12} style={styles.sheetClose}>
                     <Ionicons name="close" size={24} color={theme.colors.textMuted} />
                   </TouchableOpacity>
                 </View>
-                <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
-                  <GameCard game={previewGame} />
-                  {previewGame.prediction && (
-                    <View style={styles.sheetPrediction}>
-                      <PredictionCard prediction={previewGame.prediction} />
-                    </View>
-                  )}
-                  <TouchableOpacity
-                    style={styles.sheetCta}
-                    onPress={() => openFullAnalysis(previewGame.id)}
-                    activeOpacity={0.9}
+                <View style={styles.sheetBody}>
+                  <ScrollView
+                    style={styles.sheetScroll}
+                    contentContainerStyle={styles.sheetScrollContent}
+                    showsVerticalScrollIndicator
+                    nestedScrollEnabled
+                    keyboardShouldPersistTaps="handled"
                   >
-                    <Text style={styles.sheetCtaText}>See full analysis</Text>
-                    <Ionicons name="arrow-forward" size={20} color={theme.colors.background} />
-                  </TouchableOpacity>
-                  <Text style={styles.sheetHint}>
-                    Full AI reasoning, player props & share
-                  </Text>
-                </ScrollView>
-              </>
+                    <GameCard game={previewSheetGame} />
+                    {previewSheetGame.prediction ? (
+                      <View style={styles.sheetPrediction}>
+                        <PredictionCard
+                          prediction={previewSheetGame.prediction}
+                          league={previewSheetGame.league}
+                          embedded
+                          homeTeamName={previewSheetGame.home_team?.name ?? 'Home'}
+                          awayTeamName={previewSheetGame.away_team?.name ?? 'Away'}
+                        />
+                      </View>
+                    ) : null}
+                    <Text style={styles.sheetAnalysisPull}>
+                      {previewSheetGame.prediction
+                        ? 'Full written analysis below — scroll this section.'
+                        : 'Full written analysis below.'}
+                    </Text>
+                    <View style={styles.sheetExplanation}>
+                      <Text style={styles.sheetAnalysisHeading}>Full analysis</Text>
+                      <ExplanationView
+                        gameId={previewSheetGame.id}
+                        predictionId={previewSheetGame.prediction?.id ?? previewSheetGame.id}
+                        homeTeamName={previewSheetGame.home_team?.name ?? 'Home'}
+                        awayTeamName={previewSheetGame.away_team?.name ?? 'Away'}
+                        analysisAsOf={previewSheetGame.prediction?.created_at}
+                        league={previewSheetGame.league}
+                        homeWinProbability={previewSheetGame.prediction?.home_win_probability}
+                        awayWinProbability={previewSheetGame.prediction?.away_win_probability}
+                        external={{
+                          explanation: previewExplanation,
+                          loading: previewExplanationLoading,
+                          error: previewExplanationError,
+                        }}
+                      />
+                    </View>
+                  </ScrollView>
+                  <View style={styles.sheetFooter}>
+                    <TouchableOpacity
+                      style={styles.sheetCta}
+                      onPress={() => openFullAnalysis(previewSheetGame.id)}
+                      activeOpacity={0.9}
+                      accessibilityRole="button"
+                      accessibilityLabel="See full game"
+                    >
+                      <Text style={styles.sheetCtaText}>See full game</Text>
+                      <Ionicons name="arrow-forward" size={20} color={theme.colors.background} />
+                    </TouchableOpacity>
+                    <Text style={styles.sheetHint}>
+                      Player props, live updates & share — detail page
+                    </Text>
+                  </View>
+                </View>
+              </View>
             )}
           </Pressable>
         </Pressable>
@@ -566,6 +712,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: theme.colors.textSecondary,
+  },
+  soccerWeekHint: {
+    fontSize: 11,
+    lineHeight: 15,
+    color: theme.colors.textMuted,
+    paddingHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   dayStrip: {
     flexDirection: 'row',
@@ -667,34 +820,19 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.xs,
     marginHorizontal: 0,
   },
-  propsPlaceholder: {
-    flex: 1,
-    padding: theme.spacing.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  propsTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: theme.colors.text,
+  propsTabHint: {
+    backgroundColor: theme.colors.accentDim,
+    marginHorizontal: theme.spacing.sm,
     marginBottom: theme.spacing.sm,
+    padding: theme.spacing.sm + 4,
+    borderRadius: theme.radii.md,
+    borderLeftWidth: 4,
+    borderLeftColor: theme.colors.accent,
   },
-  propsText: {
+  propsTabHintText: {
     fontSize: 14,
     color: theme.colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: theme.spacing.lg,
-  },
-  propsButton: {
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    backgroundColor: theme.colors.accentDim,
-    borderRadius: theme.radii.md,
-  },
-  propsButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.accent,
+    lineHeight: 20,
   },
   listContent: {
     padding: theme.spacing.sm,
@@ -741,10 +879,16 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheetContent: {
+    width: '100%',
     backgroundColor: theme.colors.background,
     borderTopLeftRadius: theme.radii.xl,
     borderTopRightRadius: theme.radii.xl,
-    maxHeight: '85%',
+  },
+  sheetInner: {
+    flex: 1,
+    minHeight: 0,
+    width: '100%',
+    flexDirection: 'column',
   },
   sheetHandle: {
     width: 40,
@@ -770,12 +914,47 @@ const styles = StyleSheet.create({
   sheetClose: {
     padding: theme.spacing.xs,
   },
+  sheetBody: {
+    flex: 1,
+    minHeight: 0,
+    flexDirection: 'column',
+  },
   sheetScroll: {
+    flex: 1,
+    minHeight: 0,
+  },
+  sheetScrollContent: {
     paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.lg,
+    paddingBottom: theme.spacing.md,
+  },
+  sheetFooter: {
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderSubtle,
+    backgroundColor: theme.colors.background,
   },
   sheetPrediction: {
     marginTop: theme.spacing.sm,
+  },
+  sheetAnalysisPull: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    textAlign: 'center',
+    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
+    lineHeight: 17,
+  },
+  sheetExplanation: {
+    marginTop: theme.spacing.sm,
+  },
+  sheetAnalysisHeading: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: theme.spacing.sm,
   },
   sheetCta: {
     flexDirection: 'row',

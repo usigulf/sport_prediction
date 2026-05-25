@@ -17,6 +17,9 @@ from app.services.prediction_inference_service import run_prediction_job
 from app.services.sportradar_nfl_service import fetch_nfl_standings_json
 from app.services.sportradar_soccer_service import soccer_health_probe
 from app.services.sportradar_soccer_schedule_sync import sync_soccer_schedule_for_league
+from app.services.sportradar_soccer_standings_sync import sync_soccer_standings_for_league
+from app.services.sportradar_soccer_service import configured_soccer_league_codes
+from app.services.clearsports_client import clearsports_health_probe
 
 router = APIRouter(prefix="/internal", tags=["internal"])
 
@@ -152,22 +155,26 @@ async def soccer_sync_schedules(
     _: None = Depends(_require_cron_secret),
 ):
     """
-    Import Premier League and Champions League fixtures from Sportradar season schedules into `teams` / `games`.
-    Uses the same season env vars as standings (`SPORTRADAR_SOCCER_SEASON_*`). Game IDs are stable (uuid5 of Sportradar sport_event id).
-    After sync, run POST /internal/predictions/run to generate predictions for upcoming/live games.
+    For each league with a configured `SPORTRADAR_SOCCER_SEASON_*`: import fixtures into `teams`/`games`,
+    then upsert `team_standings` from the same season's standings feed.
+    Game IDs are stable (uuid5 of Sportradar sport_event id). After sync, run POST /internal/predictions/run.
     """
     settings = get_settings()
     results = []
-    for lg in ("premier_league", "champions_league"):
-        r = sync_soccer_schedule_for_league(db, lg, settings)
+    for lg in configured_soccer_league_codes(settings):
+        r_sched = sync_soccer_schedule_for_league(db, lg, settings)
+        r_std = sync_soccer_standings_for_league(db, lg, settings)
         results.append(
             {
-                "league": r.app_league,
-                "season_id": r.season_id or None,
-                "rows_fetched": r.rows_fetched,
-                "games_upserted": r.games_upserted,
-                "rows_skipped": r.rows_skipped,
-                "errors": r.errors,
+                "league": r_sched.app_league,
+                "season_id": r_sched.season_id or r_std.season_id or None,
+                "rows_fetched": r_sched.rows_fetched,
+                "games_upserted": r_sched.games_upserted,
+                "rows_skipped": r_sched.rows_skipped,
+                "standings_rows_seen": r_std.rows_seen,
+                "standings_upserted": r_std.upserted,
+                "standings_skipped": r_std.skipped,
+                "errors": list(r_sched.errors) + list(r_std.errors),
             }
         )
     return {"results": results}
@@ -199,3 +206,12 @@ async def sportradar_health(_: None = Depends(_require_cron_secret)):
     }
     out.update(soccer_health_probe(settings))
     return out
+
+
+@router.get("/health/clearsports")
+async def clearsports_health(_: None = Depends(_require_cron_secret)):
+    """
+    Verify ClearSports API key with a minimal GET (same X-Cron-Secret as other internal routes).
+    Does not replace Sportradar-backed soccer/NFL sync until those services are migrated.
+    """
+    return clearsports_health_probe(get_settings())

@@ -1,6 +1,6 @@
 /**
  * Best Picks carousel: horizontal FlatList with snap (no Reanimated for Expo compatibility).
- * Uses Octobet palette: #0A1428, #F1F5F9/#FFFFFF, #22C55E, #60A5FA/#FBBF24.
+ * Uses octobetiQ palette: #0A1428, #F1F5F9/#FFFFFF, #22C55E, #60A5FA/#FBBF24.
  * Tap → onPickPress(id) and optional onSetFeatured(id) to swap Featured Game.
  */
 import React from 'react';
@@ -38,18 +38,14 @@ const getSportIcon = (leagueId: string): keyof typeof Ionicons.glyphMap => {
   switch (leagueId) {
     case 'nfl': return 'football';
     case 'nba': return 'basketball';
-    case 'mlb': return 'baseball';
-    case 'nhl': return 'snow';
     case 'soccer':
     case 'premier_league':
     case 'champions_league':
+    case 'la_liga':
+    case 'serie_a':
+    case 'bundesliga':
+    case 'mls':
       return 'football';
-    case 'boxing':
-    case 'mma':
-      return 'fitness';
-    case 'tennis':
-    case 'golf':
-      return 'trophy';
     default:
       return 'football-outline';
   }

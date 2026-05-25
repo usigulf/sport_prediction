@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 from app.config import Settings
 from app.services import sportradar_soccer_service as soccer_svc
 from app.services.sportradar_soccer_service import (
+    configured_soccer_league_codes,
     find_soccer_standing_row,
     flatten_soccer_standings_rows,
     format_soccer_standings_line,
@@ -113,12 +114,17 @@ def test_format_soccer_standings_line():
 
 
 def test_soccer_season_id_for_league_from_settings(monkeypatch):
+    """Premier/UCL and optional extra soccer competitions."""
     monkeypatch.setenv("SPORTRADAR_SOCCER_SEASON_PREMIER_LEAGUE", "sr:season:999")
     monkeypatch.setenv("SPORTRADAR_SOCCER_SEASON_CHAMPIONS_LEAGUE", "sr:season:888")
+    monkeypatch.setenv("SPORTRADAR_SOCCER_SEASON_LA_LIGA", "sr:season:777")
     s = Settings()
     assert soccer_season_id_for_league("premier_league", s) == "sr:season:999"
     assert soccer_season_id_for_league("champions_league", s) == "sr:season:888"
+    assert soccer_season_id_for_league("la_liga", s) == "sr:season:777"
     assert soccer_season_id_for_league("nba", s) is None
+    codes = configured_soccer_league_codes(s)
+    assert codes == ["premier_league", "champions_league", "la_liga"]
 
 
 def test_soccer_matchup_provider_note(monkeypatch):

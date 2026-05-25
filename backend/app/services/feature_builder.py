@@ -50,7 +50,18 @@ def _time_bucket(_game: Game) -> int:
 
 
 def _synthetic_feature_dict(game: Game) -> dict[str, float | int]:
-    rng = random.Random(_seed_from_uuid(game.id) ^ _time_bucket(game))
+    """Deterministic placeholder features for non-soccer sports (not live-standings backed)."""
+    from app.config import get_settings
+
+    env = (get_settings().environment or "").lower()
+    seed = _seed_from_uuid(game.id)
+    if game.home_team_id:
+        seed ^= _seed_from_uuid(game.home_team_id)
+    if game.away_team_id:
+        seed ^= _seed_from_uuid(game.away_team_id)
+    if env != "production":
+        seed ^= _time_bucket(game)
+    rng = random.Random(seed)
     features: dict[str, float | int] = {
         "home_team_win_rate": round(rng.uniform(0.35, 0.72), 4),
         "away_team_win_rate": round(rng.uniform(0.35, 0.72), 4),
@@ -362,18 +373,12 @@ def build_feature_dict(game: Game, db: Session | None = None) -> dict[str, float
 _LEAGUE_SCORE_BASE: dict[str, tuple[float, float]] = {
     "nfl": (24.0, 21.0),
     "nba": (112.0, 108.0),
-    "mlb": (4.5, 4.2),
-    "nhl": (3.0, 2.7),
     "premier_league": (1.65, 1.35),
     "champions_league": (1.7, 1.4),
     "la_liga": (1.6, 1.35),
     "serie_a": (1.55, 1.3),
     "bundesliga": (1.75, 1.45),
     "mls": (1.5, 1.35),
-    "boxing": (7.0, 6.0),
-    "tennis": (2.0, 1.2),
-    "golf": (70.0, 71.0),
-    "mma": (2.2, 1.6),
 }
 
 
@@ -520,12 +525,9 @@ def expected_scores_for_league(
 ) -> tuple[float, float]:
     base_h, base_a = _LEAGUE_SCORE_BASE.get(league, (2.0, 1.8))
     edge = (home_win_p - 0.5) * 2.0
-    if league in ("nba", "nfl", "nhl"):
+    if league in ("nba", "nfl"):
         shift = edge * 4.0
         return round(base_h + shift, 2), round(base_a - shift * 0.85, 2)
-    if league == "mlb":
-        shift = edge * 1.2
-        return round(base_h + shift, 2), round(base_a - shift * 0.9, 2)
     if league in SOCCER_LEAGUES_SET:
         shift = edge * 0.45
         if _soccer_goals_per_game_plausible(home_team_avg_score, away_team_avg_score):

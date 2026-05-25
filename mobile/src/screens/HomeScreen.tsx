@@ -18,14 +18,17 @@ import { PredictionCard } from '../components/PredictionCard';
 import { BestPickMiniCard, CARD_WIDTH_WITH_MARGIN } from '../components/BestPickMiniCard';
 import { BestPicksCarousel } from '../components/BestPicksCarousel';
 import { SportIconsRow } from '../components/SportIconsRow';
-import { OctobetWordmark } from '../components/OctobetWordmark';
+import { OctobetiQWordmark } from '../components/OctobetiQWordmark';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchUpcomingGames, restoreGamesFromCache } from '../store/slices/gamesSlice';
 import { apiService } from '../services/api';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
-import { SPORT_OPTIONS } from '../constants/leagues';
+import { SPORT_OPTIONS, HOME_HERO_EMPTY_TAGLINE } from '../constants/leagues';
 import { theme } from '../constants/theme';
+import { useAdEngine } from '../ads/engine/AdEngineContext';
+import { NativeFeedAdCard } from '../ads/components/NativeFeedAdCard';
+import { BannerStrip } from '../ads/components/BannerStrip';
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -45,22 +48,14 @@ const getSportIcon = (leagueId: string): keyof typeof Ionicons.glyphMap => {
       return 'football';
     case 'nba':
       return 'basketball';
-    case 'mlb':
-      return 'baseball';
-    case 'nhl':
-      return 'snow'; // ionicons has no "ice-hockey"; snow suggests ice
     case 'soccer':
     case 'premier_league':
     case 'champions_league':
+    case 'la_liga':
+    case 'serie_a':
+    case 'bundesliga':
+    case 'mls':
       return 'football';
-    case 'boxing':
-      return 'fitness';
-    case 'tennis':
-      return 'trophy';
-    case 'golf':
-      return 'trophy';
-    case 'mma':
-      return 'fitness';
     default:
       return 'football-outline';
   }
@@ -74,6 +69,7 @@ function getGreeting(): string {
 }
 
 export const HomeScreen: React.FC = () => {
+  const adEngine = useAdEngine();
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const dispatch = useAppDispatch();
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
@@ -252,7 +248,7 @@ export const HomeScreen: React.FC = () => {
         <View style={styles.headerContent}>
           <View style={styles.logoContainer}>
             <View style={styles.headerTextContainer}>
-              <OctobetWordmark variant="header" />
+              <OctobetiQWordmark variant="header" />
               <Text style={styles.headerSubtitle}>AI Picks That Win More</Text>
             </View>
           </View>
@@ -273,35 +269,41 @@ export const HomeScreen: React.FC = () => {
       {/* Hero strip: greeting + value prop + trust */}
       <View style={styles.heroStrip}>
         <Text style={styles.heroGreeting}>
-          {isAuthenticated ? `${getGreeting()}${user?.email ? ` · ${user.email.split('@')[0]}` : ''}` : 'Welcome to Octobet'}
+          {isAuthenticated ? `${getGreeting()}${user?.email ? ` · ${user.email.split('@')[0]}` : ''}` : 'Welcome to octobetiQ'}
         </Text>
         <Text style={styles.heroHeadline}>AI Picks That Win More</Text>
         <Text style={styles.heroSub}>
-          {forYouPicks.length > 0 ? `${forYouPicks.length} pick${forYouPicks.length === 1 ? '' : 's'} for you today` : '62%+ accuracy · Free daily picks · NFL, NBA, EPL & more'}
+          {forYouPicks.length > 0
+            ? `${forYouPicks.length} pick${forYouPicks.length === 1 ? '' : 's'} for you today`
+            : HOME_HERO_EMPTY_TAGLINE}
         </Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.trustRow} contentContainerStyle={styles.trustRowContent}>
           <TouchableOpacity onPress={() => navigation.navigate('Accuracy')} style={styles.trustPill}>
-            <Text style={styles.trustPillText}>{accuracyPct != null ? `${accuracyPct}% accuracy` : '68% accuracy'}</Text>
+            <Text style={styles.trustPillText}>
+              {accuracyPct != null ? `${accuracyPct}% · model accuracy` : 'Model accuracy'}
+            </Text>
             <Ionicons name="chevron-forward" size={12} color={theme.colors.textMuted} />
           </TouchableOpacity>
-          <View style={styles.trustPill}><Text style={styles.trustPillText}>4.9 ★</Text></View>
-          <View style={styles.trustPill}><Text style={styles.trustPillText}>12k+ Users</Text></View>
+          <TouchableOpacity onPress={() => navigation.navigate('Help')} style={styles.trustPill} activeOpacity={0.85}>
+            <Text style={styles.trustPillText}>FAQ & trust</Text>
+            <Ionicons name="chevron-forward" size={12} color={theme.colors.textMuted} />
+          </TouchableOpacity>
         </ScrollView>
       </View>
 
-      {/* User stats widget (when logged in and data available) */}
-      {isAuthenticated && (accuracyPct != null || favoritesCount) && (
+      {/* User stats widget (logged in): always link to tracked model accuracy */}
+      {isAuthenticated && (
         <View style={styles.statsWidget}>
-          {accuracyPct != null && (
-            <TouchableOpacity
-              style={styles.statsPill}
-              onPress={() => navigation.navigate('Accuracy')}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="stats-chart" size={16} color={theme.colors.accent} />
-              <Text style={styles.statsPillText}>Model: {accuracyPct}%</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={styles.statsPill}
+            onPress={() => navigation.navigate('Accuracy')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="stats-chart" size={16} color={theme.colors.accent} />
+            <Text style={styles.statsPillText}>
+              {accuracyPct != null ? `Model: ${accuracyPct}%` : 'Model accuracy'}
+            </Text>
+          </TouchableOpacity>
           {favoritesCount && (favoritesCount.leagues > 0 || favoritesCount.teams > 0) && (
             <TouchableOpacity
               style={styles.statsPill}
@@ -424,6 +426,9 @@ export const HomeScreen: React.FC = () => {
               <GameCard game={game} />
             </TouchableOpacity>
           ))}
+          {adEngine.initialized && liveGames.length > 0 ? (
+            <NativeFeedAdCard surface="home" screenLabel="Home_InPlay_Rail" />
+          ) : null}
         </View>
       )}
 
@@ -443,7 +448,7 @@ export const HomeScreen: React.FC = () => {
               <GameCard game={featuredGame} />
               {featuredGame.prediction && (
                 <View style={styles.featuredPrediction}>
-                  <PredictionCard prediction={featuredGame.prediction} />
+                  <PredictionCard prediction={featuredGame.prediction} league={featuredGame.league} />
                 </View>
               )}
             </View>
@@ -494,10 +499,15 @@ export const HomeScreen: React.FC = () => {
               <Ionicons name="close" size={20} color={theme.colors.textMuted} />
             </TouchableOpacity>
             <Text style={styles.premiumTeaserTitle}>Live picks & full analysis</Text>
-            <Text style={styles.premiumTeaserSub}>7-day free trial — no card required</Text>
+            <Text style={styles.premiumTeaserSub}>7-day free trial via Stripe Checkout</Text>
             <TouchableOpacity
               style={styles.premiumTeaserButton}
-              onPress={() => navigation.navigate('Paywall')}
+              onPress={() =>
+                navigation.navigate('Paywall', {
+                  emphasizeTier: 'premium',
+                  contextMessage: 'Premium: unlimited picks, full analysis, live updates, and player props. 7-day free trial.',
+                })
+              }
               activeOpacity={0.9}
             >
               <Text style={styles.premiumTeaserButtonText}>Try free</Text>
@@ -507,9 +517,14 @@ export const HomeScreen: React.FC = () => {
       )}
 
       {/* Games by League */}
-      {Object.entries(gamesByLeague).map(([league, games]) => {
+      {Object.entries(gamesByLeague).map(([league, games], sectionIndex) => {
         if (games.length === 0 || games[0]?.id === featuredGame?.id) return null;
         const leagueLabel = SPORT_OPTIONS.find((s) => s.id === league)?.label || league.toUpperCase().replace('_', ' ');
+        const spacing = adEngine.initialized ? adEngine.spacingForHome() : 4;
+        const showMidRail =
+          adEngine.initialized &&
+          sectionIndex > 0 &&
+          (sectionIndex + 1) % spacing === 0;
         return (
           <View key={league} style={styles.section}>
             <Text style={styles.sectionLabel}>{leagueLabel.toUpperCase()}</Text>
@@ -530,6 +545,9 @@ export const HomeScreen: React.FC = () => {
                 <GameCard game={game} />
               </TouchableOpacity>
             ))}
+            {showMidRail ? (
+              <NativeFeedAdCard surface="home" screenLabel={`Home_${league}_Rail`} />
+            ) : null}
           </View>
         );
       })}
@@ -557,6 +575,12 @@ export const HomeScreen: React.FC = () => {
           <Text style={styles.emptyText}>No upcoming games</Text>
         </View>
       )}
+
+      {adEngine.initialized ? (
+        <View style={styles.homeBannerDock}>
+          <BannerStrip screen="HomeBanner" />
+        </View>
+      ) : null}
       </ScrollView>
     </View>
   );
@@ -600,6 +624,12 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: theme.spacing.xl,
+  },
+  homeBannerDock: {
+    marginTop: theme.spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.colors.borderSubtle,
+    backgroundColor: theme.colors.backgroundElevated,
   },
   heroStrip: {
     marginHorizontal: theme.spacing.md,

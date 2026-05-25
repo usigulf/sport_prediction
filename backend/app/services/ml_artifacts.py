@@ -1,12 +1,19 @@
 """
 Load sklearn artifacts (simple_model.pkl + feature_columns.pkl) and run inference.
 Returns None if artifacts are missing; callers should use a heuristic fallback.
+Artifacts must live in a trusted read-only directory (mounted in Docker).
 """
 from __future__ import annotations
 
+import logging
 import os
 import pickle
 from typing import Any, Optional
+
+logger = logging.getLogger(__name__)
+
+# Only unpickle files with these exact names from the model directory.
+_ALLOWED_ARTIFACTS = frozenset({"simple_model.pkl", "feature_columns.pkl"})
 
 
 def _artifact_paths(model_dir: str) -> tuple[str, str]:
@@ -14,6 +21,17 @@ def _artifact_paths(model_dir: str) -> tuple[str, str]:
         os.path.join(model_dir, "simple_model.pkl"),
         os.path.join(model_dir, "feature_columns.pkl"),
     )
+
+
+def _safe_load_pickle(path: str) -> Any:
+    basename = os.path.basename(path)
+    if basename not in _ALLOWED_ARTIFACTS:
+        raise ValueError(f"Refusing to unpickle unexpected artifact: {basename}")
+    real_dir = os.path.realpath(os.path.dirname(path))
+    if not os.access(real_dir, os.R_OK):
+        raise PermissionError(f"Model directory not readable: {real_dir}")
+    with open(path, "rb") as f:
+        return pickle.load(f)
 
 
 def predict_from_artifacts(
@@ -34,11 +52,10 @@ def predict_from_artifacts(
     except ImportError:
         return None
     try:
-        with open(model_path, "rb") as f:
-            model = pickle.load(f)
-        with open(feature_path, "rb") as f:
-            feature_columns: list = pickle.load(f)
-    except Exception:
+        model = _safe_load_pickle(model_path)
+        feature_columns: list = _safe_load_pickle(feature_path)
+    except Exception as exc:
+        logger.warning("Failed to load ML artifacts from %s: %s", model_dir, exc)
         return None
     if not hasattr(model, "predict_proba"):
         return None
@@ -93,9 +110,12 @@ def heuristic_predict(features: dict[str, Any], default_version: str) -> dict[st
         confidence = "medium"
     else:
         confidence = "low"
+    version = default_version
+    if default_version and "synthetic" not in default_version:
+        version = f"{default_version}_synthetic"
     return {
         "home_win_probability": round(home_win, 4),
         "away_win_probability": round(away_win, 4),
         "confidence_level": confidence,
-        "model_version": default_version,
+        "model_version": version,
     }

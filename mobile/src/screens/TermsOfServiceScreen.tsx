@@ -11,7 +11,7 @@ export const TermsOfServiceScreen: React.FC = () => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>1. Acceptance</Text>
         <Text style={styles.body}>
-          By using Octobet ("the app"), you agree to these Terms of Service and our Privacy Policy.
+          By using octobetiQ ("the app"), you agree to these Terms of Service and our Privacy Policy.
           If you do not agree, do not use the app.
         </Text>
       </View>
@@ -19,7 +19,7 @@ export const TermsOfServiceScreen: React.FC = () => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>2. Service description</Text>
         <Text style={styles.body}>
-          Octobet provides information-only sports predictions and analytics. We do not offer
+          octobetiQ provides information-only sports predictions and analytics. We do not offer
           gambling, betting, or financial advice. Predictions are for entertainment and informational
           purposes only. We do not guarantee accuracy of any prediction.
         </Text>

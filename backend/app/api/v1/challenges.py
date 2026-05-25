@@ -9,7 +9,7 @@ from uuid import UUID
 from datetime import datetime, timezone
 from pydantic import BaseModel, Field
 
-from app.api.deps import get_current_user
+from app.api.deps import require_pro_subscription
 from app.database import get_db
 from app.models.user import User
 from app.models.challenge import Challenge
@@ -82,10 +82,10 @@ def _challenge_to_response(c: Challenge) -> dict:
 async def list_challenges(
     status_filter: Optional[str] = Query(None, alias="status", description="active | completed | all"),
     limit: int = Query(20, ge=1, le=50),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_pro_subscription),
     db: Session = Depends(get_db),
 ):
-    """List challenges created by the current user."""
+    """List challenges created by the current user (Pro only)."""
     q = db.query(Challenge).filter(Challenge.creator_id == current_user.id)
     if status_filter and status_filter != "all":
         q = q.filter(Challenge.status == status_filter)
@@ -101,10 +101,10 @@ async def list_challenges(
 @router.get("/{challenge_id}")
 async def get_challenge(
     challenge_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_pro_subscription),
     db: Session = Depends(get_db),
 ):
-    """Get one challenge by id (must be creator)."""
+    """Get one challenge by id (must be creator; Pro only)."""
     c = db.query(Challenge).filter(Challenge.id == challenge_id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Challenge not found")
@@ -117,10 +117,10 @@ async def get_challenge(
 @router.post("")
 async def create_challenge(
     body: CreateChallengeRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_pro_subscription),
     db: Session = Depends(get_db),
 ):
-    """Create a new challenge with the given game_ids. Games must exist and be scheduled."""
+    """Create a new challenge with the given game_ids (Pro only). Games must exist and be scheduled."""
     if len(body.game_ids) > MAX_GAMES_PER_CHALLENGE:
         raise HTTPException(
             status_code=400,

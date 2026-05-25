@@ -64,6 +64,8 @@ class StructuredGameAnalysis(BaseModel):
     data_freshness_note: Optional[str] = None
     # Sportradar snapshot when configured: NFL and/or soccer season standings for the two teams.
     provider_context_note: Optional[str] = None
+    # Honesty layer: what data was available for this matchup (partial coverage OK).
+    data_coverage_note: Optional[str] = None
 
 
 class PredictionResponse(BaseModel):
@@ -75,6 +77,10 @@ class PredictionResponse(BaseModel):
     expected_home_score: Optional[float] = None
     expected_away_score: Optional[float] = None
     confidence_level: str
+    data_quality_score: Optional[float] = None
+    data_quality_label: Optional[str] = None
+    quality_gate_applied: Optional[bool] = None
+    quality_reasons: Optional[List[str]] = None
     created_at: datetime
     
     class Config:
@@ -107,5 +113,9 @@ class PredictionExplanationResponse(BaseModel):
     confidence_explanation: Optional[str] = None
     model_version: str
     accuracy: Optional[float] = None
+    data_quality_score: Optional[float] = None
+    data_quality_label: Optional[str] = None
+    quality_gate_applied: Optional[bool] = None
+    quality_reasons: Optional[List[str]] = None
     rich_analysis: Optional[RichAnalysisSections] = None
     structured_analysis: Optional[StructuredGameAnalysis] = None

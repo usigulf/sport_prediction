@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Ruff (if installed)
+        run: |
+          pip install ruff 2>/dev/null || true
+          ruff check app tests --ignore E501 2>/dev/null || true
+
+      - name: Pytest with coverage
+        env:
+          DATABASE_URL: sqlite:///:memory:
+          REDIS_URL: disabled
+          JWT_SECRET: ci-test-jwt-secret-minimum-32-characters-long
+          ENVIRONMENT: test
+          RATE_LIMIT_AUTH_PER_MINUTE: "1000"
+          RATE_LIMIT_PREDICTIONS_PER_MINUTE: "1000"
+        run: |
+          cd ..
+          pytest backend/tests -c pytest.ini --cov-fail-under=45
+
+  mobile-typecheck:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install and typecheck
+        run: |
+          npm ci
+          npx tsc --noEmit

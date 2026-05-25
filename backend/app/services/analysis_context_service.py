@@ -439,6 +439,52 @@ def build_probability_trend(db: Session, game: Game, limit: int = 6) -> list[Pro
     return [pt for pt in points if pt.timestamp_iso]
 
 
+def build_data_coverage_note(
+    game: Game,
+    src: FeatureSource,
+    standings_row_count: int,
+    recent_form_snapshot: str | None,
+) -> str | None:
+    """Short transparency text when inputs are partial or demo."""
+    league_l = (game.league or "").lower()
+    soccer = league_l in SOCCER_LEAGUES_SET
+    chunks: list[str] = []
+    if soccer:
+        if src == "soccer_db_standings":
+            chunks.append(
+                "Inputs use league standings stored in our database, "
+                "plus recent league results when we have enough finished fixtures."
+            )
+        elif src == "soccer_sportradar_api":
+            chunks.append(
+                "Inputs blend live standings (provider) with recent league results from our database when available."
+            )
+        else:
+            chunks.append(
+                "Demo priors are used until standings and results are fully synced for this competition."
+            )
+        if standings_row_count >= 2:
+            chunks.append("Table context is present for both teams.")
+        elif standings_row_count == 1:
+            chunks.append("Table context is partial (one side missing in standings cache).")
+        else:
+            chunks.append("No standings rows yet for this pair — enrichment will improve as data syncs.")
+        if recent_form_snapshot and recent_form_snapshot.strip():
+            chunks.append("Recent W–D–L reflects finished league games we already store.")
+        else:
+            chunks.append("Recent form window is sparse until more finished league games exist in our DB.")
+    else:
+        if src == "synthetic":
+            chunks.append(
+                "Feature priors are synthetic for this league until full season data is wired in."
+            )
+        if standings_row_count >= 2:
+            chunks.append("Structured standings rows are shown where configured.")
+    if not chunks:
+        return None
+    return " ".join(chunks)
+
+
 def build_structured_game_analysis(db: Session, game: Game | None) -> StructuredGameAnalysis:
     """Rows for tables/cards; complements narrative rich_analysis."""
     note = (
@@ -450,20 +496,23 @@ def build_structured_game_analysis(db: Session, game: Game | None) -> Structured
     feats, src = build_game_features(game, db)
     league_label = (game.league or "").upper() or None
     h2h_meetings, h2h_series_summary = build_h2h_structured(db, game)
+    standings_rows = build_standings_row_details(db, game)
+    recent_snap = format_recent_wdl_for_matchup(db, game)
+    cov_note = build_data_coverage_note(game, src, len(standings_rows), recent_snap)
     out = StructuredGameAnalysis(
         league_label=league_label,
-        standings_rows=build_standings_row_details(db, game),
+        standings_rows=standings_rows,
         h2h_meetings=h2h_meetings,
         h2h_series_summary=h2h_series_summary,
         metric_comparisons=build_metric_comparison_rows(game, feats, src),
         probability_trend=build_probability_trend(db, game),
-        recent_form_snapshot=format_recent_wdl_for_matchup(db, game),
+        recent_form_snapshot=recent_snap,
         player_spotlights=load_player_spotlights(db, game.id),
         data_freshness_note=note,
+        data_coverage_note=cov_note,
     )
     league_l = (game.league or "").lower()
     if league_l == "nfl":
-        from app.config import get_settings
         from app.services.sportradar_nfl_service import nfl_matchup_provider_note
 
         pn = nfl_matchup_provider_note(game, get_settings())

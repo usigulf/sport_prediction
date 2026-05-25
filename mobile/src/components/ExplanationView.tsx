@@ -8,6 +8,7 @@ import { impliedDrawForSoccer, normalizeThreeWay } from '../utils/predictionDisp
 import type {
   H2HMeetingDetail,
   MetricComparisonRow,
+  PredictionExplanation,
   ProbabilityTrendPoint,
   PlayerSpotlightDetail,
   StandingsRowDetail,
@@ -26,6 +27,15 @@ interface ExplanationViewProps {
   league?: string;
   homeWinProbability?: number;
   awayWinProbability?: number;
+  /**
+   * When set, skips Redux `fetchExplanation` and uses this payload (e.g. game preview modal).
+   * Avoids stale/wrong analysis when global `state.games.explanation` is for another screen.
+   */
+  external?: {
+    explanation: PredictionExplanation | null;
+    loading: boolean;
+    error: string | null;
+  };
 }
 
 /** Backend returns these three when no ML artifact dir is configured — not real SHAP factors. */
@@ -321,13 +331,22 @@ export const ExplanationView: React.FC<ExplanationViewProps> = ({
   league,
   homeWinProbability,
   awayWinProbability,
+  external,
 }) => {
   const dispatch = useAppDispatch();
-  const { explanation, loadingExplanation } = useAppSelector((state) => state.games);
+  const { explanation: reduxExplanation, loadingExplanation: reduxLoading } = useAppSelector(
+    (state) => state.games
+  );
+
+  const useExternal = Boolean(external);
+  const explanation = useExternal ? external!.explanation : reduxExplanation;
+  const loadingExplanation = useExternal ? external!.loading : reduxLoading;
+  const externalError = useExternal ? external!.error : null;
 
   useEffect(() => {
+    if (useExternal) return;
     dispatch(fetchExplanation({ gameId, predictionId }));
-  }, [gameId, predictionId, analysisRefreshToken, dispatch]);
+  }, [gameId, predictionId, analysisRefreshToken, dispatch, useExternal]);
 
   const narrativeSections = useMemo(() => {
     const ra = explanation?.rich_analysis;
@@ -384,6 +403,14 @@ export const ExplanationView: React.FC<ExplanationViewProps> = ({
     );
   }
 
+  if (externalError) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>{externalError}</Text>
+      </View>
+    );
+  }
+
   if (!explanation) {
     return (
       <View style={styles.container}>
@@ -408,6 +435,7 @@ export const ExplanationView: React.FC<ExplanationViewProps> = ({
   const playerRows = sa?.player_spotlights ?? [];
   const trendPoints = sa?.probability_trend ?? [];
   const recentFormSnap = sa?.recent_form_snapshot?.trim() ?? '';
+  const coverageNote = sa?.data_coverage_note?.trim() ?? '';
   const hasStructuredDetail =
     standingsRows.length > 0 ||
     h2hMeetings.length > 0 ||
@@ -415,6 +443,7 @@ export const ExplanationView: React.FC<ExplanationViewProps> = ({
     metricRows.length > 0 ||
     trendPoints.length > 1 ||
     Boolean(recentFormSnap) ||
+    Boolean(coverageNote) ||
     playerRows.length > 0;
 
   const showOneX2 =
@@ -449,6 +478,10 @@ export const ExplanationView: React.FC<ExplanationViewProps> = ({
 
       {sa?.data_freshness_note ? (
         <Text style={styles.freshnessNote}>{sa.data_freshness_note}</Text>
+      ) : null}
+
+      {coverageNote ? (
+        <Text style={styles.coverageNote}>{coverageNote}</Text>
       ) : null}
 
       {sa?.provider_context_note?.trim() ? (
@@ -584,6 +617,13 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     marginBottom: theme.spacing.md,
     lineHeight: 17,
+  },
+  coverageNote: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    marginBottom: theme.spacing.sm,
+    lineHeight: 17,
+    fontStyle: 'italic',
   },
   standingsCard: {
     marginBottom: theme.spacing.sm,

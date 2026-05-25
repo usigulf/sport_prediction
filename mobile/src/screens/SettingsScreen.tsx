@@ -6,7 +6,12 @@ import {
   ScrollView,
   Switch,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { Ionicons } from '@expo/vector-icons';
+import { RootStackParamList } from '../navigation/AppNavigator';
 import {
   getPushNotificationsEnabled,
   setPushNotificationsEnabled,
@@ -18,6 +23,7 @@ import {
 import { theme } from '../constants/theme';
 
 export const SettingsScreen: React.FC = () => {
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [pushEnabled, setPushEnabledState] = useState<boolean>(true);
   const [loading, setLoading] = useState(true);
 
@@ -59,6 +65,32 @@ export const SettingsScreen: React.FC = () => {
         <Text style={styles.hint}>
           Game reminders and high-confidence pick alerts. Turn off to stop all push notifications.
         </Text>
+      </View>
+
+      <Text style={styles.outerSectionTitle}>Support & trust</Text>
+      <View style={styles.section}>
+        <TouchableOpacity
+          style={styles.linkRow}
+          onPress={() => navigation.navigate('Help')}
+          activeOpacity={0.7}
+        >
+          <View style={styles.linkTextBlock}>
+            <Text style={styles.linkTitle}>Help & FAQ</Text>
+            <Text style={styles.linkSubtitle}>Transparency, methodology, how accuracy works</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.linkRow, styles.linkRowLast]}
+          onPress={() => navigation.navigate('Accuracy')}
+          activeOpacity={0.7}
+        >
+          <View style={styles.linkTextBlock}>
+            <Text style={styles.linkTitle}>Model accuracy</Text>
+            <Text style={styles.linkSubtitle}>Overall, last 30 days, confidence & data coverage</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -103,5 +135,41 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     marginTop: 8,
     marginBottom: 4,
+  },
+  outerSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.textMuted,
+    marginBottom: 8,
+    marginTop: 4,
+    textTransform: 'uppercase',
+  },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderSubtle,
+    minHeight: theme.minTouchSize,
+  },
+  linkRowLast: {
+    borderBottomWidth: 0,
+  },
+  linkTextBlock: {
+    flex: 1,
+    marginRight: 12,
+  },
+  linkTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginBottom: 4,
+  },
+  linkSubtitle: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    lineHeight: 18,
   },
 });

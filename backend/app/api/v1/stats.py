@@ -1,13 +1,17 @@
 """
-Stats endpoints: model accuracy (prediction vs outcome)
+Stats endpoints: model accuracy (prediction vs outcome), trust metadata, data coverage.
 """
-from collections import defaultdict
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
+
 from app.database import get_db
-from app.models.game import Game
-from app.models.prediction import Prediction
+from app.services.trust_metrics_service import (
+    aggregate_accuracy_from_finished,
+    league_data_coverage,
+    methodology_blurb,
+)
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 
@@ -15,57 +19,52 @@ router = APIRouter(prefix="/stats", tags=["stats"])
 @router.get("/accuracy")
 async def get_accuracy(db: Session = Depends(get_db)):
     """
-    Historical accuracy: for finished games with a prediction, was the predicted winner correct?
-    Public endpoint (no auth) for transparency.
+    Historical accuracy for finished games with a stored prediction.
+
+    Public endpoint (no auth) for transparency. See `methodology` for scoring rules.
+    Includes rolling 30-day window and confidence-bucket breakdown.
     """
-    # Games that have finished (have final scores). Seed uses "finished"; support both.
-    finished = (
-        db.query(Game)
-        .filter(Game.status.in_(["finished", "final"]))
-        .all()
-    )
-    total = 0
-    correct = 0
-    by_league = defaultdict(lambda: {"total": 0, "correct": 0})
-
-    for game in finished:
-        # Latest prediction for this game
-        pred = (
-            db.query(Prediction)
-            .filter(Prediction.game_id == game.id)
-            .order_by(desc(Prediction.created_at))
-            .first()
-        )
-        if not pred:
-            continue
-
-        total += 1
-        predicted_home_win = float(pred.home_win_probability) > float(pred.away_win_probability)
-        actual_home_win = (game.home_score or 0) > (game.away_score or 0)
-        is_correct = predicted_home_win == actual_home_win
-        if is_correct:
-            correct += 1
-
-        league = game.league or "other"
-        by_league[league]["total"] += 1
-        if is_correct:
-            by_league[league]["correct"] += 1
-
-    # Build by_league with pct
-    by_league_out = {}
-    for league, counts in by_league.items():
-        t, c = counts["total"], counts["correct"]
-        by_league_out[league] = {
-            "total": t,
-            "correct": c,
-            "accuracy_pct": round(100.0 * c / t, 1) if t else 0,
-        }
-
-    accuracy_pct = round(100.0 * correct / total, 1) if total else 0
+    full = aggregate_accuracy_from_finished(db, since=None)
+    now = datetime.now(timezone.utc)
+    since_30d = now - timedelta(days=30)
+    roll_30d = aggregate_accuracy_from_finished(db, since=since_30d)
+    meta = methodology_blurb()
 
     return {
-        "total_games": total,
-        "correct": correct,
-        "accuracy_pct": accuracy_pct,
-        "by_league": by_league_out,
+        **full,
+        "rolling_30d": {
+            "total_games": roll_30d["total_games"],
+            "correct": roll_30d["correct"],
+            "accuracy_pct": roll_30d["accuracy_pct"],
+            "by_league": roll_30d["by_league"],
+            "by_confidence": roll_30d["by_confidence"],
+            "window_start_iso": since_30d.isoformat(),
+        },
+        "methodology": meta,
+    }
+
+
+@router.get("/coverage")
+async def get_data_coverage(db: Session = Depends(get_db)):
+    """
+    Informational snapshot of which leagues have standings data in DB (partial coverage transparency).
+    Expands as licensed feeds and sync jobs grow.
+    """
+    leagues = league_data_coverage(db)
+    latest_sync_iso = None
+    if leagues:
+        latest_sync_iso = max(
+            (row.get("standings_last_updated_iso") for row in leagues if row.get("standings_last_updated_iso")),
+            default=None,
+        )
+    return {
+        "leagues": leagues,
+        "summary": {
+            "leagues_with_standings": len(leagues),
+            "latest_standings_sync_iso": latest_sync_iso,
+        },
+        "disclaimer": (
+            "Coverage reflects data currently stored in our database and sync jobs — "
+            "not every competition has injuries, odds, or lineups until fully licensed."
+        ),
     }

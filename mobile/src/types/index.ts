@@ -13,8 +13,8 @@ export interface Team {
   id: string;
   name: string;
   league: string;
-  abbreviation: string;
-  logo_url?: string;
+  abbreviation?: string | null;
+  logo_url?: string | null;
 }
 
 export interface Game {
@@ -41,6 +41,10 @@ export interface Prediction {
   expected_home_score?: number;
   expected_away_score?: number;
   confidence_level: 'high' | 'medium' | 'low';
+  data_quality_score?: number;
+  data_quality_label?: 'high' | 'medium' | 'low';
+  quality_gate_applied?: boolean;
+  quality_reasons?: string[];
   created_at: string;
 }
 
@@ -112,6 +116,8 @@ export interface StructuredGameAnalysis {
   data_freshness_note?: string | null;
   /** NFL: Sportradar REG standings snapshot when API key configured */
   provider_context_note?: string | null;
+  /** What inputs were available (partial coverage transparency) */
+  data_coverage_note?: string | null;
 }
 
 export interface PredictionExplanation {
@@ -123,6 +129,10 @@ export interface PredictionExplanation {
   confidence_explanation?: string;
   model_version: string;
   accuracy?: number;
+  data_quality_score?: number;
+  data_quality_label?: 'high' | 'medium' | 'low';
+  quality_gate_applied?: boolean;
+  quality_reasons?: string[];
   rich_analysis?: RichAnalysisSections | null;
   structured_analysis?: StructuredGameAnalysis | null;
 }
@@ -134,4 +144,26 @@ export interface PlayerProp {
   prop_type: string;
   predicted_value: number;
   confidence_level: 'high' | 'medium' | 'low';
+}
+
+export interface TopPick {
+  game_id: string;
+  league: string;
+  home_team_name: string;
+  away_team_name: string;
+  home_win_probability: number;
+  away_win_probability: number;
+  confidence_level: string;
+  scheduled_time?: string;
+}
+
+export interface ChallengeSummary {
+  id: string;
+  creator_id: string;
+  game_ids: string[];
+  status: string;
+  correct_count: number;
+  total_count: number;
+  created_at: string | null;
+  completed_at: string | null;
 }

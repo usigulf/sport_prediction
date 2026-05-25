@@ -1,0 +1,282 @@
+# React Native officially requires Xcode >= 16.1. Older hosts (e.g. macOS 12 + Xcode 14) cannot install that.
+# We relax the *pod install* check when the active Xcode is < 16.1 so CocoaPods can finish. Native compile may still fail.
+# Force the upstream check: OCTO_ENFORCE_RN_MIN_XCODE=1 bundle exec pod install
+# Production iOS: prefer EAS Build (Xcode 16+) or upgrade Xcode.
+#
+# TLS to cdn.cocoapods.org: rbenv Ruby + OpenSSL needs a CA bundle or you get "certificate verify failed".
+def octobetiq_find_ca_bundle
+  if ENV['SSL_CERT_FILE'].to_s != '' && File.file?(ENV['SSL_CERT_FILE'])
+    return ENV['SSL_CERT_FILE']
+  end
+
+  candidates = []
+  begin
+    require 'openssl'
+    d = OpenSSL::X509::DEFAULT_CERT_FILE
+    candidates << d if d && !d.to_s.empty?
+  rescue LoadError
+  end
+
+  brew_openssl = `brew --prefix openssl@3 2>/dev/null`.strip
+  candidates << File.join(brew_openssl, 'etc/openssl@3/cert.pem') if brew_openssl != ''
+  candidates += %w[
+    /opt/homebrew/etc/openssl@3/cert.pem
+    /usr/local/etc/openssl@3/cert.pem
+    /etc/ssl/cert.pem
+  ]
+  candidates.find { |p| File.file?(p) }
+end
+
+ca = octobetiq_find_ca_bundle
+if ca
+  ENV['SSL_CERT_FILE'] = ca
+  ENV['OPENSSL_CERT_FILE'] = ca
+else
+  warn '[octobetiQ] No CA certificate bundle found. If `pod install` fails SSL to cdn.cocoapods.org: brew install openssl@3'
+end
+
+require File.join(File.dirname(`node --print "require.resolve('expo/package.json')"`), "scripts/autolinking")
+require File.join(File.dirname(`node --print "require.resolve('react-native/package.json')"`), "scripts/react_native_pods")
+
+begin
+  xc_line = `xcodebuild -version 2>/dev/null`.strip.lines.first
+  xc_m = xc_line&.match(/Xcode\s+(\d+(?:\.\d+)*)/)
+  if xc_m && Gem::Version.correct?(xc_m[1]) && Gem::Version.new(xc_m[1]) < Gem::Version.new('16.1') && ENV['OCTO_ENFORCE_RN_MIN_XCODE'] != '1'
+    # Must use ::Helpers — a bare `module Helpers` in a Podfile can nest under CocoaPods' DSL, not RN's module.
+    ::Helpers::Constants.define_singleton_method(:min_xcode_version_supported) { '14.0' }
+    warn "[octobetiQ] Xcode #{xc_m[1]} < 16.1: allowing pod install (RN wants 16.1+). Use EAS or upgrade for supported builds."
+  end
+rescue StandardError => e
+  warn "[octobetiQ] min-Xcode relax hook skipped: #{e.message}"
+end
+
+require 'json'
+podfile_properties = JSON.parse(File.read(File.join(__dir__, 'Podfile.properties.json'))) rescue {}
+
+def ccache_enabled?(podfile_properties)
+  # Environment variable takes precedence
+  return ENV['USE_CCACHE'] == '1' if ENV['USE_CCACHE']
+  
+  # Fall back to Podfile properties
+  podfile_properties['apple.ccacheEnabled'] == 'true'
+end
+
+ENV['RCT_NEW_ARCH_ENABLED'] ||= '0' if podfile_properties['newArchEnabled'] == 'false'
+ENV['EX_DEV_CLIENT_NETWORK_INSPECTOR'] ||= podfile_properties['EX_DEV_CLIENT_NETWORK_INSPECTOR']
+ENV['RCT_USE_RN_DEP'] ||= '1' if podfile_properties['ios.buildReactNativeFromSource'] != 'true' && podfile_properties['newArchEnabled'] != 'false'
+ENV['RCT_USE_PREBUILT_RNCORE'] ||= '1' if podfile_properties['ios.buildReactNativeFromSource'] != 'true' && podfile_properties['newArchEnabled'] != 'false'
+platform :ios, podfile_properties['ios.deploymentTarget'] || '15.1'
+
+prepare_react_native_project!
+
+target 'octobetiQ' do
+  use_expo_modules!
+
+  if ENV['EXPO_USE_COMMUNITY_AUTOLINKING'] == '1'
+    config_command = ['node', '-e', "process.argv=['', '', 'config'];require('@react-native-community/cli').run()"];
+  else
+    config_command = [
+      'node',
+      '--no-warnings',
+      '--eval',
+      'require(\'expo/bin/autolinking\')',
+      'expo-modules-autolinking',
+      'react-native-config',
+      '--json',
+      '--platform',
+      'ios'
+    ]
+  end
+
+  config = use_native_modules!(config_command)
+
+  use_frameworks! :linkage => podfile_properties['ios.useFrameworks'].to_sym if podfile_properties['ios.useFrameworks']
+  use_frameworks! :linkage => ENV['USE_FRAMEWORKS'].to_sym if ENV['USE_FRAMEWORKS']
+
+  use_react_native!(
+    :path => config[:reactNativePath],
+    :hermes_enabled => podfile_properties['expo.jsEngine'] == nil || podfile_properties['expo.jsEngine'] == 'hermes',
+    # An absolute path to your application root.
+    :app_path => "#{Pod::Config.instance.installation_root}/..",
+    :privacy_file_aggregation_enabled => podfile_properties['apple.privacyManifestAggregationEnabled'] != 'false',
+  )
+
+  post_install do |installer|
+    react_native_post_install(
+      installer,
+      config[:reactNativePath],
+      :mac_catalyst_enabled => false,
+      :ccache_enabled => ccache_enabled?(podfile_properties),
+    )
+
+    # Yoga (RN New Architecture headers): Xcode 14 libc++ may not expose std::bit_cast for iOS targets;
+    # folly::bit_cast is always available via React Native dependencies.
+    Dir.glob(File.join(installer.sandbox.root.to_s, '**', 'StyleValuePool.h')).each do |pool_path|
+      next unless File.file?(pool_path)
+      contents = File.read(pool_path)
+      next if contents.include?('octobetiQ_xcode14_bit_cast')
+      next unless contents.include?('namespace facebook::yoga') && contents.include?('std::bit_cast')
+
+      system('/bin/chmod', 'u+w', pool_path)
+      updated = contents.gsub('std::bit_cast', 'folly::bit_cast')
+      updated = updated.sub(
+        /#include <cstdint>\n/,
+        "#include <cstdint>\n#include <folly/lang/Bits.h> // octobetiQ_xcode14_bit_cast\n"
+      )
+      File.write(pool_path, updated)
+    end
+
+    # worklets / reanimated: constexpr getFlag uses std::string (invalid constexpr on Xcode 14).
+    Dir.glob(File.join(installer.sandbox.root.to_s, '**', 'FeatureFlags.h')).each do |ff_path|
+      next unless File.file?(ff_path)
+      contents = File.read(ff_path)
+      next if contents.include?('octobetiQ_xcode14_feature_flags_constexpr_fix')
+      next unless contents.include?('std::string nameStr') &&
+                  (contents.include?('WORKLETS_FEATURE_FLAGS') || contents.include?('REANIMATED_FEATURE_FLAGS'))
+
+      system('/bin/chmod', 'u+w', ff_path)
+      updated = contents.sub(
+        /  static constexpr bool getFlag\(const std::string_view &name\) \{\n    std::string nameStr/,
+        "  static bool getFlag(const std::string_view &name) { // octobetiQ_xcode14_feature_flags_constexpr_fix\n    std::string nameStr"
+      )
+      File.write(ff_path, updated)
+    end
+
+    rnr_ff = File.expand_path('../node_modules/react-native-reanimated/Common/cpp/reanimated/Tools/FeatureFlags.h', __dir__)
+    if File.exist?(rnr_ff)
+      rff = File.read(rnr_ff)
+      unless rff.include?('octobetiQ_xcode14_feature_flags_constexpr_fix')
+        if rff.include?('std::string nameStr') && rff.include?('REANIMATED_FEATURE_FLAGS')
+          rff = rff.sub(
+            /  static constexpr bool getFlag\(const std::string_view &name\) \{\n    std::string nameStr/,
+            "  static bool getFlag(const std::string_view &name) { // octobetiQ_xcode14_feature_flags_constexpr_fix\n    std::string nameStr"
+          )
+          system('/bin/chmod', 'u+w', rnr_ff)
+          File.write(rnr_ff, rff)
+        end
+      end
+    end
+
+    rnr_val_interp = File.expand_path('../node_modules/react-native-reanimated/Common/cpp/reanimated/CSS/interpolation/values/ValueInterpolator.cpp', __dir__)
+    if File.exist?(rnr_val_interp)
+      vi = File.read(rnr_val_interp)
+      unless vi.include?('octobetiQ_xcode14_aggregate_emplace')
+        vi = vi.sub(
+          "  for (const auto &[offset, value] : parsedKeyframes) {\n    if (value.isUndefined()) {\n      keyframes_.emplace_back(offset, std::nullopt);\n    } else {\n      keyframes_.emplace_back(\n          offset, std::make_optional(createValue(rt, value)));\n    }\n  }\n",
+          "  for (const auto &[offset, value] : parsedKeyframes) {\n    if (value.isUndefined()) {\n      keyframes_.push_back(ValueKeyframe{offset, std::nullopt}); // octobetiQ_xcode14_aggregate_emplace\n    } else {\n      keyframes_.push_back(\n          ValueKeyframe{offset, std::make_optional(createValue(rt, value))});\n    }\n  }\n"
+        )
+        system('/bin/chmod', 'u+w', rnr_val_interp)
+        File.write(rnr_val_interp, vi)
+      end
+    end
+
+    rnr_urm = File.expand_path('../node_modules/react-native-reanimated/Common/cpp/reanimated/Fabric/updates/UpdatesRegistryManager.cpp', __dir__)
+    if File.exist?(rnr_urm)
+      urm = File.read(rnr_urm)
+      unless urm.include?('octobetiQ_xcode14_reanimated_if_constexpr')
+        urm = urm.sub(
+          "if constexpr (!StaticFeatureFlags::getFlag(\n                    \"DISABLE_COMMIT_PAUSING_MECHANISM\"))",
+          "if (!StaticFeatureFlags::getFlag(\n                    \"DISABLE_COMMIT_PAUSING_MECHANISM\")) // octobetiQ_xcode14_reanimated_if_constexpr"
+        )
+        system('/bin/chmod', 'u+w', rnr_urm)
+        File.write(rnr_urm, urm)
+      end
+    end
+
+    # With getFlag non-constexpr (see above), downstream if constexpr must become runtime if.
+    worklets_anim = File.expand_path('../node_modules/react-native-worklets/apple/worklets/apple/AnimationFrameQueue.mm', __dir__)
+    if File.exist?(worklets_anim)
+      anim = File.read(worklets_anim)
+      unless anim.include?('octobetiQ_xcode14_worklets_if_constexpr')
+        if anim.sub!(
+          'if constexpr (worklets::StaticFeatureFlags::getFlag("IOS_DYNAMIC_FRAMERATE_ENABLED")) {',
+          'if (worklets::StaticFeatureFlags::getFlag("IOS_DYNAMIC_FRAMERATE_ENABLED")) { // octobetiQ_xcode14_worklets_if_constexpr'
+        )
+          system('/bin/chmod', 'u+w', worklets_anim)
+          File.write(worklets_anim, anim)
+        end
+      end
+    end
+
+    # react-native-reanimated (CSS): libc++ on Xcode 14 needs explicit headers for std::hypot / std::optional.
+    rnr_vectors = File.expand_path('../node_modules/react-native-reanimated/Common/cpp/reanimated/CSS/common/transforms/vectors.cpp', __dir__)
+    if File.exist?(rnr_vectors)
+      vc = File.read(rnr_vectors)
+      unless vc.include?('octobetiQ_xcode14_std_headers')
+        vc = vc.sub(
+          "#include <reanimated/CSS/common/transforms/vectors.h>\n",
+          "#include <reanimated/CSS/common/transforms/vectors.h>\n#include <cmath> // octobetiQ_xcode14_std_headers\n"
+        )
+        system('/bin/chmod', 'u+w', rnr_vectors)
+        File.write(rnr_vectors, vc)
+      end
+    end
+
+    rnr_defs = File.expand_path('../node_modules/react-native-reanimated/Common/cpp/reanimated/CSS/common/definitions.h', __dir__)
+    if File.exist?(rnr_defs)
+      dh = File.read(rnr_defs)
+      unless dh.include?('octobetiQ_xcode14_std_headers')
+        dh = dh.sub(
+          "#include <jsi/jsi.h>\n#include <string>\n",
+          "#include <jsi/jsi.h>\n#include <array>\n#include <functional>\n#include <optional>\n#include <string>\n"
+        )
+        unless dh.include?('octobetiQ_xcode14_std_headers')
+          dh = dh.sub("#include <vector>\n", "#include <vector>\n// octobetiQ_xcode14_std_headers\n")
+        end
+        system('/bin/chmod', 'u+w', rnr_defs)
+        File.write(rnr_defs, dh)
+      end
+    end
+
+    # SDWebImage (expo-image): Xcode 14 SDK lacks symbols used behind @available (iOS 17+ APIs).
+    sd_root = File.join(installer.sandbox.root.to_s, 'SDWebImage')
+    if File.directory?(sd_root)
+      system('/bin/chmod', '-R', 'u+w', sd_root)
+
+      sd_meta = File.join(sd_root, 'SDWebImage/Core/UIImage+Metadata.m')
+      if File.exist?(sd_meta)
+        contents = File.read(sd_meta)
+        unless contents.include?('sd_octobetiQ_sdk_hdr_fix')
+          hdr_patch = '    if (@available(iOS 17, tvOS 17, watchOS 10, *)) {' \
+                      "\n        // sd_octobetiQ_sdk_hdr_fix: UIImage.isHighDynamicRange needs iOS 17 SDK headers." \
+                      "\n#if ((defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 170000) || (defined(__TV_OS_VERSION_MAX_ALLOWED) && __TV_OS_VERSION_MAX_ALLOWED >= 170000) || (defined(__WATCH_OS_VERSION_MAX_ALLOWED) && __WATCH_OS_VERSION_MAX_ALLOWED >= 100000))" \
+                      "\n        return self.isHighDynamicRange;" \
+                      "\n#else" \
+                      "\n        return [SDImageCoderHelper CGImageIsHDR:self.CGImage];" \
+                      "\n#endif" \
+                      "\n    } else {"
+          if contents.sub!(
+            /if \(@available\(iOS 17, tvOS 17, watchOS 10, \*\)\) \{\n        return self\.isHighDynamicRange;\n    \} else \{/,
+            hdr_patch
+          )
+            File.write(sd_meta, contents)
+          end
+        end
+      end
+
+      coder_path = File.join(sd_root, 'SDWebImage/Core/SDImageIOAnimatedCoder.m')
+      if File.exist?(coder_path)
+        cc = File.read(coder_path)
+        unless cc.include?('sd_octobetiQ_sdk_decode_fix')
+          decode_patch =
+            "#if ((defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 170000) || (defined(__TV_OS_VERSION_MAX_ALLOWED) && __TV_OS_VERSION_MAX_ALLOWED >= 170000) || (defined(__WATCH_OS_VERSION_MAX_ALLOWED) && __WATCH_OS_VERSION_MAX_ALLOWED >= 100000) || (defined(__MAC_OS_VERSION_MAX_ALLOWED) && __MAC_OS_VERSION_MAX_ALLOWED >= 140000))\n" \
+              "    // sd_octobetiQ_sdk_decode_fix: kCGImageSourceDecode* require iOS 17 / macOS 14 SDK.\n" \
+              "    if (@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)) {\n" \
+              "        if (decodeToHDR) {\n" \
+              "            decodingOptions[(__bridge NSString *)kCGImageSourceDecodeRequest] = (__bridge NSString *)kCGImageSourceDecodeToHDR;\n" \
+              "        } else {\n" \
+              "            decodingOptions[(__bridge NSString *)kCGImageSourceDecodeRequest] = (__bridge NSString *)kCGImageSourceDecodeToSDR;\n" \
+              "        }\n" \
+              "    }\n" \
+              '#endif'
+          if cc.sub!(
+            /    if \(@available\(macOS 14, iOS 17, tvOS 17, watchOS 10, \*\)\) \{\n        if \(decodeToHDR\) \{\n            decodingOptions\[\(__bridge NSString \*\)kCGImageSourceDecodeRequest\] = \(__bridge NSString \*\)kCGImageSourceDecodeToHDR;\n        \} else \{\n            decodingOptions\[\(__bridge NSString \*\)kCGImageSourceDecodeRequest\] = \(__bridge NSString \*\)kCGImageSourceDecodeToSDR;\n        \}\n    \}/,
+            decode_patch
+          )
+            File.write(coder_path, cc)
+          end
+        end
+      end
+    end
+  end
+end

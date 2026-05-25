@@ -4,6 +4,7 @@
  */
 import { Platform } from 'react-native';
 import { clearStoredAuth, getStoredAuth, setStoredAuth } from '../utils/authStorage';
+import type { User, Game, TopPick, ChallengeSummary } from '../types';
 
 // In dev: Android emulator uses 10.0.2.2 for host; iOS simulator uses localhost.
 // For a physical device, set EXPO_PUBLIC_API_URL to your machine's LAN IP (e.g. http://192.168.1.100:8000/api/v1)
@@ -175,6 +176,46 @@ async function refreshAccessToken(refreshToken: string): Promise<{
     throw err;
   }
   return res.json();
+}
+
+export interface AccuracyBucket {
+  total: number;
+  correct: number;
+  accuracy_pct: number;
+}
+
+export interface AccuracyMethodology {
+  short: string;
+  detail: string;
+}
+
+export interface AccuracyRollingWindow extends AccuracyBucket {
+  by_league: Record<string, AccuracyBucket>;
+  by_confidence: Record<string, AccuracyBucket>;
+  window_start_iso: string;
+}
+
+/** GET /stats/accuracy — overall, rolling 30d, methodology */
+export interface AccuracyResponse extends AccuracyBucket {
+  by_league: Record<string, AccuracyBucket>;
+  by_confidence: Record<string, AccuracyBucket>;
+  rolling_30d: AccuracyRollingWindow;
+  methodology: AccuracyMethodology;
+}
+
+export interface LeagueCoverageRow {
+  league: string;
+  standings_rows: number;
+  standings_last_updated_iso: string | null;
+}
+
+export interface CoverageResponse {
+  leagues: LeagueCoverageRow[];
+  summary: {
+    leagues_with_standings: number;
+    latest_standings_sync_iso: string | null;
+  };
+  disclaimer: string;
 }
 
 class ApiService {
@@ -349,9 +390,20 @@ class ApiService {
   }
 
   async register(email: string, password: string) {
-    return this.request('/auth/register', {
+    return this.request<User>('/auth/register', {
       method: 'POST',
       body: { email, password },
+    });
+  }
+
+  async logout(refreshToken?: string, accessToken?: string) {
+    return this.request('/auth/logout', {
+      method: 'POST',
+      body: {
+        refresh_token: refreshToken,
+        access_token: accessToken,
+      },
+      requireAuth: true,
     });
   }
 
@@ -377,7 +429,7 @@ class ApiService {
 
     const query = queryParams.toString();
     return this.request<{
-      games: any[];
+      games: Game[];
       total: number;
       skip: number;
       limit: number;
@@ -389,7 +441,7 @@ class ApiService {
   }
 
   async getGame(gameId: string) {
-    return this.request(`/games/${gameId}`, {
+    return this.request<Game>(`/games/${gameId}`, {
       requireAuth: false,
       sendAuthIfPresent: true,
     });
@@ -404,7 +456,8 @@ class ApiService {
 
   async getPredictionExplanation(gameId: string) {
     return this.request(`/games/${gameId}/explanation`, {
-      requireAuth: true,
+      requireAuth: false,
+      sendAuthIfPresent: true,
     });
   }
 
@@ -429,7 +482,7 @@ class ApiService {
 
   // User
   async getCurrentUser() {
-    return this.request('/user/me', {
+    return this.request<User>('/user/me', {
       requireAuth: true,
     });
   }
@@ -503,23 +556,29 @@ class ApiService {
     });
   }
 
-  // Stats (public)
+  // Stats (public; trust / transparency)
   async getAccuracy() {
-    return this.request<{
-      total_games: number;
-      correct: number;
-      accuracy_pct: number;
-      by_league: Record<string, { total: number; correct: number; accuracy_pct: number }>;
-    }>('/stats/accuracy', { requireAuth: false });
+    return this.request<AccuracyResponse>('/stats/accuracy', { requireAuth: false });
+  }
+
+  async getCoverage() {
+    return this.request<CoverageResponse>('/stats/coverage', { requireAuth: false });
   }
 
   // Feed (top picks)
-  async getTopPicks(params?: { leagues?: string; limit?: number }) {
+  async getTopPicks(params?: {
+    leagues?: string;
+    limit?: number;
+    date?: string;
+    time_zone?: string;
+  }) {
     const queryParams = new URLSearchParams();
     if (params?.leagues) queryParams.append('leagues', params.leagues);
     if (params?.limit) queryParams.append('limit', String(params.limit ?? 20));
+    if (params?.date) queryParams.append('date', params.date);
+    if (params?.time_zone) queryParams.append('time_zone', params.time_zone);
     const query = queryParams.toString();
-    return this.request<{ picks: any[]; count: number }>(
+    return this.request<{ picks: TopPick[]; count: number }>(
       `/feed/top-picks${query ? `?${query}` : ''}`,
       { requireAuth: false }
     );
@@ -543,55 +602,37 @@ class ApiService {
         is_me?: boolean;
       }>;
       count: number;
-    }>(`/leaderboards${query ? `?${query}` : ''}`, { requireAuth: false });
+    }>(`/leaderboards${query ? `?${query}` : ''}`, { requireAuth: true });
   }
 
-  // Challenges (stub)
   async getChallenges(params?: { status?: string; limit?: number }) {
     const queryParams = new URLSearchParams();
     if (params?.status) queryParams.append('status', params.status);
     if (params?.limit) queryParams.append('limit', String(params.limit ?? 20));
     const query = queryParams.toString();
-    return this.request<{ challenges: any[]; count: number }>(
+    return this.request<{ challenges: ChallengeSummary[]; count: number }>(
       `/challenges${query ? `?${query}` : ''}`,
       { requireAuth: true }
     );
   }
 
   async getChallenge(id: string) {
-    return this.request<{
-      id: string;
-      creator_id: string;
-      game_ids: string[];
-      status: string;
-      correct_count: number;
-      total_count: number;
-      created_at: string | null;
-      completed_at: string | null;
-    }>(`/challenges/${id}`, { requireAuth: true });
+    return this.request<ChallengeSummary>(`/challenges/${id}`, { requireAuth: true });
   }
 
   async createChallenge(gameIds: string[]) {
-    return this.request<{
-      id: string;
-      creator_id: string;
-      game_ids: string[];
-      status: string;
-      correct_count: number;
-      total_count: number;
-      created_at: string | null;
-      completed_at: string | null;
-    }>('/challenges', {
+    return this.request<ChallengeSummary>('/challenges', {
       method: 'POST',
       body: { game_ids: gameIds },
       requireAuth: true,
     });
   }
 
-  // Subscription (Stripe Checkout). Returns { url } to open in browser.
-  async createCheckoutSession() {
+  // Subscription (Stripe Checkout). tier: premium = Premium, premium_plus = Pro.
+  async createCheckoutSession(tier: 'premium' | 'premium_plus' = 'premium') {
     return this.request<{ url: string }>('/subscription/create-checkout', {
       method: 'POST',
+      body: { tier },
       requireAuth: true,
     });
   }

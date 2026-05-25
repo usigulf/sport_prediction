@@ -1,27 +1,14 @@
 /**
- * Horizontal row of 5–6 circular sport icons for quick filter.
- * Tap → onSportPress(sportId). Use to open Games tab with league pre-selected.
+ * Home sport shortcuts: Soccer, NFL, NBA — equal columns, tap → Games with league selected.
  */
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../constants/theme';
-import { SPORT_OPTIONS } from '../constants/leagues';
-import { HOME_SPORT_IDS } from '../constants/leagues';
+import { HOME_SPORT_IDS, SPORT_OPTIONS } from '../constants/leagues';
+import { HOME_SPORT_LOGO } from '../constants/sportLogos';
 
-const getSportIcon = (sportId: string): keyof typeof Ionicons.glyphMap => {
-  switch (sportId) {
-    case 'nfl': return 'football';
-    case 'nba': return 'basketball';
-    case 'mlb': return 'baseball';
-    case 'nhl': return 'snow';
-    case 'soccer': return 'football';
-    case 'golf': return 'trophy';
-    default: return 'football-outline';
-  }
-};
-
-const ICON_SIZE = 44;
+const LOGO_INNER = 34;
 const CIRCLE_SIZE = 56;
 
 export interface SportIconsRowProps {
@@ -36,11 +23,7 @@ export function SportIconsRow({ onSportPress }: SportIconsRowProps) {
 
   return (
     <View style={styles.wrapper}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.content}
-      >
+      <View style={styles.row}>
         {sports.map((sport) => (
           <TouchableOpacity
             key={sport.id}
@@ -51,18 +34,23 @@ export function SportIconsRow({ onSportPress }: SportIconsRowProps) {
             accessibilityRole="button"
           >
             <View style={styles.circle}>
-              <Ionicons
-                name={getSportIcon(sport.id)}
-                size={ICON_SIZE * 0.6}
-                color={theme.colors.accent}
-              />
+              {sport.id === 'soccer' || sport.id === 'nfl' || sport.id === 'nba' ? (
+                <Image
+                  source={HOME_SPORT_LOGO[sport.id]}
+                  style={styles.logo}
+                  resizeMode="contain"
+                  accessibilityIgnoresInvertColors
+                />
+              ) : (
+                <Ionicons name="football-outline" size={22} color={theme.colors.accent} />
+              )}
             </View>
             <Text style={styles.label} numberOfLines={1}>
               {sport.label}
             </Text>
           </TouchableOpacity>
         ))}
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -72,17 +60,22 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.backgroundElevated,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderSubtle,
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: theme.spacing.md,
   },
-  content: {
-    paddingHorizontal: theme.spacing.md,
+  row: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.md,
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.lg,
+    maxWidth: 420,
+    alignSelf: 'center',
+    width: '100%',
   },
   iconButton: {
+    flex: 1,
     alignItems: 'center',
-    minWidth: CIRCLE_SIZE + 8,
+    minWidth: 0,
+    paddingHorizontal: theme.spacing.xs,
   },
   circle: {
     width: CIRCLE_SIZE,
@@ -94,6 +87,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 6,
+    overflow: 'hidden',
+  },
+  logo: {
+    width: LOGO_INNER,
+    height: LOGO_INNER,
   },
   label: {
     fontSize: 11,

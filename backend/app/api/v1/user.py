@@ -9,7 +9,6 @@ from sqlalchemy import desc
 from app.database import get_db
 from app.api.deps import get_current_user
 from app.schemas.user import UserResponse
-from app.schemas.game import TeamResponse
 from app.models.user import User
 from app.models.user_favorite import UserFavorite
 from app.models.user_prediction_view import UserPredictionView
@@ -17,7 +16,8 @@ from app.models.user_push_token import UserPushToken
 from app.models.push_reminder_sent import PushReminderSent
 from app.models.team import Team
 from app.schemas.common import PaginationParams, datetime_to_iso
-from app.constants.leagues import ALLOWED_LEAGUE_CODES
+from app.constants.leagues import ALLOWED_LEAGUE_CODES, LEAGUE_LABEL_BY_ID
+from app.utils.team_logo_urls import team_to_api_dict
 
 router = APIRouter(prefix="/user", tags=["user"])
 
@@ -37,8 +37,20 @@ async def get_favorites(
 ):
     """Get user's favorite teams and leagues (with team details expanded)."""
     favorites = db.query(UserFavorite).filter(UserFavorite.user_id == current_user.id).all()
+    # Remove league favorites outside current product scope (legacy / invalid codes).
+    removed_legacy_league = False
+    for fav in favorites:
+        if fav.entity_type == "league" and fav.entity_id.lower() not in ALLOWED_LEAGUE_CODES:
+            db.delete(fav)
+            removed_legacy_league = True
+    if removed_legacy_league:
+        db.commit()
+        favorites = db.query(UserFavorite).filter(UserFavorite.user_id == current_user.id).all()
+
     team_ids = [f.entity_id for f in favorites if f.entity_type == "team"]
-    league_codes = list({f.entity_id for f in favorites if f.entity_type == "league"})
+    league_codes = sorted(
+        {f.entity_id.lower() for f in favorites if f.entity_type == "league" and f.entity_id.lower() in ALLOWED_LEAGUE_CODES}
+    )
 
     teams = []
     if team_ids:
@@ -48,8 +60,11 @@ async def get_favorites(
             team_uuids = []
         if team_uuids:
             team_rows = db.query(Team).filter(Team.id.in_(team_uuids)).all()
-            teams = [TeamResponse.model_validate(t) for t in team_rows]
-    leagues = [{"id": code, "name": code.upper().replace("_", " ")} for code in league_codes]
+            teams = [team_to_api_dict(t) for t in team_rows]
+    leagues = [
+        {"id": code, "name": LEAGUE_LABEL_BY_ID.get(code, code.replace("_", " ").title())}
+        for code in league_codes
+    ]
 
     return {"teams": teams, "leagues": leagues}
 
@@ -147,9 +162,7 @@ async def remove_favorite_league(
 
 
 def _team_to_response(team):
-    if not team:
-        return None
-    return TeamResponse.model_validate(team).model_dump()
+    return team_to_api_dict(team)
 
 
 @router.get("/prediction-history")

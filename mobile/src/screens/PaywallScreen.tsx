@@ -5,14 +5,21 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Pressable,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
+import Constants from 'expo-constants';
 import * as WebBrowser from 'expo-web-browser';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { fetchUserProfile } from '../store/slices/authSlice';
 import { apiService } from '../services/api';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { theme } from '../constants/theme';
+import { PLAN_MATRIX } from '../constants/planFeatures';
+import { normalizeSubscriptionTier } from '../utils/subscription';
 
 const CHECKOUT_TIMEOUT_MS = 20000;
 
@@ -32,42 +39,62 @@ const TIERS = [
     name: 'Free',
     price: '$0',
     period: '',
-    features: ['Daily prediction limit', 'Basic game predictions', 'Favorites'],
+    features: [...PLAN_MATRIX.free],
   },
   {
     id: 'premium',
     name: 'Premium',
     price: '$9.99',
     period: '/month',
-    features: ['Unlimited predictions', 'Full explanations', 'Live in-game updates', 'Priority support'],
+    features: [...PLAN_MATRIX.premium],
   },
   {
     id: 'premium_plus',
     name: 'Pro',
     price: '$29.99',
     period: '/month',
-    features: ['Everything in Premium', 'Advanced analytics', 'API access', 'Dedicated support'],
+    features: [...PLAN_MATRIX.pro],
   },
 ];
 
+type PaywallRoute = RouteProp<
+  { Paywall: { emphasizeTier?: 'premium' | 'premium_plus'; contextMessage?: string } },
+  'Paywall'
+>;
+
 export const PaywallScreen: React.FC = () => {
+  const route = useRoute<PaywallRoute>();
+  const emphasizeTier = route.params?.emphasizeTier;
+  const contextMessage = route.params?.contextMessage;
+  const contextBannerText =
+    contextMessage ??
+    (emphasizeTier === 'premium_plus'
+      ? 'Pro unlocks challenges, leaderboards, and everything in Premium.'
+      : emphasizeTier === 'premium'
+        ? 'Premium unlocks unlimited picks, full analysis, live updates, and player props.'
+        : undefined);
+
+  const dispatch = useAppDispatch();
+  const reduxTier = useAppSelector((s) => s.auth.user?.subscriptionTier ?? 'free');
+
   const [currentTier, setCurrentTier] = useState<string>('free');
   const [loading, setLoading] = useState(true);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutLoadingTier, setCheckoutLoadingTier] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadTier = useCallback(async () => {
     setLoadError(null);
     setLoading(true);
     try {
-      const info = await apiService.getCurrentUser() as { subscription_tier?: string };
-      if (info?.subscription_tier) setCurrentTier(info.subscription_tier);
+      const info = await dispatch(fetchUserProfile()).unwrap();
+      setCurrentTier(normalizeSubscriptionTier(info.subscription_tier));
     } catch (e) {
+      setCurrentTier(reduxTier);
       setLoadError(getUserFriendlyMessage(e));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [dispatch, reduxTier]);
 
   // Do not put `loading` in this callback's deps: when load finishes, `loading` flips to false,
   // React Navigation re-runs the focus effect, and `loadTier()` runs again → infinite blink.
@@ -79,25 +106,25 @@ export const PaywallScreen: React.FC = () => {
 
   const handleSubscribe = useCallback(async (tierId: string) => {
     if (tierId === 'free') return;
-    if (tierId !== 'premium') {
-      Alert.alert('Coming soon', 'Pro plan checkout is not available yet.');
-      return;
-    }
-    setCheckoutLoading(true);
+    if (tierId !== 'premium' && tierId !== 'premium_plus') return;
+    setCheckoutLoadingTier(tierId);
     try {
-      const { url } = await withTimeout(apiService.createCheckoutSession(), CHECKOUT_TIMEOUT_MS);
+      const { url } = await withTimeout(
+        apiService.createCheckoutSession(tierId === 'premium_plus' ? 'premium_plus' : 'premium'),
+        CHECKOUT_TIMEOUT_MS
+      );
       if (!url) {
         Alert.alert('Checkout', 'Checkout URL missing. Payments may not be configured yet.');
         return;
       }
       // Stripe Checkout: use in-app browser (SFSafariViewController / Chrome Custom Tabs).
       // Linking.openURL often flashes or fails to stay open during hosted checkout.
-      setCheckoutLoading(false);
+      setCheckoutLoadingTier(null);
       await WebBrowser.openBrowserAsync(url);
     } catch (e) {
       Alert.alert('Checkout', getUserFriendlyMessage(e));
     } finally {
-      setCheckoutLoading(false);
+      setCheckoutLoadingTier(null);
     }
   }, []);
 
@@ -109,8 +136,16 @@ export const PaywallScreen: React.FC = () => {
     );
   }
 
+  const appVersion =
+    Constants.expoConfig?.version ?? (Constants as { nativeAppVersion?: string }).nativeAppVersion ?? '—';
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+    >
       {loadError ? (
         <View style={styles.errorBanner}>
           <Text style={styles.errorText}>{loadError}</Text>
@@ -119,19 +154,28 @@ export const PaywallScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
       ) : null}
+      {contextBannerText ? (
+        <View style={styles.contextBanner}>
+          <Text style={styles.contextBannerText}>{contextBannerText}</Text>
+        </View>
+      ) : null}
       <Text style={styles.title}>Choose your plan</Text>
       <Text style={styles.subtitle}>
-        {currentTier === 'free' ? 'Upgrade for unlimited predictions and more.' : 'You\'re on a paid plan. Manage below.'}
+        {contextBannerText
+          ? 'Pick the plan that matches what you need.'
+          : currentTier === 'free'
+            ? 'Upgrade for unlimited predictions and more.'
+            : 'You\'re on a paid plan. Manage below.'}
       </Text>
 
       {TIERS.map((tier) => {
         const isCurrent = currentTier === tier.id;
         const isPaid = tier.id !== 'free';
-        return (
-          <View
-            key={tier.id}
-            style={[styles.card, isCurrent && styles.cardCurrent]}
-          >
+        const loadingThis = checkoutLoadingTier === tier.id;
+        const showSubscribe = isPaid && !isCurrent;
+
+        const cardBody = (
+          <>
             <View style={styles.cardHeader}>
               <Text style={styles.tierName}>{tier.name}</Text>
               <View style={styles.priceRow}>
@@ -143,6 +187,11 @@ export const PaywallScreen: React.FC = () => {
                   <Text style={styles.badgeText}>Current plan</Text>
                 </View>
               )}
+              {tier.id === 'premium_plus' && !isCurrent && (
+                <View style={styles.availableBadge}>
+                  <Text style={styles.availableBadgeText}>Available now — Stripe Checkout</Text>
+                </View>
+              )}
             </View>
             <View style={styles.features}>
               {tier.features.map((f, i) => (
@@ -150,27 +199,66 @@ export const PaywallScreen: React.FC = () => {
               ))}
             </View>
             {isPaid && (
-              <TouchableOpacity
-                style={[styles.cta, isCurrent && styles.ctaCurrent]}
-                disabled={isCurrent || tier.id !== 'premium' || checkoutLoading}
-                onPress={() => handleSubscribe(tier.id)}
-              >
-                {tier.id === 'premium' && checkoutLoading ? (
+              <View style={[styles.cta, isCurrent && styles.ctaCurrent]}>
+                {loadingThis ? (
                   <ActivityIndicator color={theme.colors.background} />
                 ) : (
                   <Text style={[styles.ctaText, isCurrent && styles.ctaTextCurrent]}>
-                    {isCurrent ? 'Current plan' : tier.id === 'premium' ? 'Start 7-day free trial' : 'Coming soon'}
+                    {isCurrent
+                      ? 'Current plan'
+                      : tier.id === 'premium'
+                        ? 'Start 7-day free trial'
+                        : 'Subscribe to Pro for $29.99/mo'}
                   </Text>
                 )}
-              </TouchableOpacity>
+              </View>
             )}
+          </>
+        );
+
+        if (showSubscribe) {
+          return (
+            <Pressable
+              key={tier.id}
+              accessibilityRole="button"
+              accessibilityLabel={
+                tier.id === 'premium'
+                  ? 'Subscribe to Premium with 7-day free trial'
+                  : 'Subscribe to Pro for 29.99 dollars per month'
+              }
+              disabled={loadingThis}
+              onPress={() => handleSubscribe(tier.id)}
+              android_ripple={{ color: 'rgba(0,255,159,0.25)' }}
+              style={({ pressed }) => [
+                styles.card,
+                isCurrent && styles.cardCurrent,
+                emphasizeTier === tier.id && styles.cardEmphasized,
+                Platform.OS === 'ios' && pressed && !loadingThis && styles.cardPressed,
+              ]}
+            >
+              {cardBody}
+            </Pressable>
+          );
+        }
+
+        return (
+          <View
+            key={tier.id}
+            style={[
+              styles.card,
+              isCurrent && styles.cardCurrent,
+              emphasizeTier === tier.id && styles.cardEmphasized,
+            ]}
+          >
+            {cardBody}
           </View>
         );
       })}
 
       <Text style={styles.footer}>
-        Premium includes a 7-day free trial. Pro plan coming soon.
+        Premium includes a 7-day free trial. Pro ($29.99/mo) uses the same secure Stripe Checkout flow—no waitlist. You can add a trial on the Pro Price in Stripe if you want one.
       </Text>
+      <Text style={styles.footerVersion}>App v{appVersion}</Text>
     </ScrollView>
   );
 };
@@ -237,6 +325,31 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.accent,
     backgroundColor: theme.colors.accentDim,
   },
+  cardPressed: {
+    opacity: 0.92,
+  },
+  cardEmphasized: {
+    borderColor: theme.colors.accent,
+    borderWidth: 3,
+    shadowColor: theme.colors.accent,
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  contextBanner: {
+    backgroundColor: theme.colors.accentDim,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    marginBottom: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+  },
+  contextBannerText: {
+    fontSize: 14,
+    color: theme.colors.text,
+    lineHeight: 20,
+  },
   cardHeader: {
     marginBottom: 12,
   },
@@ -273,6 +386,21 @@ const styles = StyleSheet.create({
     color: theme.colors.background,
     fontWeight: '600',
   },
+  availableBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: theme.colors.accentDim,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: theme.radii.sm,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+  },
+  availableBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: theme.colors.accent,
+  },
   features: {
     marginBottom: 16,
   },
@@ -304,5 +432,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 16,
     paddingHorizontal: 16,
+  },
+  footerVersion: {
+    fontSize: 11,
+    color: theme.colors.textMuted,
+    textAlign: 'center',
+    marginTop: 8,
+    opacity: 0.75,
   },
 });

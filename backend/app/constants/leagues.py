@@ -1,30 +1,34 @@
 """
 League codes and labels for filters, favorites, and API.
-Must match games/teams data (seed script and client).
+Focused product scope: NFL, NBA, and soccer competitions.
 """
 ALLOWED_LEAGUE_CODES = {
     "nfl",
     "nba",
-    "mlb",
-    "nhl",
     "premier_league",
     "champions_league",
-    "boxing",
-    "tennis",
-    "golf",
-    "mma",
+    "la_liga",
+    "serie_a",
+    "bundesliga",
+    "mls",
 }
 
-# For GET /games/leagues: id + display label (soccer grouped as "Soccer" for Premier + UCL)
+# Stats / methodology — keep aligned with mobile `PRODUCT_SCOPE_LONG_DESCRIPTION`.
+PRODUCT_SCOPE_SUMMARY = (
+    "Product scope is eight leagues: soccer (Premier League, Champions League, "
+    "La Liga, Serie A, Bundesliga, MLS), NFL, and NBA."
+)
+
+# GET /games/leagues: id + display label
 LEAGUES_LIST = [
     {"id": "nfl", "label": "NFL"},
     {"id": "nba", "label": "NBA"},
-    {"id": "mlb", "label": "MLB"},
-    {"id": "nhl", "label": "NHL"},
     {"id": "premier_league", "label": "Premier League"},
     {"id": "champions_league", "label": "Champions League"},
-    {"id": "boxing", "label": "Boxing"},
-    {"id": "tennis", "label": "Tennis"},
-    {"id": "golf", "label": "Golf"},
-    {"id": "mma", "label": "MMA"},
+    {"id": "la_liga", "label": "La Liga"},
+    {"id": "serie_a", "label": "Serie A"},
+    {"id": "bundesliga", "label": "Bundesliga"},
+    {"id": "mls", "label": "MLS"},
 ]
+
+LEAGUE_LABEL_BY_ID: dict[str, str] = {row["id"]: row["label"] for row in LEAGUES_LIST}

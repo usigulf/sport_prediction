@@ -2,6 +2,7 @@
 Rate limiting: Redis when available, in-memory fallback.
 Fixed window per key (e.g. per IP or per user).
 """
+import logging
 import time
 import threading
 from typing import Optional
@@ -36,6 +37,13 @@ def _redis_check(key: str, window_seconds: int, max_requests: int) -> bool:
     """Returns True if over limit. Uses INCR + EXPIRE (fixed window)."""
     client = _cache.redis_client
     if not client:
+        env = (_settings.environment or "").lower()
+        if env == "production":
+            logging.getLogger(__name__).warning(
+                "Redis unavailable in production; rate limit for %s skipped (fail-open).",
+                key,
+            )
+            return False
         return _memory_check(key, window_seconds, max_requests)
     full_key = f"ratelimit:{key}"
     try:

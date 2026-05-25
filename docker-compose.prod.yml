@@ -1,0 +1,27 @@
+# Production overlay: immutable API image, no bind-mount, optional observability profile.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  api:
+    volumes:
+      - ./ml/models:/models:ro
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+    environment:
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (min 32 chars)}
+      REDIS_URL: redis://redis:6379/0
+
+  prometheus:
+    profiles:
+      - monitoring
+
+  grafana:
+    profiles:
+      - monitoring
+
+  zookeeper:
+    profiles:
+      - unused
+
+  kafka:
+    profiles:
+      - unused

@@ -6,6 +6,10 @@
 #
 # After deploy, verify Sportradar + soccer seasons (must cd to repo — not from ~):
 #   cd /home/YOU/sport_prediction && VERIFY_API_BASE=https://127.0.0.1:8000 ./scripts/verify_sportradar_prod.sh .env.production
+#
+# Premier League real features (health → sync → predictions → sample upcoming):
+#   cd /home/YOU/sport_prediction && chmod +x scripts/setup_premier_league_features.sh
+#   VERIFY_API_BASE=http://127.0.0.1:8000 ./scripts/setup_premier_league_features.sh .env
 
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin

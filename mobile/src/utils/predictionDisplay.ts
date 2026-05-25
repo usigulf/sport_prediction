@@ -17,6 +17,14 @@ export function impliedDrawProbability(home: number, away: number): number {
   return Math.min(1, Math.max(0, d));
 }
 
+/**
+ * Soccer 1X2: always use residual mass as draw (no sub-0.5% floor) so the draw leg is visible.
+ * For two-outcome sports, use {@link impliedDrawProbability} so tiny residuals stay hidden.
+ */
+export function impliedDrawForSoccer(home: number, away: number): number {
+  return Math.min(1, Math.max(0, 1 - home - away));
+}
+
 export function normalizeThreeWay(home: number, away: number, draw: number): {
   home: number;
   away: number;

@@ -11,7 +11,8 @@ from datetime import datetime, timezone
 from app.database import get_db
 from app.utils.calendar_window import utc_bounds_for_calendar_day
 from app.api.deps import get_current_user, get_current_user_optional, rate_limit_predictions
-from app.schemas.game import GameResponse, GameListResponse, TeamResponse
+from app.schemas.game import GameResponse, GameListResponse
+from app.utils.team_logo_urls import team_to_api_dict
 from app.schemas.prediction import (
     PredictionResponse,
     PredictionExplanationResponse,
@@ -27,6 +28,7 @@ from app.models.user_prediction_view import UserPredictionView
 from app.services.prediction_service import PredictionService
 from app.services.explanation_service import get_model_feature_importance
 from app.services.analysis_context_service import enrich_rich_analysis, build_structured_game_analysis
+from app.services.data_quality_service import compute_prediction_quality
 from app.services.share_image_service import generate_share_image
 from app.config import get_settings
 
@@ -70,9 +72,40 @@ async def get_leagues():
 
 def _team_to_response(team):
     """Serialize Team model to TeamResponse-compatible dict (no internal __dict__)."""
-    if not team:
-        return None
-    return TeamResponse.model_validate(team).model_dump()
+    return team_to_api_dict(team)
+
+
+def _prediction_payload(db: Session, game: Game, prediction: Prediction) -> dict:
+    settings = get_settings()
+    quality = compute_prediction_quality(
+        db,
+        game,
+        prediction,
+        threshold=float(settings.min_data_quality_score),
+    )
+    expected_home = float(prediction.expected_home_score) if prediction.expected_home_score else None
+    expected_away = float(prediction.expected_away_score) if prediction.expected_away_score else None
+    confidence_level = prediction.confidence_level
+    if quality["quality_gate_applied"]:
+        # Do not present detailed scoreline when source quality is low.
+        expected_home = None
+        expected_away = None
+        confidence_level = "low"
+    return {
+        "id": str(prediction.id),
+        "game_id": str(prediction.game_id),
+        "model_version": prediction.model_version,
+        "home_win_probability": float(prediction.home_win_probability),
+        "away_win_probability": float(prediction.away_win_probability),
+        "expected_home_score": expected_home,
+        "expected_away_score": expected_away,
+        "confidence_level": confidence_level,
+        "data_quality_score": quality["data_quality_score"],
+        "data_quality_label": quality["data_quality_label"],
+        "quality_gate_applied": quality["quality_gate_applied"],
+        "quality_reasons": quality["quality_reasons"],
+        "created_at": prediction.created_at,
+    }
 
 
 @router.get("/upcoming", response_model=GameListResponse)
@@ -153,17 +186,7 @@ async def get_upcoming_games(
         if include_predictions:
             prediction = prediction_service.get_latest_prediction(str(game.id))
             if prediction:
-                game_dict["prediction"] = {
-                    "id": str(prediction.id),
-                    "game_id": str(prediction.game_id),
-                    "model_version": prediction.model_version,
-                    "home_win_probability": float(prediction.home_win_probability),
-                    "away_win_probability": float(prediction.away_win_probability),
-                    "expected_home_score": float(prediction.expected_home_score) if prediction.expected_home_score else None,
-                    "expected_away_score": float(prediction.expected_away_score) if prediction.expected_away_score else None,
-                    "confidence_level": prediction.confidence_level,
-                    "created_at": prediction.created_at
-                }
+                game_dict["prediction"] = _prediction_payload(db, game, prediction)
         
         games_data.append(game_dict)
     
@@ -188,7 +211,12 @@ async def get_game(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid game ID format")
     
-    game = db.query(Game).filter(Game.id == game_uuid).first()
+    game = (
+        db.query(Game)
+        .options(joinedload(Game.home_team), joinedload(Game.away_team))
+        .filter(Game.id == game_uuid)
+        .first()
+    )
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
     
@@ -217,17 +245,7 @@ async def get_game(
     }
     
     if prediction:
-        game_dict["prediction"] = {
-            "id": str(prediction.id),
-            "game_id": str(prediction.game_id),
-            "model_version": prediction.model_version,
-            "home_win_probability": float(prediction.home_win_probability),
-            "away_win_probability": float(prediction.away_win_probability),
-            "expected_home_score": float(prediction.expected_home_score) if prediction.expected_home_score else None,
-            "expected_away_score": float(prediction.expected_away_score) if prediction.expected_away_score else None,
-            "confidence_level": prediction.confidence_level,
-            "created_at": prediction.created_at
-        }
+        game_dict["prediction"] = _prediction_payload(db, game, prediction)
     
     return game_dict
 
@@ -254,12 +272,17 @@ async def get_prediction_explanation(
     prediction = prediction_service.get_latest_prediction(game_id)
     if not prediction:
         raise HTTPException(status_code=404, detail="Prediction not found")
-
     game = (
         db.query(Game)
         .options(joinedload(Game.home_team), joinedload(Game.away_team))
         .filter(Game.id == prediction.game_id)
         .first()
+    )
+    quality = compute_prediction_quality(
+        db,
+        game,
+        prediction,
+        threshold=float(get_settings().min_data_quality_score),
     )
 
     # Record view for prediction history
@@ -274,7 +297,13 @@ async def get_prediction_explanation(
     settings = get_settings()
     model_factors = get_model_feature_importance(settings.explanation_model_dir)
 
-    if model_factors:
+    if quality["quality_gate_applied"]:
+        top_features = []
+        confidence_explanation = (
+            "Detailed explanation is temporarily limited because current data quality is low. "
+            "Try again after a fresh sync."
+        )
+    elif model_factors:
         top_features = [
             FeatureImportance(feature=f["feature"], shap_value=f["shap_value"], description=f.get("description"))
             for f in model_factors[:10]
@@ -322,6 +351,10 @@ async def get_prediction_explanation(
         confidence_explanation=confidence_explanation,
         model_version=prediction.model_version,
         accuracy=None,
+        data_quality_score=quality["data_quality_score"],
+        data_quality_label=quality["data_quality_label"],
+        quality_gate_applied=quality["quality_gate_applied"],
+        quality_reasons=quality["quality_reasons"],
         rich_analysis=rich_analysis,
         structured_analysis=structured_analysis,
     )
@@ -413,17 +446,8 @@ async def get_prediction(
     db.add(view)
     db.commit()
 
-    return {
-        "id": str(prediction.id),
-        "game_id": str(prediction.game_id),
-        "model_version": prediction.model_version,
-        "home_win_probability": float(prediction.home_win_probability),
-        "away_win_probability": float(prediction.away_win_probability),
-        "expected_home_score": float(prediction.expected_home_score) if prediction.expected_home_score else None,
-        "expected_away_score": float(prediction.expected_away_score) if prediction.expected_away_score else None,
-        "confidence_level": prediction.confidence_level,
-        "created_at": prediction.created_at
-    }
+    game = db.query(Game).filter(Game.id == prediction.game_id).first()
+    return _prediction_payload(db, game, prediction)
 
 
 @router.post("/{game_id}/share")

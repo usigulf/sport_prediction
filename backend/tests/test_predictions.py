@@ -49,6 +49,9 @@ def test_get_prediction_free_user(client, auth_headers, test_game, test_predicti
     data = response.json()
     assert "home_win_probability" in data
     assert "away_win_probability" in data
+    assert "data_quality_score" in data
+    assert "data_quality_label" in data
+    assert "quality_gate_applied" in data
 
 
 def test_get_prediction_exceeds_daily_limit(client, auth_headers, test_game, test_prediction, db):
@@ -90,6 +93,26 @@ def test_get_prediction_explanation(client, auth_headers, test_game, test_predic
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert "top_features" in data or "explanation" in data
+    assert "data_quality_score" in data
+    assert "data_quality_label" in data
+    assert "quality_gate_applied" in data
+
+
+def test_get_prediction_explanation_quality_gate(client, auth_headers, test_game, test_prediction, db):
+    """Bad probability inputs should trigger explanation gate."""
+    test_prediction.home_win_probability = 1.4
+    test_prediction.away_win_probability = -0.2
+    db.add(test_prediction)
+    db.commit()
+    response = client.get(
+        f"/api/v1/games/{test_game.id}/explanation",
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["quality_gate_applied"] is True
+    assert data["data_quality_label"] == "low"
+    assert data["top_features"] == []
 
 
 def test_get_prediction_explanation_rich_analysis(client, auth_headers, test_game, test_prediction, db):

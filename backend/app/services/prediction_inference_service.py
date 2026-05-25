@@ -17,7 +17,8 @@ from app.config import get_settings
 from app.models.game import Game
 from app.models.prediction import Prediction
 from app.services.feature_builder import (
-    build_feature_dict,
+    FeatureSource,
+    build_game_features,
     build_rich_analysis_dict,
     expected_scores_for_league,
 )
@@ -66,16 +67,27 @@ def _should_skip(
     return age_min < cooldown
 
 
-def _predict_for_game(game: Game) -> tuple[dict[str, Any], dict[str, float | int]]:
-    features = build_feature_dict(game)
+def _predict_for_game(
+    game: Game, db: Session
+) -> tuple[dict[str, Any], dict[str, float | int], FeatureSource]:
+    features, feat_src = build_game_features(game, db)
     model_dir = _model_dir()
     out = predict_from_artifacts(model_dir, features) if model_dir else None
     if not out:
         out = heuristic_predict(features, get_settings().ml_model_version)
-    exp_h, exp_a = expected_scores_for_league(game.league, float(out["home_win_probability"]))
+    exp_h, exp_a = expected_scores_for_league(
+        game.league,
+        float(out["home_win_probability"]),
+        home_team_avg_score=float(features["home_team_avg_score"])
+        if isinstance(features.get("home_team_avg_score"), (int, float))
+        else None,
+        away_team_avg_score=float(features["away_team_avg_score"])
+        if isinstance(features.get("away_team_avg_score"), (int, float))
+        else None,
+    )
     out["expected_home_score"] = exp_h
     out["expected_away_score"] = exp_a
-    return out, features
+    return out, features, feat_src
 
 
 def run_prediction_job(
@@ -132,8 +144,10 @@ def run_prediction_job(
             ):
                 result.skipped_cooldown += 1
                 continue
-            payload, feat = _predict_for_game(game)
-            rich = build_rich_analysis_dict(game, feat)
+            payload, feat, feat_src = _predict_for_game(game, db)
+            if feat_src == "synthetic" and "_synthetic" not in str(payload["model_version"]):
+                payload["model_version"] = f"{payload['model_version']}_synthetic"[:50]
+            rich = build_rich_analysis_dict(game, feat, db=db, feature_source=feat_src)
             created_at = datetime.now(timezone.utc)
             pred = Prediction(
                 id=uuid4(),

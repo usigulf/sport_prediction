@@ -1,8 +1,10 @@
 {
   "expo": {
-    "name": "Octobet",
+    "name": "octobetiQ",
     "slug": "sport-prediction",
+    "description": "Informational AI picks across 8 leagues: Premier League, Champions League, La Liga, Serie A, Bundesliga, MLS, NFL, and NBA. Tracked model accuracy. Not betting advice.",
     "version": "1.0.0",
+    "icon": "./assets/icon.png",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "assetBundlePatterns": [
@@ -11,23 +13,35 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sportsprediction.app",
+      "icon": "./assets/icon.png",
       "infoPlist": {
+        "CFBundleDisplayName": "octobetiQ",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "com.sportsprediction.app"
+      "package": "com.sportsprediction.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#0B1020"
+      }
     },
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.0",
     "updates": {
       "url": "https://u.expo.dev/1c6a5910-f9f8-43fe-8aea-da17ac3331fb"
     },
     "extra": {
       "eas": {
         "projectId": "1c6a5910-f9f8-43fe-8aea-da17ac3331fb"
-      }
+      },
+      "adMobBannerIos": "ca-app-pub-3940256099942544/2934735716",
+      "adMobBannerAndroid": "ca-app-pub-3940256099942544/6300978111",
+      "adMobNativeIos": "ca-app-pub-3940256099942544/3986624511",
+      "adMobNativeAndroid": "ca-app-pub-3940256099942544/2247696110",
+      "adMobRewardedIos": "ca-app-pub-3940256099942544/1712485313",
+      "adMobRewardedAndroid": "ca-app-pub-3940256099942544/5224354917",
+      "adMobInterstitialIos": "ca-app-pub-3940256099942544/4411468910",
+      "adMobInterstitialAndroid": "ca-app-pub-3940256099942544/1033173712"
     },
     "plugins": [
       "expo-font",
@@ -37,6 +51,13 @@
           "android": {
             "usesCleartextTraffic": true
           }
+        }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511"
         }
       ]
     ]

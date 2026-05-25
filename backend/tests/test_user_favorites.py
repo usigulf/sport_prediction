@@ -86,3 +86,30 @@ def test_favorites_require_auth(client):
     assert client.get("/api/v1/user/favorites").status_code == status.HTTP_401_UNAUTHORIZED
     assert client.post("/api/v1/user/favorites/leagues/nfl").status_code == status.HTTP_401_UNAUTHORIZED
     assert client.delete("/api/v1/user/favorites/leagues/nfl").status_code == status.HTTP_401_UNAUTHORIZED
+
+
+def test_get_favorites_prunes_legacy_league_codes(client, db, test_user, auth_headers):
+    """League favorites outside ALLOWED_LEAGUE_CODES are removed on read (self-heal legacy rows)."""
+    from app.models.user_favorite import UserFavorite
+
+    db.add_all(
+        [
+            UserFavorite(user_id=test_user.id, entity_type="league", entity_id="nfl"),
+            UserFavorite(user_id=test_user.id, entity_type="league", entity_id="mlb"),
+        ]
+    )
+    db.commit()
+
+    r = client.get("/api/v1/user/favorites", headers=auth_headers)
+    assert r.status_code == status.HTTP_200_OK
+    leagues = r.json()["leagues"]
+    assert len(leagues) == 1
+    assert leagues[0]["id"] == "nfl"
+    assert leagues[0]["name"] == "NFL"
+
+    rows = (
+        db.query(UserFavorite)
+        .filter(UserFavorite.user_id == test_user.id, UserFavorite.entity_type == "league")
+        .all()
+    )
+    assert {x.entity_id for x in rows} == {"nfl"}

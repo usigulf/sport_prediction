@@ -6,7 +6,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService } from '../../services/api';
 import { Game, Prediction, PredictionExplanation } from '../../types';
 
-const GAMES_CACHE_KEY = '@sport_prediction_games_cache';
+/** Bump when API shape changes (e.g. team logos) so stale offline cache is not reused forever. */
+const GAMES_CACHE_KEY = '@sport_prediction_games_cache_v4';
 
 interface GamesState {
   upcomingGames: Game[];
@@ -92,10 +93,16 @@ export const fetchGameDetails = createAsyncThunk<Game, string>(
 
 export const fetchPrediction = createAsyncThunk<Prediction, string>(
   'games/fetchPrediction',
-  async (gameId: string) => {
-    const prediction = await apiService.getPrediction(gameId);
-    return prediction as Prediction;
-  }
+  async (gameId: string, { rejectWithValue }) => {
+    try {
+      const prediction = await apiService.getPrediction(gameId);
+      return prediction as Prediction;
+    } catch (e: unknown) {
+      const msg =
+        e instanceof Error ? e.message : 'Failed to fetch prediction';
+      return rejectWithValue(msg);
+    }
+  },
 );
 
 export const fetchExplanation = createAsyncThunk<PredictionExplanation, { gameId: string; predictionId: string }>(
@@ -174,9 +181,13 @@ const gamesSlice = createSlice({
         state.loadingPrediction = false;
         state.currentPrediction = action.payload;
       })
-      .addCase(fetchPrediction.rejected, (state) => {
+      .addCase(fetchPrediction.rejected, (state, action) => {
         state.loadingPrediction = false;
         state.currentPrediction = null;
+        state.error =
+          (typeof action.payload === 'string' && action.payload) ||
+          action.error.message ||
+          'Failed to fetch prediction';
       });
 
     // Fetch explanation

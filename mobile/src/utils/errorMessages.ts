@@ -22,6 +22,9 @@ export function getUserFriendlyMessage(error: unknown): string {
     if (/live predictions require|premium subscription/i.test(msg)) {
       return 'This feature requires a Premium subscription.';
     }
+    if (/requires a Pro subscription/i.test(msg)) {
+      return 'This feature requires a Pro subscription. Open Subscription to upgrade.';
+    }
     if (/prediction not found/i.test(msg)) {
       return 'No prediction available for this game.';
     }

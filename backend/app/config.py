@@ -55,23 +55,31 @@ class Settings(BaseSettings):
         "https://app.sportsprediction.com"
     ]
     
-    # ML Inference
-    ml_inference_url: str = "http://localhost:8501"
+    # ML Inference (sklearn pickles via EXPLANATION_MODEL_DIR; TF Serving not used)
     ml_model_version: str = "v1.0.0"
     # Optional: directory with simple_model.pkl + feature_columns.pkl (explanations + batch inference job)
     explanation_model_dir: Optional[str] = None
     # Optional: override artifact path for inference only; defaults to explanation_model_dir
     model_artifact_dir: Optional[str] = None
+    # Gate explanations / rich output when computed quality is below threshold.
+    min_data_quality_score: float = 0.45
     
     # External APIs
     sportradar_api_key: str = ""
     sportradar_api_url: str = "https://api.sportradar.com"
+    # ClearSports (clearsportsapi.com): Bearer auth; not a drop-in for Sportradar URLs — use for new integrations / probes.
+    clearsports_api_key: str = ""
+    clearsports_api_base_url: str = "https://api.clearsportsapi.com"
     # NFL v7 standings: /nfl/official/{access}/v7/en/seasons/{year}/REG/standings/season.json
     sportradar_access_level: str = "trial"  # trial | production
     sportradar_nfl_season_year: Optional[int] = None  # default: current UTC calendar year
     # Soccer v4 standings: /soccer/{access}/v4/en/seasons/{sr:season:...}/standings.json
     sportradar_soccer_season_premier_league: Optional[str] = None
     sportradar_soccer_season_champions_league: Optional[str] = None
+    sportradar_soccer_season_la_liga: Optional[str] = None
+    sportradar_soccer_season_serie_a: Optional[str] = None
+    sportradar_soccer_season_bundesliga: Optional[str] = None
+    sportradar_soccer_season_mls: Optional[str] = None
     weather_api_key: str = ""
     
     # Monitoring
@@ -89,12 +97,14 @@ class Settings(BaseSettings):
     # Optional: secret for internal cron endpoints (e.g. push triggers). If set, require X-Cron-Secret header.
     push_cron_secret: Optional[str] = None
     
-    # Stripe (payments). Set STRIPE_SECRET_KEY to enable checkout.
+    # Stripe (payments). Set STRIPE_SECRET_KEY to enable checkout. Webhook: POST /api/v1/subscription/webhook
     stripe_secret_key: Optional[str] = None
-    stripe_webhook_secret: Optional[str] = None
+    stripe_webhook_secret: Optional[str] = None  # Stripe signing secret for checkout.session.completed
     stripe_price_id_premium: Optional[str] = None  # price_xxx for Premium monthly
-    stripe_success_url: str = "https://app.sportsprediction.com/payment/success"
-    stripe_cancel_url: str = "https://app.sportsprediction.com/payment/cancel"
+    stripe_price_id_premium_plus: Optional[str] = None  # price_xxx for Pro (tier premium_plus)
+    # Host deploy/payment-pages/*.html on your domain (match nginx canonical host www vs apex).
+    stripe_success_url: str = "https://www.octobetiq.com/payment/success"
+    stripe_cancel_url: str = "https://www.octobetiq.com/payment/cancel"
 
 
 @lru_cache()

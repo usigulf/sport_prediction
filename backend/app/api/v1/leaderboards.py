@@ -5,11 +5,10 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from datetime import datetime, timedelta
-from typing import Optional
 from collections import defaultdict
 
 from app.database import get_db
-from app.api.deps import get_current_user_optional
+from app.api.deps import require_pro_subscription
 from app.models.game import Game
 from app.models.prediction import Prediction
 from app.models.user import User
@@ -33,7 +32,7 @@ async def get_leaderboards(
     period: str = Query("monthly", description="weekly | monthly | all"),
     limit: int = Query(50, ge=1, le=100),
     db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_optional),
+    current_user: User = Depends(require_pro_subscription),
 ):
     """
     Leaderboard: users ranked by accuracy of finished games they viewed (prediction vs outcome).

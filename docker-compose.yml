@@ -48,13 +48,19 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: sport-prediction-api
+    # Later file wins: .env overrides .env.production (use .env for machine-only secrets like Stripe).
+    # Compose ${VAR} substitution only reads .env — .env.production is ignored unless listed here or you use docker compose --env-file.
+    env_file:
+      - path: .env.production
+        required: false
+      - path: .env
+        required: false
     environment:
       ENVIRONMENT: production
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/sportsprediction
       REDIS_URL: redis://redis:6379/0
       # Set JWT_SECRET in project .env (min ~32 chars). Rotating logs everyone out.
-      JWT_SECRET: ${JWT_SECRET:-dev-secret-key-change-in-production-min-32-chars}
-      ML_INFERENCE_URL: http://ml-inference:8501
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-key-change-in-production-minimum-32-characters-long}
       CORS_ORIGINS: '["http://localhost:3000","http://localhost:19006"]'
       OPENAPI_DOCS_ENABLED: "false"
       LOG_LEVEL: INFO
@@ -62,12 +68,13 @@ services:
       EXPLANATION_MODEL_DIR: /models
       # Same secret as prediction-scheduler / scripts/run_predictions_job.py
       PUSH_CRON_SECRET: ${PUSH_CRON_SECRET:-changeme}
-      # Optional: NFL standings snippet on game explanations (see .env.example)
-      SPORTRADAR_API_KEY: ${SPORTRADAR_API_KEY:-}
-      SPORTRADAR_API_URL: ${SPORTRADAR_API_URL:-https://api.sportradar.com}
-      SPORTRADAR_ACCESS_LEVEL: ${SPORTRADAR_ACCESS_LEVEL:-trial}
-      SPORTRADAR_SOCCER_SEASON_PREMIER_LEAGUE: ${SPORTRADAR_SOCCER_SEASON_PREMIER_LEAGUE:-}
-      SPORTRADAR_SOCCER_SEASON_CHAMPIONS_LEAGUE: ${SPORTRADAR_SOCCER_SEASON_CHAMPIONS_LEAGUE:-}
+      # Stripe: passed via Compose substitution from project-root .env (same file as POSTGRES_PASSWORD).
+      # If unset here, env_file can still supply them unless an empty key in another file overrides.
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_PRICE_ID_PREMIUM: ${STRIPE_PRICE_ID_PREMIUM:-}
+      STRIPE_PRICE_ID_PREMIUM_PLUS: ${STRIPE_PRICE_ID_PREMIUM_PLUS:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      # Sportradar: set in .env and/or .env.production (see env_file above), not only .env.production with compose substitution.
     # Bind to loopback so host nginx can proxy; not exposed on the public interface.
     ports:
       - "127.0.0.1:8000:8000"
@@ -103,26 +110,24 @@ services:
     profiles:
       - predictions
 
-  # ML Inference Service (TensorFlow Serving)
-  ml-inference:
-    image: tensorflow/serving:2.13.0
-    container_name: sport-prediction-ml
-    ports:
-      - "8500:8500"  # gRPC
-      - "8501:8501"  # REST API
-    volumes:
-      - ./ml/models:/models
+  # Sportradar PL/UCL schedule import (~3x/day). Same profile as prediction-scheduler.
+  soccer-schedule-sync:
+    image: curlimages/curl:8.5.0
+    container_name: sport-prediction-soccer-schedule-sync
     environment:
-      MODEL_NAME: sports_prediction
-      MODEL_BASE_PATH: /models
-    command: >
-      --model_config_file=/models/models.config
-      --rest_api_port=8501
-      --rest_api_timeout_in_ms=30000
+      PUSH_CRON_SECRET: ${PUSH_CRON_SECRET:-changeme}
+      API_INTERNAL_URL: http://api:8000
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - 'while true; do curl -sS -X POST "$$API_INTERNAL_URL/internal/soccer/sync-schedules" -H "X-Cron-Secret: $$PUSH_CRON_SECRET"; sleep 28800; done'
+    depends_on:
+      - api
     networks:
       - sport-prediction-network
+    profiles:
+      - predictions
 
-  # Prometheus (Monitoring)
+  # Prometheus (Monitoring) — enable with: docker compose --profile monitoring up -d
   prometheus:
     image: prom/prometheus:latest
     container_name: sport-prediction-prometheus
@@ -136,6 +141,8 @@ services:
       - '--storage.tsdb.path=/prometheus'
     networks:
       - sport-prediction-network
+    profiles:
+      - monitoring
 
   # Grafana (Visualization)
   grafana:
@@ -155,8 +162,10 @@ services:
       - prometheus
     networks:
       - sport-prediction-network
+    profiles:
+      - monitoring
 
-  # Kafka (Event Streaming - Optional for local dev)
+  # Kafka — not used by API; enable only if experimenting locally
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     container_name: sport-prediction-zookeeper
@@ -165,6 +174,8 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     networks:
       - sport-prediction-network
+    profiles:
+      - unused
 
   kafka:
     image: confluentinc/cp-kafka:latest
@@ -180,6 +191,8 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     networks:
       - sport-prediction-network
+    profiles:
+      - unused
 
 volumes:
   postgres_data:

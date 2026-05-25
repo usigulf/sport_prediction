@@ -11,7 +11,7 @@ export const PrivacyPolicyScreen: React.FC = () => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>1. Introduction</Text>
         <Text style={styles.body}>
-          Octobet ("we", "our", or "the app") is an information-only sports prediction service.
+          octobetiQ ("we", "our", or "the app") is an information-only sports prediction service.
           This policy describes what data we collect, how we use it, and your rights. We do not sell
           your personal data.
         </Text>

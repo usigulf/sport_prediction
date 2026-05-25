@@ -1,0 +1,11 @@
+source "https://rubygems.org"
+
+# System Ruby on macOS 12 is often 2.6; CocoaPods 1.16+ needs Ruby >= 3.0.
+# On macOS 12, Homebrew may compile LLVM+Rust for `brew install ruby` (very slow).
+# Prefer: full Xcode, then rbenv + `eval "$(rbenv init -)"` (detects zsh; avoids `init -zsh` typo → unsupported shell "-zsh").
+# Set `export LANG=en_US.UTF-8` and `LC_ALL=en_US.UTF-8` for CocoaPods (see ~/.zshrc).
+# If `pod install` fails TLS to cdn.cocoapods.org: `brew install openssl@3` (Podfile sets SSL_CERT_FILE when it finds that PEM).
+# Or skip Bundler: `sudo gem install cocoapods -v 1.11.3` then `pod install` (older pod; ok for many RN projects).
+ruby ">= 3.0.0"
+
+gem "cocoapods", "~> 1.15"

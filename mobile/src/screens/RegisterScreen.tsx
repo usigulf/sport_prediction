@@ -17,6 +17,7 @@ import { apiService } from '../services/api';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { theme } from '../constants/theme';
+import { AuthTrustLinks } from '../components/AuthTrustLinks';
 
 type RegisterScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -71,7 +72,7 @@ export const RegisterScreen: React.FC = () => {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
           <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Join Sports Prediction</Text>
+          <Text style={styles.subtitle}>Join octobetiQ</Text>
 
           <View style={styles.form}>
             <TextInput
@@ -125,6 +126,8 @@ export const RegisterScreen: React.FC = () => {
                 Already have an account? <Text style={styles.linkTextBold}>Login</Text>
               </Text>
             </TouchableOpacity>
+
+            <AuthTrustLinks />
           </View>
         </View>
       </ScrollView>

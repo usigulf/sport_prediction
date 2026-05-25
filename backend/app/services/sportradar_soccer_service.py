@@ -18,6 +18,7 @@ import urllib.request
 from typing import Any
 
 from app.config import Settings
+from app.constants.soccer import SOCCER_LEAGUE_CODES
 
 logger = logging.getLogger(__name__)
 
@@ -34,13 +35,21 @@ def _access_level(settings: Settings) -> str:
 def soccer_season_id_for_league(league: str, settings: Settings) -> str | None:
     """Return Sportradar season id (e.g. sr:season:130281) when configured for this app league code."""
     key = (league or "").lower().strip()
-    if key == "premier_league":
-        sid = (settings.sportradar_soccer_season_premier_league or "").strip()
-        return sid or None
-    if key == "champions_league":
-        sid = (settings.sportradar_soccer_season_champions_league or "").strip()
-        return sid or None
-    return None
+    env_map: dict[str, str | None] = {
+        "premier_league": settings.sportradar_soccer_season_premier_league,
+        "champions_league": settings.sportradar_soccer_season_champions_league,
+        "la_liga": settings.sportradar_soccer_season_la_liga,
+        "serie_a": settings.sportradar_soccer_season_serie_a,
+        "bundesliga": settings.sportradar_soccer_season_bundesliga,
+        "mls": settings.sportradar_soccer_season_mls,
+    }
+    sid = (env_map.get(key) or "").strip()
+    return sid or None
+
+
+def configured_soccer_league_codes(settings: Settings) -> list[str]:
+    """Leagues with a non-empty Sportradar season id (schedules + standings sync)."""
+    return [code for code in SOCCER_LEAGUE_CODES if soccer_season_id_for_league(code, settings)]
 
 
 def _cache_key(settings: Settings, season_id: str) -> str:
@@ -263,16 +272,14 @@ def soccer_matchup_provider_note(game, settings: Settings) -> str | None:
 
 def soccer_health_probe(settings: Settings) -> dict[str, Any]:
     """
-    Ops helper: fetch standings for each configured season id (PL and/or UCL).
+    Ops helper: fetch standings for each configured soccer season id.
     soccer_standings_ok is true only when every configured probe succeeds.
     """
     probes: list[tuple[str, str]] = []
-    pl = (settings.sportradar_soccer_season_premier_league or "").strip()
-    if pl:
-        probes.append(("premier_league", pl))
-    cl = (settings.sportradar_soccer_season_champions_league or "").strip()
-    if cl:
-        probes.append(("champions_league", cl))
+    for code in SOCCER_LEAGUE_CODES:
+        sid = soccer_season_id_for_league(code, settings)
+        if sid:
+            probes.append((code, sid))
     if not probes:
         return {
             "soccer_configured": False,

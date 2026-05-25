@@ -2,6 +2,7 @@
 Tests for games API: leagues, pagination, scheduled_time ISO 8601
 """
 import re
+import urllib.request
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -93,3 +94,31 @@ def test_upcoming_invalid_time_zone(client):
         params={"date": "2030-01-01", "time_zone": "Not/A_Real_Zone", "limit": 10},
     )
     assert r.status_code == status.HTTP_400_BAD_REQUEST
+
+
+def test_game_detail_team_logo_urls_resolve_on_cdn(client, test_game):
+    """
+    End-to-end check: JSON logo URLs must load as images from ESPN CDN (matches mobile headers UX).
+    Requires outbound HTTPS (skipped offline).
+    """
+    r = client.get(f"/api/v1/games/{test_game.id}")
+    assert r.status_code == status.HTTP_200_OK
+    body = r.json()
+    for side in ("home_team", "away_team"):
+        url = body[side]["logo_url"]
+        assert url and "espncdn.com" in url
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
+                "Accept": "image/png,image/webp,*/*",
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                assert resp.status == 200
+                ct = (resp.headers.get("Content-Type") or "").lower()
+                assert "image" in ct or "png" in ct or ct.startswith("binary/")
+                resp.read(256)
+        except OSError:
+            pytest.skip("CDN unreachable from this environment")

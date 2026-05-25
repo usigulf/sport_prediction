@@ -3,37 +3,19 @@
  * Shows: sport icon, matchup teaser, confidence stars, win % bar snippet.
  */
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { TeamCrestImage } from './TeamCrestImage';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../constants/theme';
+import { leagueBadgeSource } from '../constants/sportLogos';
+import { teamLogoUriCandidates } from '../utils/teamLogoUrl';
 import { confidenceToPickStrength } from './PredictionCard';
-
-const getSportIcon = (leagueId: string): keyof typeof Ionicons.glyphMap => {
-  switch (leagueId) {
-    case 'nfl': return 'football';
-    case 'nba': return 'basketball';
-    case 'mlb': return 'baseball';
-    case 'nhl': return 'snow';
-    case 'soccer':
-    case 'premier_league':
-    case 'champions_league':
-      return 'football';
-    case 'boxing':
-    case 'mma':
-      return 'fitness';
-    case 'tennis':
-    case 'golf':
-      return 'trophy';
-    default:
-      return 'football-outline';
-  }
-};
 
 export interface BestPickItem {
   id: string;
   league: string;
-  home_team?: { name: string } | null;
-  away_team?: { name: string } | null;
+  home_team?: { name: string; logo_url?: string | null; abbreviation?: string | null } | null;
+  away_team?: { name: string; logo_url?: string | null; abbreviation?: string | null } | null;
   prediction?: {
     home_win_probability: number;
     away_win_probability: number;
@@ -58,7 +40,17 @@ export const BestPickMiniCard: React.FC<BestPickMiniCardProps> = ({ pick, onPres
   const pred = pick.prediction;
   const stars = pred ? confidenceToPickStrength(pred.confidence_level) : 0;
   const probHome = pred ? pred.home_win_probability : 0;
-  const probAway = pred ? pred.away_win_probability : 0;
+  const badge = leagueBadgeSource(pick.league);
+  const homeCrest = teamLogoUriCandidates({
+    league: pick.league,
+    abbreviation: pick.home_team?.abbreviation,
+    logo_url: pick.home_team?.logo_url,
+  });
+  const awayCrest = teamLogoUriCandidates({
+    league: pick.league,
+    abbreviation: pick.away_team?.abbreviation,
+    logo_url: pick.away_team?.logo_url,
+  });
 
   return (
     <TouchableOpacity
@@ -68,9 +60,18 @@ export const BestPickMiniCard: React.FC<BestPickMiniCardProps> = ({ pick, onPres
     >
       <View style={styles.header}>
         <View style={styles.sportIconWrap}>
-          <Ionicons name={getSportIcon(pick.league)} size={18} color={theme.colors.accent} />
+          {badge ? (
+            <Image source={badge} style={styles.leagueBadgeImg} resizeMode="contain" accessibilityIgnoresInvertColors />
+          ) : (
+            <Ionicons name="football-outline" size={18} color={theme.colors.accent} />
+          )}
         </View>
         <Text style={styles.league} numberOfLines={1}>{pick.league.toUpperCase()}</Text>
+      </View>
+      <View style={styles.clubsRow}>
+        <ClubFace candidates={homeCrest} fallbackLabel={home} />
+        <Text style={styles.clubsVs}>vs</Text>
+        <ClubFace candidates={awayCrest} fallbackLabel={away} />
       </View>
       <Text style={styles.matchup} numberOfLines={2}>{matchup}</Text>
       {pred && (
@@ -102,6 +103,20 @@ export const BestPickMiniCard: React.FC<BestPickMiniCardProps> = ({ pick, onPres
   );
 };
 
+function ClubFace({ candidates, fallbackLabel }: { candidates: string[]; fallbackLabel: string }) {
+  const letter = fallbackLabel.trim().slice(0, 1).toUpperCase() || '?';
+  if (candidates.length > 0) {
+    return (
+      <TeamCrestImage candidates={candidates} style={styles.clubLogo} contentFit="contain" />
+    );
+  }
+  return (
+    <View style={[styles.clubLogo, styles.clubFallback]} accessibilityRole="image">
+      <Text style={styles.clubFallbackText}>{letter}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   card: {
     width: CARD_WIDTH,
@@ -125,6 +140,40 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.accentDim,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  leagueBadgeImg: {
+    width: 22,
+    height: 22,
+  },
+  clubsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  clubLogo: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSubtle,
+    backgroundColor: theme.colors.backgroundElevated,
+  },
+  clubFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clubFallbackText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: theme.colors.textSecondary,
+  },
+  clubsVs: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: theme.colors.textMuted,
   },
   league: {
     fontSize: 10,

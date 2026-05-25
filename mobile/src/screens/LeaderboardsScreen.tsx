@@ -1,5 +1,5 @@
 /**
- * Leaderboards: rank by prediction-view accuracy (weekly / monthly / all).
+ * Leaderboards: rank by prediction-view accuracy (weekly / monthly / all). Pro tier required.
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -11,9 +11,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { apiService } from '../services/api';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { theme } from '../constants/theme';
+import { useAppSelector } from '../store/hooks';
+import { hasProAccess } from '../utils/subscription';
+import { RootStackParamList } from '../navigation/AppNavigator';
 
 type Period = 'weekly' | 'monthly' | 'all';
 
@@ -27,7 +32,12 @@ interface Entry {
   is_me?: boolean;
 }
 
+type Nav = StackNavigationProp<RootStackParamList>;
+
 export const LeaderboardsScreen: React.FC = () => {
+  const navigation = useNavigation<Nav>();
+  const tier = useAppSelector((s) => s.auth.user?.subscriptionTier ?? 'free');
+  const pro = hasProAccess(tier);
   const [period, setPeriod] = useState<Period>('monthly');
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,6 +46,10 @@ export const LeaderboardsScreen: React.FC = () => {
 
   const load = useCallback(
     async (isRefresh = false) => {
+      if (!pro) {
+        setLoading(false);
+        return;
+      }
       if (isRefresh) setRefreshing(true);
       else setLoading(true);
       setError(null);
@@ -50,20 +64,39 @@ export const LeaderboardsScreen: React.FC = () => {
         setRefreshing(false);
       }
     },
-    [period]
+    [period, pro],
   );
 
   useEffect(() => {
     load();
   }, [load]);
 
+  if (!pro) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.gate}>
+          <Text style={styles.title}>Leaderboard</Text>
+          <Text style={styles.subtitle}>
+            Pro feature — compare accuracy across users who viewed finished games.
+          </Text>
+          <TouchableOpacity
+            style={styles.upgradeBtn}
+            onPress={() =>
+              navigation.navigate('Paywall', {
+                emphasizeTier: 'premium_plus',
+                contextMessage: 'Upgrade to Pro for leaderboards and challenges.',
+              })
+            }
+          >
+            <Text style={styles.upgradeBtnText}>Upgrade to Pro</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   const renderItem = ({ item }: { item: Entry }) => (
-    <View
-      style={[
-        styles.row,
-        item.is_me && styles.rowMe,
-      ]}
-    >
+    <View style={[styles.row, item.is_me && styles.rowMe]}>
       <Text style={[styles.rank, item.is_me && styles.rankMe]}>{item.rank}</Text>
       <View style={styles.info}>
         <Text style={[styles.name, item.is_me && styles.nameMe]} numberOfLines={1}>
@@ -132,6 +165,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  gate: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: theme.spacing.lg,
+  },
+  upgradeBtn: {
+    marginTop: theme.spacing.lg,
+    backgroundColor: theme.colors.accent,
+    paddingVertical: 14,
+    borderRadius: theme.radii.md,
+    alignItems: 'center',
+  },
+  upgradeBtnText: {
+    color: theme.colors.background,
+    fontWeight: '700',
+    fontSize: 16,
   },
   header: {
     backgroundColor: theme.colors.backgroundElevated,

@@ -37,6 +37,7 @@ from app.models.game import Game
 from app.models.prediction import Prediction
 from app.models.user import User
 from app.core.security import get_password_hash
+from app.utils.team_logo_urls import default_team_logo_url
 
 def create_teams(db: Session):
     """Create sample teams for different leagues"""
@@ -64,20 +65,6 @@ def create_teams(db: Session):
         {"name": "Manchester United", "league": "premier_league", "abbreviation": "MUN"},
         {"name": "Chelsea", "league": "premier_league", "abbreviation": "CHE"},
         {"name": "Tottenham Hotspur", "league": "premier_league", "abbreviation": "TOT"},
-        # MLB Teams
-        {"name": "New York Yankees", "league": "mlb", "abbreviation": "NYY"},
-        {"name": "Los Angeles Dodgers", "league": "mlb", "abbreviation": "LAD"},
-        {"name": "Houston Astros", "league": "mlb", "abbreviation": "HOU"},
-        {"name": "Atlanta Braves", "league": "mlb", "abbreviation": "ATL"},
-        {"name": "Boston Red Sox", "league": "mlb", "abbreviation": "BOS"},
-        {"name": "Chicago Cubs", "league": "mlb", "abbreviation": "CHC"},
-        # NHL Teams
-        {"name": "Colorado Avalanche", "league": "nhl", "abbreviation": "COL"},
-        {"name": "Toronto Maple Leafs", "league": "nhl", "abbreviation": "TOR"},
-        {"name": "Edmonton Oilers", "league": "nhl", "abbreviation": "EDM"},
-        {"name": "New York Rangers", "league": "nhl", "abbreviation": "NYR"},
-        {"name": "Boston Bruins", "league": "nhl", "abbreviation": "BOS"},
-        {"name": "Vegas Golden Knights", "league": "nhl", "abbreviation": "VGK"},
         # Champions League Teams
         {"name": "Real Madrid", "league": "champions_league", "abbreviation": "RMA"},
         {"name": "Barcelona", "league": "champions_league", "abbreviation": "BAR"},
@@ -85,34 +72,34 @@ def create_teams(db: Session):
         {"name": "Paris Saint-Germain", "league": "champions_league", "abbreviation": "PSG"},
         {"name": "Manchester City", "league": "champions_league", "abbreviation": "MCI"},
         {"name": "Inter Milan", "league": "champions_league", "abbreviation": "INT"},
-        # Boxing Fighters (modeled as teams)
-        {"name": "Tyson Fury", "league": "boxing", "abbreviation": "FURY"},
-        {"name": "Oleksandr Usyk", "league": "boxing", "abbreviation": "USYK"},
-        {"name": "Anthony Joshua", "league": "boxing", "abbreviation": "AJ"},
-        {"name": "Deontay Wilder", "league": "boxing", "abbreviation": "WILD"},
-        {"name": "Canelo Alvarez", "league": "boxing", "abbreviation": "CAN"},
-        {"name": "Gervonta Davis", "league": "boxing", "abbreviation": "DAVIS"},
-        # Tennis Players
-        {"name": "Novak Djokovic", "league": "tennis", "abbreviation": "DJOK"},
-        {"name": "Carlos Alcaraz", "league": "tennis", "abbreviation": "ALC"},
-        {"name": "Daniil Medvedev", "league": "tennis", "abbreviation": "MED"},
-        {"name": "Jannik Sinner", "league": "tennis", "abbreviation": "SIN"},
-        {"name": "Rafael Nadal", "league": "tennis", "abbreviation": "NAD"},
-        {"name": "Stefanos Tsitsipas", "league": "tennis", "abbreviation": "TSI"},
-        # Golf Players
-        {"name": "Scottie Scheffler", "league": "golf", "abbreviation": "SCH"},
-        {"name": "Rory McIlroy", "league": "golf", "abbreviation": "MCIL"},
-        {"name": "Jon Rahm", "league": "golf", "abbreviation": "RAHM"},
-        {"name": "Viktor Hovland", "league": "golf", "abbreviation": "HOV"},
-        {"name": "Xander Schauffele", "league": "golf", "abbreviation": "SCHAU"},
-        {"name": "Collin Morikawa", "league": "golf", "abbreviation": "MOR"},
-        # MMA Fighters
-        {"name": "Jon Jones", "league": "mma", "abbreviation": "JONES"},
-        {"name": "Islam Makhachev", "league": "mma", "abbreviation": "MAKH"},
-        {"name": "Alexander Volkanovski", "league": "mma", "abbreviation": "VOLK"},
-        {"name": "Leon Edwards", "league": "mma", "abbreviation": "EDW"},
-        {"name": "Kamaru Usman", "league": "mma", "abbreviation": "USM"},
-        {"name": "Conor McGregor", "league": "mma", "abbreviation": "MCG"},
+        # La Liga
+        {"name": "Atlético Madrid", "league": "la_liga", "abbreviation": "ATM"},
+        {"name": "Sevilla", "league": "la_liga", "abbreviation": "SEV"},
+        {"name": "Real Sociedad", "league": "la_liga", "abbreviation": "RSO"},
+        {"name": "Villarreal", "league": "la_liga", "abbreviation": "VIL"},
+        {"name": "Athletic Club", "league": "la_liga", "abbreviation": "ATH"},
+        {"name": "Real Betis", "league": "la_liga", "abbreviation": "BET"},
+        # Serie A
+        {"name": "Juventus", "league": "serie_a", "abbreviation": "JUV"},
+        {"name": "AC Milan", "league": "serie_a", "abbreviation": "MIL"},
+        {"name": "Napoli", "league": "serie_a", "abbreviation": "NAP"},
+        {"name": "Roma", "league": "serie_a", "abbreviation": "ROM"},
+        {"name": "Lazio", "league": "serie_a", "abbreviation": "LAZ"},
+        {"name": "Fiorentina", "league": "serie_a", "abbreviation": "FIO"},
+        # Bundesliga
+        {"name": "Borussia Dortmund", "league": "bundesliga", "abbreviation": "BVB"},
+        {"name": "RB Leipzig", "league": "bundesliga", "abbreviation": "RBL"},
+        {"name": "Bayer Leverkusen", "league": "bundesliga", "abbreviation": "B04"},
+        {"name": "Eintracht Frankfurt", "league": "bundesliga", "abbreviation": "SGE"},
+        {"name": "VfB Stuttgart", "league": "bundesliga", "abbreviation": "VFB"},
+        {"name": "VfL Wolfsburg", "league": "bundesliga", "abbreviation": "WOB"},
+        # MLS
+        {"name": "Los Angeles FC", "league": "mls", "abbreviation": "LAFC"},
+        {"name": "Inter Miami CF", "league": "mls", "abbreviation": "MIA"},
+        {"name": "Columbus Crew", "league": "mls", "abbreviation": "CLB"},
+        {"name": "Seattle Sounders FC", "league": "mls", "abbreviation": "SEA"},
+        {"name": "Atlanta United FC", "league": "mls", "abbreviation": "ATL"},
+        {"name": "New York City FC", "league": "mls", "abbreviation": "NYC"},
     ]
     
     teams = []
@@ -122,7 +109,7 @@ def create_teams(db: Session):
             name=team_data["name"],
             league=team_data["league"],
             abbreviation=team_data["abbreviation"],
-            logo_url=f"https://example.com/logos/{team_data['abbreviation'].lower()}.png"
+            logo_url=default_team_logo_url(team_data["league"], team_data["abbreviation"]),
         )
         db.add(team)
         teams.append(team)
@@ -137,13 +124,11 @@ def create_games(db: Session, teams: list):
     nfl_teams = [t for t in teams if t.league == "nfl"]
     nba_teams = [t for t in teams if t.league == "nba"]
     pl_teams = [t for t in teams if t.league == "premier_league"]
-    mlb_teams = [t for t in teams if t.league == "mlb"]
-    nhl_teams = [t for t in teams if t.league == "nhl"]
     cl_teams = [t for t in teams if t.league == "champions_league"]
-    boxing_teams = [t for t in teams if t.league == "boxing"]
-    tennis_teams = [t for t in teams if t.league == "tennis"]
-    golf_teams = [t for t in teams if t.league == "golf"]
-    mma_teams = [t for t in teams if t.league == "mma"]
+    la_teams = [t for t in teams if t.league == "la_liga"]
+    sa_teams = [t for t in teams if t.league == "serie_a"]
+    bun_teams = [t for t in teams if t.league == "bundesliga"]
+    mls_teams = [t for t in teams if t.league == "mls"]
 
     games = []
     now = datetime.now()
@@ -198,38 +183,6 @@ def create_games(db: Session, teams: list):
         db.add(game)
         games.append(game)
 
-    # MLB Games
-    for i in range(4):
-        game_date = now + timedelta(days=i+1, hours=19)
-        home_team = mlb_teams[i % len(mlb_teams)]
-        away_team = mlb_teams[(i+1) % len(mlb_teams)]
-        game = Game(
-            id=uuid4(),
-            league="mlb",
-            home_team_id=home_team.id,
-            away_team_id=away_team.id,
-            scheduled_time=game_date,
-            status="scheduled"
-        )
-        db.add(game)
-        games.append(game)
-
-    # NHL Games
-    for i in range(4):
-        game_date = now + timedelta(days=i+1, hours=19)
-        home_team = nhl_teams[i % len(nhl_teams)]
-        away_team = nhl_teams[(i+2) % len(nhl_teams)]
-        game = Game(
-            id=uuid4(),
-            league="nhl",
-            home_team_id=home_team.id,
-            away_team_id=away_team.id,
-            scheduled_time=game_date,
-            status="scheduled"
-        )
-        db.add(game)
-        games.append(game)
-
     # Champions League Games
     for i in range(4):
         game_date = now + timedelta(days=i+3, hours=15)
@@ -246,66 +199,66 @@ def create_games(db: Session, teams: list):
         db.add(game)
         games.append(game)
 
-    # Boxing Matches
-    for i in range(3):
-        game_date = now + timedelta(days=i+4, hours=21)
-        home_team = boxing_teams[i % len(boxing_teams)]
-        away_team = boxing_teams[(i+1) % len(boxing_teams)]
-        game = Game(
-            id=uuid4(),
-            league="boxing",
-            home_team_id=home_team.id,
-            away_team_id=away_team.id,
-            scheduled_time=game_date,
-            status="scheduled"
-        )
-        db.add(game)
-        games.append(game)
-
-    # Tennis Matches
+    # La Liga
     for i in range(4):
-        game_date = now + timedelta(days=i+2, hours=14)
-        home_team = tennis_teams[i % len(tennis_teams)]
-        away_team = tennis_teams[(i+2) % len(tennis_teams)]
+        game_date = now + timedelta(days=i + 2, hours=16)
+        home_team = la_teams[i % len(la_teams)]
+        away_team = la_teams[(i + 1) % len(la_teams)]
         game = Game(
             id=uuid4(),
-            league="tennis",
+            league="la_liga",
             home_team_id=home_team.id,
             away_team_id=away_team.id,
             scheduled_time=game_date,
-            status="scheduled"
+            status="scheduled",
         )
         db.add(game)
         games.append(game)
 
-    # Golf Tournaments (matchups)
-    for i in range(3):
-        game_date = now + timedelta(days=i+5, hours=8)
-        home_team = golf_teams[i % len(golf_teams)]
-        away_team = golf_teams[(i+1) % len(golf_teams)]
+    # Serie A
+    for i in range(4):
+        game_date = now + timedelta(days=i + 3, hours=17)
+        home_team = sa_teams[i % len(sa_teams)]
+        away_team = sa_teams[(i + 2) % len(sa_teams)]
         game = Game(
             id=uuid4(),
-            league="golf",
+            league="serie_a",
             home_team_id=home_team.id,
             away_team_id=away_team.id,
             scheduled_time=game_date,
-            status="scheduled"
+            status="scheduled",
         )
         db.add(game)
         games.append(game)
 
-    # MMA Fights
-    for i in range(3):
-        game_date = now + timedelta(days=i+6, hours=22)
-        home_team = mma_teams[i % len(mma_teams)]
-        away_team = mma_teams[(i+1) % len(mma_teams)]
+    # Bundesliga
+    for i in range(4):
+        game_date = now + timedelta(days=i + 2, hours=18)
+        home_team = bun_teams[i % len(bun_teams)]
+        away_team = bun_teams[(i + 1) % len(bun_teams)]
         game = Game(
             id=uuid4(),
-            league="mma",
+            league="bundesliga",
             home_team_id=home_team.id,
             away_team_id=away_team.id,
             scheduled_time=game_date,
-            status="scheduled"
+            status="scheduled",
+        )
+        db.add(game)
+        games.append(game)
+
+    # MLS
+    for i in range(4):
+        game_date = now + timedelta(days=i + 1, hours=23)
+        home_team = mls_teams[i % len(mls_teams)]
+        away_team = mls_teams[(i + 3) % len(mls_teams)]
+        game = Game(
+            id=uuid4(),
+            league="mls",
+            home_team_id=home_team.id,
+            away_team_id=away_team.id,
+            scheduled_time=game_date,
+            status="scheduled",
         )
         db.add(game)
         games.append(game)
@@ -393,29 +346,7 @@ def create_predictions(db: Session, games: list):
         elif game.league == "nba":
             expected_home_score = round(random.uniform(105, 115), 1)
             expected_away_score = round(random.uniform(100, 110), 1)
-        elif game.league == "mlb":
-            expected_home_score = round(random.uniform(4, 6), 1)
-            expected_away_score = round(random.uniform(3, 5), 1)
-        elif game.league == "nhl":
-            expected_home_score = round(random.uniform(2.5, 3.5), 1)
-            expected_away_score = round(random.uniform(2.0, 3.0), 1)
-        elif game.league == "boxing":
-            # Boxing: rounds won (12 rounds)
-            expected_home_score = round(random.uniform(7, 10), 1)
-            expected_away_score = round(random.uniform(5, 9), 1)
-        elif game.league == "tennis":
-            # Tennis: sets won (best of 3)
-            expected_home_score = round(random.uniform(1.5, 2.5), 1)
-            expected_away_score = round(random.uniform(0.5, 1.5), 1)
-        elif game.league == "golf":
-            # Golf: strokes (lower is better, but we show as matchup score)
-            expected_home_score = round(random.uniform(68, 72), 1)
-            expected_away_score = round(random.uniform(69, 73), 1)
-        elif game.league == "mma":
-            # MMA: rounds won (3 or 5 rounds)
-            expected_home_score = round(random.uniform(2, 3), 1)
-            expected_away_score = round(random.uniform(1, 2.5), 1)
-        else:  # Premier League, Champions League (soccer)
+        else:  # Soccer competitions
             expected_home_score = round(random.uniform(1.5, 2.5), 1)
             expected_away_score = round(random.uniform(1.0, 2.0), 1)
         
@@ -485,14 +416,12 @@ def create_team_standings(db: Session, teams: list):
     played_by_league = {
         "nfl": 17,
         "nba": 82,
-        "mlb": 162,
-        "nhl": 82,
         "premier_league": 38,
         "champions_league": 6,
-        "boxing": 1,
-        "tennis": 1,
-        "golf": 1,
-        "mma": 1,
+        "la_liga": 38,
+        "serie_a": 38,
+        "bundesliga": 34,
+        "mls": 34,
     }
     by_league = defaultdict(list)
     for t in teams:

@@ -1,5 +1,5 @@
 /**
- * Main Navigation Setup for Sports Prediction App
+ * Main navigation for octobetiQ
  */
 import React, { useState, useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
@@ -39,7 +39,8 @@ export type RootStackParamList = {
   MainTabs: undefined;
   GameDetail: { gameId: string };
   PredictionHistory: undefined;
-  Paywall: undefined;
+  /** Params all optional — omit when opening Subscription from the menu. */
+  Paywall: { emphasizeTier?: 'premium' | 'premium_plus'; contextMessage?: string };
   Accuracy: undefined;
   Leaderboards: undefined;
   Challenges: undefined;
@@ -265,6 +266,16 @@ export function AppNavigator() {
             name="Register"
             component={RegisterScreen}
             options={{ title: 'Create Account' }}
+          />
+          <Stack.Screen
+            name="Accuracy"
+            component={AccuracyScreen}
+            options={{ title: 'Model accuracy' }}
+          />
+          <Stack.Screen
+            name="Help"
+            component={HelpScreen}
+            options={{ title: 'Help & FAQ' }}
           />
         </Stack.Navigator>
       ) : !onboardingChecked ? (

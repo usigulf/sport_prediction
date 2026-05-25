@@ -1,12 +1,31 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ImageStyle, StyleProp } from 'react-native';
 import { Game } from '../types';
 import { theme } from '../constants/theme';
 import { formatLeagueLabel } from '../utils/leagueDisplay';
+import { teamLogoUriCandidates } from '../utils/teamLogoUrl';
+import { TeamCrestImage } from './TeamCrestImage';
 
 interface GameCardProps {
   game: Game;
   onPress?: () => void;
+}
+
+function CrestOrInitial(props: {
+  candidates: string[];
+  fallbackName: string;
+  style: StyleProp<ImageStyle>;
+}) {
+  const { candidates, fallbackName, style } = props;
+  const letter = fallbackName.trim().slice(0, 1).toUpperCase() || '?';
+  if (candidates.length > 0) {
+    return <TeamCrestImage candidates={candidates} style={style} />;
+  }
+  return (
+    <View style={[style, styles.logoFallback]} accessibilityRole="image">
+      <Text style={styles.logoFallbackText}>{letter}</Text>
+    </View>
+  );
 }
 
 export const GameCard: React.FC<GameCardProps> = ({ game, onPress }) => {
@@ -34,11 +53,15 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onPress }) => {
     }
   };
 
+  const homeLogoCandidates = teamLogoUriCandidates(game.home_team, game.league);
+  const awayLogoCandidates = teamLogoUriCandidates(game.away_team, game.league);
+
   return (
     <TouchableOpacity
       style={styles.card}
       onPress={onPress}
-      activeOpacity={0.7}
+      disabled={!onPress}
+      activeOpacity={onPress ? 0.7 : 1}
     >
       <View style={styles.header}>
         <Text style={styles.league}>{formatLeagueLabel(game.league)}</Text>
@@ -54,13 +77,12 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onPress }) => {
 
       <View style={styles.teamsContainer}>
         <View style={styles.team}>
-          {game.home_team?.logo_url && (
-            <Image
-              source={{ uri: game.home_team.logo_url }}
-              style={styles.logo}
-            />
-          )}
-          <Text style={styles.teamName} numberOfLines={1}>
+          <CrestOrInitial
+            candidates={homeLogoCandidates}
+            fallbackName={game.home_team?.name || 'H'}
+            style={styles.logo}
+          />
+          <Text style={styles.teamName} numberOfLines={2}>
             {game.home_team?.name || 'Home Team'}
           </Text>
         </View>
@@ -68,13 +90,12 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onPress }) => {
         <Text style={styles.vs}>VS</Text>
 
         <View style={styles.team}>
-          {game.away_team?.logo_url && (
-            <Image
-              source={{ uri: game.away_team.logo_url }}
-              style={styles.logo}
-            />
-          )}
-          <Text style={styles.teamName} numberOfLines={1}>
+          <CrestOrInitial
+            candidates={awayLogoCandidates}
+            fallbackName={game.away_team?.name || 'A'}
+            style={styles.logo}
+          />
+          <Text style={styles.teamName} numberOfLines={2}>
             {game.away_team?.name || 'Away Team'}
           </Text>
         </View>
@@ -147,6 +168,18 @@ const styles = StyleSheet.create({
     height: 50,
     marginBottom: theme.spacing.sm,
     borderRadius: 25,
+  },
+  logoFallback: {
+    backgroundColor: theme.colors.accentDim,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSubtle,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoFallbackText: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: theme.colors.accent,
   },
   teamName: {
     fontSize: 14,

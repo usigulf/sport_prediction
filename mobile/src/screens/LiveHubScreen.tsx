@@ -1,7 +1,7 @@
 /**
  * Live Hub: today's games and top picks in one place. Uses /feed/top-picks and shows countdown.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +20,13 @@ import { apiService } from '../services/api';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { theme } from '../constants/theme';
+import { useAdEngine } from '../ads/engine/AdEngineContext';
+import { NativeFeedAdCard } from '../ads/components/NativeFeedAdCard';
+import { BannerStrip } from '../ads/components/BannerStrip';
+import {
+  mergeListWithNativeAds,
+  type MergedRow,
+} from '../ads/hooks/mergeListWithNativeAds';
 
 type LiveHubNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -42,10 +50,23 @@ function formatStartsIn(scheduledTime: string): string {
 
 export const LiveHubScreen: React.FC = () => {
   const navigation = useNavigation<LiveHubNavigationProp>();
+  const adEngine = useAdEngine();
+  const insets = useSafeAreaInsets();
   const [picks, setPicks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const spacing = adEngine.initialized ? adEngine.spacingForLiveHub() : 6;
+  const merged = useMemo(
+    () =>
+      mergeListWithNativeAds(
+        picks,
+        (item, i) => (item?.id ? String(item.id) : `p-${i}`),
+        spacing,
+      ),
+    [picks, spacing],
+  );
 
   const load = async () => {
     try {
@@ -74,24 +95,32 @@ export const LiveHubScreen: React.FC = () => {
     navigation.navigate('GameDetail', { gameId });
   };
 
-  const renderItem = ({ item }: { item: any }) => (
-    <TouchableOpacity onPress={() => handleGamePress(item.id)}>
-      <View style={styles.cardWrap}>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>
-            {formatStartsIn(item.scheduled_time)}
-          </Text>
+  const renderMerged = ({
+    item,
+  }: {
+    item: MergedRow<(typeof picks)[number]>;
+  }) => {
+    if (item.kind === 'ad') {
+      return <NativeFeedAdCard surface="liveHub" screenLabel="LiveHub_Feed_Rail" />;
+    }
+    const g = item.item;
+    return (
+      <TouchableOpacity onPress={() => handleGamePress(g.id)}>
+        <View style={styles.cardWrap}>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{formatStartsIn(g.scheduled_time)}</Text>
+          </View>
+          <GameCard game={g} />
         </View>
-        <GameCard game={item} />
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Live Hub</Text>
-        <Text style={styles.subtitle}>Today's best picks & upcoming games</Text>
+        <Text style={styles.subtitle}>Today&apos;s best picks & upcoming games</Text>
       </View>
       {error ? (
         <View style={styles.errorBanner}>
@@ -104,13 +133,12 @@ export const LiveHubScreen: React.FC = () => {
         </View>
       ) : (
         <FlatList
-          data={picks}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
+          style={styles.listFlex}
+          data={merged}
+          renderItem={renderMerged}
+          keyExtractor={(row) => row.id}
+          contentContainerStyle={[styles.listContent, { paddingBottom: 72 + insets.bottom }]}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="calendar-outline" size={48} color={theme.colors.textMuted} />
@@ -120,6 +148,9 @@ export const LiveHubScreen: React.FC = () => {
           }
         />
       )}
+      <View style={[styles.bannerDock, { paddingBottom: insets.bottom }]}>
+        <BannerStrip screen="LiveHubBanner" />
+      </View>
     </View>
   );
 };
@@ -128,6 +159,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  listFlex: {
+    flex: 1,
+  },
+  bannerDock: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.colors.borderSubtle,
+    backgroundColor: theme.colors.backgroundElevated,
   },
   header: {
     backgroundColor: theme.colors.backgroundElevated,

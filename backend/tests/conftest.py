@@ -1,6 +1,13 @@
 """
 Pytest configuration and fixtures for testing
 """
+import os
+
+# Disable Redis in tests — avoids connection attempts and matches CI.
+os.environ.setdefault("REDIS_URL", "disabled")
+os.environ.setdefault("RATE_LIMIT_AUTH_PER_MINUTE", "100000")
+os.environ.setdefault("RATE_LIMIT_PREDICTIONS_PER_MINUTE", "100000")
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -19,8 +26,8 @@ from app.core.security import get_password_hash
 from uuid import uuid4
 from datetime import datetime, timedelta
 
-# Test database (in-memory SQLite)
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+# Test database (in-memory SQLite — isolated per engine instance)
+SQLALCHEMY_DATABASE_URL = "sqlite://"
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
@@ -32,11 +39,13 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 @pytest.fixture(autouse=True)
 def _clear_cache_fallback_after_test():
-    """Avoid daily_prediction / rate-limit keys leaking between tests when using memory fallback."""
+    """Avoid daily_prediction / rate-limit / token revocation keys leaking between tests."""
     yield
     from app.services.cache_service import clear_fallback_memory_store
+    from app.services.token_revocation_service import clear_memory_revocations
 
     clear_fallback_memory_store()
+    clear_memory_revocations()
 
 
 @pytest.fixture(scope="function")
@@ -104,13 +113,14 @@ def test_teams(db):
             id=uuid4(),
             name="Team A",
             league="nfl",
-            abbreviation="TEA"
+            # Real NFL abbreviations so ESPN crest URLs resolve (TEA/TEB return 404).
+            abbreviation="KC",
         ),
         Team(
             id=uuid4(),
             name="Team B",
             league="nfl",
-            abbreviation="TEB"
+            abbreviation="BUF",
         ),
     ]
     for team in teams:
@@ -165,6 +175,7 @@ def auth_headers(client, test_user):
             "password": "testpass123"
         }
     )
+    assert response.status_code == 200, response.text
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
 
@@ -179,5 +190,32 @@ def premium_auth_headers(client, premium_user):
             "password": "premium123"
         }
     )
+    assert response.status_code == 200, response.text
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def pro_user(db):
+    """Pro tier (premium_plus) test user."""
+    user = User(
+        id=uuid4(),
+        email="pro@example.com",
+        password_hash=get_password_hash("propass123"),
+        subscription_tier="premium_plus",
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@pytest.fixture
+def pro_auth_headers(client, pro_user):
+    response = client.post(
+        "/api/v1/auth/login",
+        data={"username": pro_user.email, "password": "propass123"},
+    )
+    assert response.status_code == 200, response.text
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
