@@ -59,11 +59,13 @@ echo "Step 5 — Regenerate predictions (uses PL standings + recent finished gam
 curl -sS -X POST \
   -H "X-Cron-Secret: ${PUSH_CRON_SECRET}" \
   -H "Content-Type: application/json" \
-  -d '{}' \
+  -d '{"include_recent_finished_days":14,"leagues":["premier_league"],"force":true}' \
   "$BASE/internal/predictions/run" | python3 -m json.tool || true
 echo ""
 echo "Step 6 — Spot-check the public API (no secret):"
-curl -sS "$BASE/api/v1/games/upcoming?leagues=premier_league&limit=5" | python3 -c "import json,sys; d=json.load(sys.stdin); print('total', d.get('total'), 'sample', [g.get('home_team',{}).get('name') for g in (d.get('games') or [])[:3]])" 2>/dev/null || echo "  (adjust VERIFY_API_BASE if this fails — path is /api/v1/games/upcoming)"
+TODAY=$(date -u +%Y-%m-%d 2>/dev/null || python3 -c "from datetime import datetime,timezone; print(datetime.now(timezone.utc).strftime('%Y-%m-%d'))")
+curl -sS "$BASE/api/v1/feed/top-picks?league=premier_league&date=${TODAY}&limit=5" | python3 -m json.tool 2>/dev/null | head -30 || true
+curl -sS "$BASE/api/v1/games/upcoming?league=premier_league&date=${TODAY}&limit=5" | python3 -c "import json,sys; d=json.load(sys.stdin); print('total', d.get('total'), 'sample', [g.get('home_team',{}).get('name') for g in (d.get('games') or [])[:3]])" 2>/dev/null || echo "  (adjust VERIFY_API_BASE if this fails)"
 echo ""
 echo "Step 7 — Mobile app"
 echo "  EXPO_PUBLIC_API_URL (or equivalent) must point at this same API."

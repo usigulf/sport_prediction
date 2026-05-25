@@ -97,10 +97,15 @@ def run_prediction_job(
     force: bool = False,
     min_minutes_scheduled: int = 45,
     min_minutes_live: int = 2,
+    include_recent_finished_days: int = 0,
+    leagues: Optional[list[str]] = None,
 ) -> PredictionJobResult:
     """
     For live games and upcoming scheduled games (next 7 days), write a new Prediction row
     when cooldown allows. Always invalidates Redis cache for touched games.
+
+    include_recent_finished_days: also score finished games in the last N days (demo/backfill).
+    leagues: optional filter to app league codes (e.g. premier_league only).
     """
     now = datetime.now(timezone.utc)
     window_end = now + timedelta(days=7)
@@ -113,16 +118,28 @@ def run_prediction_job(
             return PredictionJobResult(0, 0, 0, ["invalid game_ids"])
         q = q.filter(Game.id.in_(uids))
     else:
-        q = q.filter(
-            or_(
-                Game.status == "live",
+        clauses = [
+            Game.status == "live",
+            and_(
+                Game.status == "scheduled",
+                Game.scheduled_time >= now - timedelta(hours=2),
+                Game.scheduled_time <= window_end,
+            ),
+        ]
+        if include_recent_finished_days > 0:
+            since = now - timedelta(days=include_recent_finished_days)
+            clauses.append(
                 and_(
-                    Game.status == "scheduled",
-                    Game.scheduled_time >= now - timedelta(hours=2),
-                    Game.scheduled_time <= window_end,
-                ),
+                    Game.status == "finished",
+                    Game.scheduled_time >= since,
+                    Game.scheduled_time < now,
+                )
             )
-        )
+        q = q.filter(or_(*clauses))
+    if leagues:
+        allow = [lg.strip().lower() for lg in leagues if lg and lg.strip()]
+        if allow:
+            q = q.filter(Game.league.in_(allow))
 
     games = q.options(joinedload(Game.home_team), joinedload(Game.away_team)).all()
     result = PredictionJobResult(

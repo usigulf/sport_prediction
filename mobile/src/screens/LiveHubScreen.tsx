@@ -27,6 +27,7 @@ import {
   mergeListWithNativeAds,
   type MergedRow,
 } from '../ads/hooks/mergeListWithNativeAds';
+import { soccerBetaFetchParams } from '../utils/soccerBetaFetch';
 
 type LiveHubNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -71,7 +72,7 @@ export const LiveHubScreen: React.FC = () => {
   const load = async () => {
     try {
       setError(null);
-      const res = await apiService.getTopPicks({ limit: 30 });
+      const res = await apiService.getTopPicks({ limit: 30, ...soccerBetaFetchParams() });
       setPicks(res.picks ?? []);
     } catch (e) {
       setError(getUserFriendlyMessage(e));

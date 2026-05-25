@@ -38,6 +38,7 @@ def _confidence_order(cl: Optional[str]) -> int:
 
 @router.get("/top-picks")
 async def get_top_picks(
+    league: Optional[str] = Query(None, description="Filter by single league (alias for leagues=)"),
     leagues: Optional[str] = Query(None, description="Filter by leagues (comma-separated)"),
     limit: int = Query(20, ge=1, le=50),
     date: Optional[str] = Query(
@@ -83,8 +84,9 @@ async def get_top_picks(
             )
             .options(joinedload(Game.home_team), joinedload(Game.away_team))
         )
-    if leagues:
-        league_list = [s.strip().lower() for s in leagues.split(",") if s.strip()]
+    league_filter = leagues or league
+    if league_filter:
+        league_list = [s.strip().lower() for s in league_filter.split(",") if s.strip()]
         if league_list:
             query = query.filter(Game.league.in_(league_list))
 

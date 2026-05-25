@@ -567,13 +567,15 @@ class ApiService {
 
   // Feed (top picks)
   async getTopPicks(params?: {
+    league?: string;
     leagues?: string;
     limit?: number;
     date?: string;
     time_zone?: string;
   }) {
     const queryParams = new URLSearchParams();
-    if (params?.leagues) queryParams.append('leagues', params.leagues);
+    const leagues = params?.leagues ?? params?.league;
+    if (leagues) queryParams.append('leagues', leagues);
     if (params?.limit) queryParams.append('limit', String(params.limit ?? 20));
     if (params?.date) queryParams.append('date', params.date);
     if (params?.time_zone) queryParams.append('time_zone', params.time_zone);

@@ -86,8 +86,8 @@ Thumbs.db
 /models/
 ml/models/
 
-# Docker
-.dockerignore
+# Docker (root only; allow backend/.dockerignore in repo)
+/.dockerignore
 
 # Terraform
 *.tfstate

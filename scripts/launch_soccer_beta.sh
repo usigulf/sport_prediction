@@ -90,6 +90,19 @@ if [[ -x scripts/setup_premier_league_features.sh ]]; then
 fi
 
 echo ""
+echo "=== Predictions backfill (PL, last 14 days) ==="
+if [[ -n "${PUSH_CRON_SECRET:-}" ]]; then
+  curl -fsS -X POST \
+    -H "X-Cron-Secret: ${PUSH_CRON_SECRET}" \
+    -H "Content-Type: application/json" \
+    -d '{"include_recent_finished_days":14,"leagues":["premier_league"],"force":true}' \
+    "http://127.0.0.1:8000/internal/predictions/run" | head -c 400 || true
+  echo ""
+else
+  echo "  Set PUSH_CRON_SECRET in .env.production to run backfill from this script."
+fi
+
+echo ""
 echo "=== Cron (host) ==="
 echo "Install jobs from deploy/crontab.example (predictions + soccer sync)."
 echo "  crontab -e"

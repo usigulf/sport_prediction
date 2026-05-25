@@ -77,6 +77,8 @@ class Settings(BaseSettings):
     clearsports_soccer_season_bundesliga: Optional[str] = None
     clearsports_soccer_season_mls: Optional[str] = None
     clearsports_soccer_season_champions_league: Optional[str] = None
+    # Comma-separated app league codes to sync (empty = all with season/config). Beta: premier_league
+    soccer_sync_leagues: str = ""
     # NFL v7 standings: /nfl/official/{access}/v7/en/seasons/{year}/REG/standings/season.json
     sportradar_access_level: str = "trial"  # trial | production
     sportradar_nfl_season_year: Optional[int] = None  # default: current UTC calendar year

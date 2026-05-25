@@ -26,6 +26,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { SPORT_OPTIONS, HOME_HERO_EMPTY_TAGLINE } from '../constants/leagues';
 import { theme } from '../constants/theme';
+import { soccerBetaFetchParams } from '../utils/soccerBetaFetch';
 import { useAdEngine } from '../ads/engine/AdEngineContext';
 import { NativeFeedAdCard } from '../ads/components/NativeFeedAdCard';
 import { BannerStrip } from '../ads/components/BannerStrip';
@@ -90,7 +91,7 @@ export const HomeScreen: React.FC = () => {
   const loadGames = useCallback(async () => {
     setLoadError(null);
     try {
-      await dispatch(fetchUpcomingGames({ limit: 30 })).unwrap();
+      await dispatch(fetchUpcomingGames({ limit: 30, ...soccerBetaFetchParams() })).unwrap();
     } catch (error) {
       setLoadError(getUserFriendlyMessage(error));
     }
@@ -109,7 +110,13 @@ export const HomeScreen: React.FC = () => {
           // not logged in or favorites failed
         }
       }
-      const res = await apiService.getTopPicks({ leagues: leaguesParam, limit: 10 });
+      const beta = soccerBetaFetchParams();
+      const res = await apiService.getTopPicks({
+        leagues: beta.leagues ?? leaguesParam,
+        date: beta.date,
+        time_zone: beta.time_zone,
+        limit: 10,
+      });
       setForYouPicks(res.picks ?? []);
     } catch {
       setForYouPicks([]);
@@ -130,7 +137,7 @@ export const HomeScreen: React.FC = () => {
   const loadTrending = useCallback(async () => {
     setTrendingLoading(true);
     try {
-      const res = await apiService.getTopPicks({ limit: 6 });
+      const res = await apiService.getTopPicks({ limit: 6, ...soccerBetaFetchParams() });
       setTrendingPicks(res.picks ?? []);
     } catch {
       setTrendingPicks([]);

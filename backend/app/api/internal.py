@@ -29,6 +29,16 @@ class PredictionRunBody(BaseModel):
     force: bool = False
     min_minutes_scheduled: int = Field(45, ge=1, le=1440)
     min_minutes_live: int = Field(2, ge=1, le=120)
+    include_recent_finished_days: int = Field(
+        0,
+        ge=0,
+        le=90,
+        description="Also predict finished games in the last N days (soccer beta backfill / top-picks).",
+    )
+    leagues: Optional[list[str]] = Field(
+        None,
+        description="Optional league filter (e.g. ['premier_league']).",
+    )
 
 
 class PlayerSpotlightItem(BaseModel):
@@ -89,6 +99,8 @@ async def run_predictions_cron(
         force=body.force,
         min_minutes_scheduled=body.min_minutes_scheduled,
         min_minutes_live=body.min_minutes_live,
+        include_recent_finished_days=body.include_recent_finished_days,
+        leagues=body.leagues,
     )
     return {
         "games_considered": result.games_considered,
