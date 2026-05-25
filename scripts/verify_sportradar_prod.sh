@@ -34,7 +34,7 @@ mask() {
 }
 
 echo "=== Env file: $ENV_FILE ==="
-if [[ -z "${SPORTRADAR_API_KEY// }" ]]; then
+if [[ -z "${SPORTRADAR_API_KEY:-}" ]]; then
   echo "FAIL SPORTRADAR_API_KEY is empty — Sportradar calls will not work."
   exit 1
 fi

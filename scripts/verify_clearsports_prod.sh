@@ -31,7 +31,7 @@ mask() {
 }
 
 echo "=== Env file: $ENV_FILE ==="
-if [[ -z "${CLEARSPORTS_API_KEY// }" ]]; then
+if [[ -z "${CLEARSPORTS_API_KEY:-}" ]]; then
   echo "FAIL CLEARSPORTS_API_KEY is empty"
   exit 1
 fi
