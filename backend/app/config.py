@@ -70,6 +70,13 @@ class Settings(BaseSettings):
     # ClearSports (clearsportsapi.com): Bearer auth; not a drop-in for Sportradar URLs — use for new integrations / probes.
     clearsports_api_key: str = ""
     clearsports_api_base_url: str = "https://api.clearsportsapi.com"
+    # Season string for ClearSports soccer feeds (e.g. 2024-2025). Mirrors SPORTRADAR_SOCCER_SEASON_* when set.
+    clearsports_soccer_season_premier_league: Optional[str] = None
+    clearsports_soccer_season_la_liga: Optional[str] = None
+    clearsports_soccer_season_serie_a: Optional[str] = None
+    clearsports_soccer_season_bundesliga: Optional[str] = None
+    clearsports_soccer_season_mls: Optional[str] = None
+    clearsports_soccer_season_champions_league: Optional[str] = None
     # NFL v7 standings: /nfl/official/{access}/v7/en/seasons/{year}/REG/standings/season.json
     sportradar_access_level: str = "trial"  # trial | production
     sportradar_nfl_season_year: Optional[int] = None  # default: current UTC calendar year

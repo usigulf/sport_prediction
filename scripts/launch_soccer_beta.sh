@@ -34,8 +34,20 @@ set +a
 [[ ${#JWT_SECRET} -ge 32 ]] || fail "JWT_SECRET must be at least 32 characters"
 [[ -n "${REDIS_URL// }" ]] || fail "REDIS_URL empty"
 [[ -n "${PUSH_CRON_SECRET// }" ]] || fail "PUSH_CRON_SECRET empty"
-[[ -n "${SPORTRADAR_API_KEY// }" ]] || fail "SPORTRADAR_API_KEY empty (soccer beta requires Sportradar)"
-[[ -n "${SPORTRADAR_SOCCER_SEASON_PREMIER_LEAGUE// }" ]] || fail "Set SPORTRADAR_SOCCER_SEASON_PREMIER_LEAGUE at minimum"
+has_cs=0
+has_sr=0
+[[ -n "${CLEARSPORTS_API_KEY// }" ]] && has_cs=1
+[[ -n "${SPORTRADAR_API_KEY// }" ]] && has_sr=1
+if [[ "$has_cs" -eq 0 && "$has_sr" -eq 0 ]]; then
+  fail "Set CLEARSPORTS_API_KEY (recommended) or SPORTRADAR_API_KEY for soccer fixtures"
+fi
+if [[ "$has_cs" -eq 1 ]]; then
+  ok "Soccer data provider: ClearSports"
+  # Season label optional — defaults to current European season (e.g. 2024-2025)
+elif [[ "$has_sr" -eq 1 ]]; then
+  ok "Soccer data provider: Sportradar"
+  [[ -n "${SPORTRADAR_SOCCER_SEASON_PREMIER_LEAGUE// }" ]] || fail "Set SPORTRADAR_SOCCER_SEASON_PREMIER_LEAGUE at minimum"
+fi
 
 ok "Required env vars present"
 
@@ -67,8 +79,10 @@ curl -fsS "http://127.0.0.1:8000/ready" | head -c 200
 echo ""
 
 echo ""
-echo "=== Sportradar + soccer sync ==="
-if [[ -x scripts/verify_sportradar_prod.sh ]]; then
+echo "=== Soccer provider health + sync ==="
+if [[ "$has_cs" -eq 1 && -x scripts/verify_clearsports_prod.sh ]]; then
+  VERIFY_API_BASE=http://127.0.0.1:8000 ./scripts/verify_clearsports_prod.sh .env.production || true
+elif [[ "$has_sr" -eq 1 && -x scripts/verify_sportradar_prod.sh ]]; then
   VERIFY_API_BASE=http://127.0.0.1:8000 ./scripts/verify_sportradar_prod.sh .env.production || true
 fi
 if [[ -x scripts/setup_premier_league_features.sh ]]; then

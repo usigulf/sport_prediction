@@ -29,6 +29,8 @@ def clearsports_get_json(
     base = (base_url or "https://api.clearsportsapi.com").rstrip("/")
     if not path.startswith("/"):
         path = "/" + path
+    if not path.startswith("/api/"):
+        path = "/api" + path
     q = urllib.parse.urlencode(query or {})
     url = f"{base}{path}" + (f"?{q}" if q else "")
     req = urllib.request.Request(
@@ -64,7 +66,10 @@ def clearsports_health_probe(settings: Any) -> dict[str, Any]:
             "clearsports_ok": False,
             "detail": "CLEARSPORTS_API_KEY not set",
         }
-    data, code, err = clearsports_get_json(base, key, "/v1/nba/games", {"date": "today"})
+    from datetime import datetime, timezone
+
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    data, code, err = clearsports_get_json(base, key, "/v1/epl/games", {"date": today})
     if data is not None and code == 200:
         n = 0
         if isinstance(data, dict) and isinstance(data.get("data"), list):
@@ -73,7 +78,7 @@ def clearsports_health_probe(settings: Any) -> dict[str, Any]:
             "clearsports_configured": True,
             "clearsports_ok": True,
             "clearsports_http_status": code,
-            "sample_games_count": n,
+            "sample_epl_games_count": n,
             "clearsports_base_url": base,
         }
     return {

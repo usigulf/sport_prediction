@@ -8,7 +8,7 @@
 #   VERIFY_API_BASE=http://127.0.0.1:8000 ./scripts/setup_premier_league_features.sh .env
 #
 # What this does: prints the checklist, then calls health → soccer sync → predictions run.
-# What you must do first: set SPORTRADAR_* and PUSH_CRON_SECRET in the env file (see Step 1).
+# What you must do first: set CLEARSPORTS_API_KEY (or SPORTRADAR_*) and PUSH_CRON_SECRET (see Step 1).
 #
 set -euo pipefail
 
@@ -33,9 +33,9 @@ echo " Premier League — real features (checklist + automated curls)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "Step 1 — Env (required for PL)"
-echo "  SPORTRADAR_API_KEY           = non-empty"
-echo "  SPORTRADAR_ACCESS_LEVEL      = trial or production (must match your Sportradar key)"
-echo "  SPORTRADAR_SOCCER_SEASON_PREMIER_LEAGUE = sr:season:… from Sportradar Global Soccer v4"
+echo "  CLEARSPORTS_API_KEY          = non-empty (recommended; Sportradar trial keys expire)"
+echo "  # optional: CLEARSPORTS_SOCCER_SEASON_PREMIER_LEAGUE=2024-2025"
+echo "  — or legacy Sportradar: SPORTRADAR_API_KEY + SPORTRADAR_SOCCER_SEASON_PREMIER_LEAGUE"
 echo "  PUSH_CRON_SECRET             = non-empty (protects /internal/*)"
 echo ""
 echo "  Tip: If UCL health fails, comment out SPORTRADAR_SOCCER_SEASON_CHAMPIONS_LEAGUE until fixed"

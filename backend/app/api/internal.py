@@ -16,10 +16,10 @@ from app.services.push_trigger_service import send_game_starting_reminders, send
 from app.services.prediction_inference_service import run_prediction_job
 from app.services.sportradar_nfl_service import fetch_nfl_standings_json
 from app.services.sportradar_soccer_service import soccer_health_probe
-from app.services.sportradar_soccer_schedule_sync import sync_soccer_schedule_for_league
-from app.services.sportradar_soccer_standings_sync import sync_soccer_standings_for_league
-from app.services.sportradar_soccer_service import configured_soccer_league_codes
+from app.services.soccer_data_provider import configured_soccer_league_codes, use_clearsports_soccer
+from app.services.soccer_sync_dispatch import sync_soccer_schedule_for_league, sync_soccer_standings_for_league
 from app.services.clearsports_client import clearsports_health_probe
+from app.services.clearsports_soccer_service import clearsports_soccer_health_probe
 
 router = APIRouter(prefix="/internal", tags=["internal"])
 
@@ -155,9 +155,9 @@ async def soccer_sync_schedules(
     _: None = Depends(_require_cron_secret),
 ):
     """
-    For each league with a configured `SPORTRADAR_SOCCER_SEASON_*`: import fixtures into `teams`/`games`,
-    then upsert `team_standings` from the same season's standings feed.
-    Game IDs are stable (uuid5 of Sportradar sport_event id). After sync, run POST /internal/predictions/run.
+    For each configured soccer league: import fixtures into `teams`/`games`, then upsert `team_standings`.
+    Uses ClearSports when CLEARSPORTS_API_KEY is set and Sportradar is not; otherwise Sportradar season feeds.
+    After sync, run POST /internal/predictions/run.
     """
     settings = get_settings()
     results = []
@@ -211,7 +211,15 @@ async def sportradar_health(_: None = Depends(_require_cron_secret)):
 @router.get("/health/clearsports")
 async def clearsports_health(_: None = Depends(_require_cron_secret)):
     """
-    Verify ClearSports API key with a minimal GET (same X-Cron-Secret as other internal routes).
-    Does not replace Sportradar-backed soccer/NFL sync until those services are migrated.
+    Verify ClearSports API key (EPL games probe) and soccer feed when key is the active provider.
     """
-    return clearsports_health_probe(get_settings())
+    settings = get_settings()
+    out = clearsports_health_probe(settings)
+    if use_clearsports_soccer(settings):
+        out.update(clearsports_soccer_health_probe(settings))
+        out["soccer_provider"] = "clearsports"
+    elif (settings.sportradar_api_key or "").strip():
+        out["soccer_provider"] = "sportradar"
+    else:
+        out["soccer_provider"] = "none"
+    return out

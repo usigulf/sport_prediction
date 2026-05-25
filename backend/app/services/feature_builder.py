@@ -313,6 +313,62 @@ def _soccer_features_from_standings(db: Session, game: Game) -> dict[str, float 
     return _build_soccer_features_from_recs(db, game, league, rh, ra)
 
 
+def _rec_from_clearsports_stats_row(row: dict) -> SoccerTableRec | None:
+    try:
+        w = int(row.get("wins") or row.get("win") or 0)
+        d = int(row.get("draws") or row.get("draw") or 0)
+        l = int(row.get("losses") or row.get("loss") or 0)
+    except (TypeError, ValueError):
+        return None
+    if w + d + l <= 0 and row.get("points") is None:
+        return None
+    rk_raw = row.get("rank") or row.get("position")
+    try:
+        league_rank = int(rk_raw) if rk_raw is not None else 99
+    except (TypeError, ValueError):
+        league_rank = 99
+    try:
+        gf = int(row.get("goals_for") or row.get("goalsFor") or 0)
+        ga = int(row.get("goals_against") or row.get("goalsAgainst") or 0)
+    except (TypeError, ValueError):
+        gf, ga = 0, 0
+    pts_raw = row.get("points") or row.get("pts")
+    try:
+        points = int(pts_raw) if pts_raw is not None else 3 * w + d
+    except (TypeError, ValueError):
+        points = 3 * w + d
+    return SoccerTableRec(
+        wins=w, draws=d, losses=l, goals_for=gf, goals_against=ga, league_rank=league_rank, points=points
+    )
+
+
+def _soccer_features_from_clearsports_api(db: Session, game: Game, settings) -> dict[str, float | int] | None:
+    from app.services.soccer_data_provider import use_clearsports_soccer
+    from app.services.clearsports_soccer_service import (
+        fetch_clearsports_team_stats,
+        find_clearsports_team_stats_row,
+    )
+
+    league = (game.league or "").lower()
+    if league not in SOCCER_LEAGUES_SET or not game.home_team or not game.away_team:
+        return None
+    if not use_clearsports_soccer(settings):
+        return None
+    rows = fetch_clearsports_team_stats(settings, league)
+    if not rows:
+        return None
+    h, a = game.home_team, game.away_team
+    th = find_clearsports_team_stats_row(rows, h.abbreviation, h.name)
+    ta = find_clearsports_team_stats_row(rows, a.abbreviation, a.name)
+    if not th or not ta:
+        return None
+    rh = _rec_from_clearsports_stats_row(th)
+    ra = _rec_from_clearsports_stats_row(ta)
+    if rh is None or ra is None:
+        return None
+    return _build_soccer_features_from_recs(db, game, league, rh, ra)
+
+
 def _soccer_features_from_sportradar_api(db: Session, game: Game, settings) -> dict[str, float | int] | None:
     """
     When team_standings rows are missing, pull the same season standings from Sportradar
@@ -359,7 +415,11 @@ def build_game_features(game: Game, db: Session | None) -> tuple[dict[str, float
                 return soccer, "soccer_db_standings"
             from app.config import get_settings
 
-            soccer = _soccer_features_from_sportradar_api(db, game, get_settings())
+            settings = get_settings()
+            soccer = _soccer_features_from_clearsports_api(db, game, settings)
+            if soccer is not None:
+                return soccer, "soccer_sportradar_api"
+            soccer = _soccer_features_from_sportradar_api(db, game, settings)
             if soccer is not None:
                 return soccer, "soccer_sportradar_api"
     return _synthetic_feature_dict(game), "synthetic"

@@ -170,7 +170,7 @@ def test_clearsports_health_ok(monkeypatch, client):
             "clearsports_configured": True,
             "clearsports_ok": True,
             "clearsports_http_status": 200,
-            "sample_games_count": 3,
+            "sample_epl_games_count": 3,
             "clearsports_base_url": "https://api.clearsportsapi.com",
         },
     )
@@ -178,7 +178,7 @@ def test_clearsports_health_ok(monkeypatch, client):
     assert r.status_code == status.HTTP_200_OK
     body = r.json()
     assert body["clearsports_ok"] is True
-    assert body["sample_games_count"] == 3
+    assert body["sample_epl_games_count"] == 3
 
 
 def test_clearsports_health_requires_secret(client):
