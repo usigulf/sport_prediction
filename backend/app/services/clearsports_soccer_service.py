@@ -70,7 +70,7 @@ def _games_list(payload: Any) -> list[dict[str, Any]]:
         return [x for x in payload if isinstance(x, dict)]
     if not isinstance(payload, dict):
         return []
-    for key in ("data", "games", "results", "items"):
+    for key in ("games", "data", "results", "items"):
         v = payload.get(key)
         if isinstance(v, list):
             return [x for x in v if isinstance(x, dict)]

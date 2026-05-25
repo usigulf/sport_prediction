@@ -39,6 +39,28 @@ def test_use_clearsports_when_only_cs_key():
     assert use_clearsports_soccer(s) is True
 
 
+def test_normalize_clearsports_epl_flat_payload():
+    """Real ClearSports EPL shape (flat home_team_abbreviation + time_utc)."""
+    raw = {
+        "id": 19175,
+        "game_key": "epl_2025_740596",
+        "home_team_abbreviation": "LIV",
+        "away_team_abbreviation": "BOU",
+        "home_team_id": "epl_liv",
+        "away_team_id": "epl_bou",
+        "time_utc": "2025-08-15T19:00:00Z",
+        "status": "SETTLED",
+        "is_closed": True,
+        "home_score": 4,
+        "away_score": 2,
+    }
+    fx = normalize_clearsports_game(raw, "epl")
+    assert fx is not None
+    assert fx["game_status"] == "finished"
+    assert fx["home"]["abbreviation"] == "LIV"
+    assert fx["away"]["abbreviation"] == "BOU"
+
+
 def test_use_sportradar_when_both_keys():
     s = Settings(clearsports_api_key="k", sportradar_api_key="sr")
     assert use_clearsports_soccer(s) is False

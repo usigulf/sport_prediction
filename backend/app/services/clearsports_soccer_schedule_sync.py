@@ -49,11 +49,11 @@ def _parse_start_time(raw: Any) -> datetime | None:
         return None
 
 
-def _map_clearsports_status(raw: Any) -> str:
+def _map_clearsports_status(raw: Any, *, is_closed: bool = False) -> str:
     st = (raw or "").lower() if isinstance(raw, str) else ""
-    if st in ("final", "finished", "completed", "ended", "ft"):
+    if is_closed or st in ("final", "finished", "completed", "ended", "ft", "settled", "closed"):
         return "finished"
-    if st in ("live", "inprogress", "in_progress", "halftime", "1h", "2h"):
+    if st in ("live", "inprogress", "in_progress", "halftime", "1h", "2h", "inplay"):
         return "live"
     return "scheduled"
 
@@ -80,6 +80,15 @@ def _team_competitor(obj: Any) -> dict[str, Any] | None:
 
 
 def _extract_team(game: dict[str, Any], side: str) -> dict[str, Any] | None:
+    prefix = "home" if side == "home" else "away"
+    abbr = game.get(f"{prefix}_team_abbreviation") or game.get(f"{prefix}TeamAbbreviation")
+    tid = game.get(f"{prefix}_team_id") or game.get(f"{prefix}TeamId")
+    if isinstance(abbr, str) and abbr.strip():
+        name = abbr.strip()
+        comp: dict[str, Any] = {"name": name[:255], "abbreviation": name.strip()[:10]}
+        if tid is not None:
+            comp["id"] = str(tid)
+        return comp
     for key in (f"{side}_team", f"{side}Team", side):
         t = _team_competitor(game.get(key))
         if t:
@@ -92,6 +101,10 @@ def _extract_team(game: dict[str, Any], side: str) -> dict[str, Any] | None:
             role = (t.get("home_away") or t.get("qualifier") or t.get("side") or "").lower()
             if role == side or (side == "home" and role == "h") or (side == "away" and role == "a"):
                 return _team_competitor(t)
+    if tid is not None:
+        tid_s = str(tid).strip()
+        if tid_s:
+            return {"name": tid_s[:255], "id": tid_s}
     return None
 
 
@@ -112,13 +125,19 @@ def normalize_clearsports_game(game: dict[str, Any], league_slug: str) -> dict[s
     if not home or not away:
         return None
     start = _parse_start_time(
-        game.get("start_time")
+        game.get("time_utc")
+        or game.get("start_time")
         or game.get("scheduled_at")
         or game.get("scheduled_time")
         or game.get("date_time")
         or game.get("game_time")
         or game.get("date")
     )
+    if start is None and game.get("epoch_time") is not None:
+        try:
+            start = datetime.fromtimestamp(int(game["epoch_time"]), tz=timezone.utc)
+        except (TypeError, ValueError, OSError):
+            pass
     if start is None:
         return None
     try:
@@ -148,7 +167,10 @@ def normalize_clearsports_game(game: dict[str, Any], league_slug: str) -> dict[s
     return {
         "sport_event_id": f"clearsports:{league_slug}:{gid}",
         "scheduled_time": start,
-        "game_status": _map_clearsports_status(game.get("status") or game.get("game_status")),
+        "game_status": _map_clearsports_status(
+            game.get("status") or game.get("game_status"),
+            is_closed=bool(game.get("is_closed")),
+        ),
         "home_score": hs,
         "away_score": aws,
         "venue": venue,
