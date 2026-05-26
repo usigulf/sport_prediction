@@ -7,6 +7,11 @@
     "icon": "./assets/icon.png",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A1428"
+    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -46,6 +51,19 @@
       "adMobInterstitialAndroid": ""
     },
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0A1428",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 120,
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#0A1428",
+            "image": "./assets/splash-icon.png"
+          }
+        }
+      ],
       "expo-font",
       [
         "expo-build-properties",

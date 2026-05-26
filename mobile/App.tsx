@@ -3,12 +3,12 @@
  */
 import 'react-native-gesture-handler';
 import React, { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
 import { initializeGoogleMobileAds } from './src/ads/native/loadGma';
 import { Provider } from 'react-redux';
-import { theme } from './src/constants/theme';
 import { store } from './src/store/store';
 import { AppNavigator } from './src/navigation/AppNavigator';
+import { LaunchScreen } from './src/components/LaunchScreen';
 import { getStoredAuth } from './src/utils/authStorage';
 import { setAuthToken, setOnUnauthorized, setOnAccessTokenRefreshed } from './src/services/api';
 import { setUser, logout, fetchUserProfile } from './src/store/slices/authSlice';
@@ -17,8 +17,12 @@ import { getPushNotificationsEnabled } from './src/utils/settingsStorage';
 import { RewardedUnlockProvider } from './src/ads/engine/RewardedUnlockContext';
 import { AdEngineProvider } from './src/ads/engine/AdEngineContext';
 
+SplashScreen.preventAutoHideAsync().catch(() => {
+  /* Expo Go may not support native splash */
+});
+
 function AppContent() {
-  const [isRestoring, setIsRestoring] = useState(true);
+  const [appReady, setAppReady] = useState(false);
 
   useEffect(() => {
     setOnUnauthorized(() => {
@@ -49,7 +53,10 @@ function AppContent() {
       } catch {
         // ignore
       } finally {
-        if (!cancelled) setIsRestoring(false);
+        if (!cancelled) {
+          setAppReady(true);
+          await SplashScreen.hideAsync().catch(() => {});
+        }
       }
     })();
     return () => {
@@ -57,13 +64,8 @@ function AppContent() {
     };
   }, []);
 
-  if (isRestoring) {
-    return (
-      <View style={styles.restoring}>
-        <ActivityIndicator size="large" color={theme.colors.accent} />
-        <Text style={styles.restoringText}>Loading...</Text>
-      </View>
-    );
+  if (!appReady) {
+    return <LaunchScreen />;
   }
 
   return <AppNavigator />;
@@ -84,17 +86,3 @@ export default function App() {
     </Provider>
   );
 }
-
-const styles = StyleSheet.create({
-  restoring: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background,
-  },
-  restoringText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: theme.colors.textMuted,
-  },
-});
