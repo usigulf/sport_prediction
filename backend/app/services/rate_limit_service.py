@@ -39,11 +39,11 @@ def _redis_check(key: str, window_seconds: int, max_requests: int) -> bool:
     if not client:
         env = (_settings.environment or "").lower()
         if env == "production":
-            logging.getLogger(__name__).warning(
-                "Redis unavailable in production; rate limit for %s skipped (fail-open).",
+            logging.getLogger(__name__).error(
+                "Redis unavailable in production; rate limit fail-closed for %s",
                 key,
             )
-            return False
+            return True
         return _memory_check(key, window_seconds, max_requests)
     full_key = f"ratelimit:{key}"
     try:

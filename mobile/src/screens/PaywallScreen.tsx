@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  AppState,
+  type AppStateStatus,
 } from 'react-native';
 import Constants from 'expo-constants';
 import * as WebBrowser from 'expo-web-browser';
@@ -104,6 +106,15 @@ export const PaywallScreen: React.FC = () => {
     }, [loadTier])
   );
 
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
+      if (state === 'active') {
+        void loadTier();
+      }
+    });
+    return () => sub.remove();
+  }, [loadTier]);
+
   const handleSubscribe = useCallback(async (tierId: string) => {
     if (tierId === 'free') return;
     if (tierId !== 'premium' && tierId !== 'premium_plus') return;
@@ -121,6 +132,8 @@ export const PaywallScreen: React.FC = () => {
       // Linking.openURL often flashes or fails to stay open during hosted checkout.
       setCheckoutLoadingTier(null);
       await WebBrowser.openBrowserAsync(url);
+      const info = await dispatch(fetchUserProfile()).unwrap();
+      setCurrentTier(normalizeSubscriptionTier(info.subscription_tier));
     } catch (e) {
       Alert.alert('Checkout', getUserFriendlyMessage(e));
     } finally {
@@ -256,7 +269,9 @@ export const PaywallScreen: React.FC = () => {
       })}
 
       <Text style={styles.footer}>
-        Premium includes a 7-day free trial. Pro ($29.99/mo) uses the same secure Stripe Checkout flow—no waitlist. You can add a trial on the Pro Price in Stripe if you want one.
+        Billing is handled on the web by Stripe (not Apple/Google in-app purchase). Premium: 7-day free
+        trial, then $9.99/month until you cancel in Stripe. Pro: $29.99/month. Paid plans are ad-free.
+        After checkout, return to the app and open Subscription again to refresh your plan.
       </Text>
       <Text style={styles.footerVersion}>App v{appVersion}</Text>
     </ScrollView>

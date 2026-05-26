@@ -8,6 +8,7 @@ WEAK_JWT_SECRETS = frozenset(
     {
         "dev-secret-key-change-in-production-minimum-32-characters-long",
         "dev-secret-key-change-in-production-min-32-chars",
+        "your-secret-key-change-in-production-minimum-32-characters-long",
         "changeme",
         "secret",
     }

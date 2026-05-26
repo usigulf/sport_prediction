@@ -5,7 +5,10 @@ from functools import lru_cache
 from pathlib import Path
 from typing import List, Optional
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from app.core.jwt_constants import is_weak_jwt_secret
 
 # backend/app/config.py -> parent.parent == backend/ (Docker: /app)
 _BACKEND_DIR = Path(__file__).resolve().parent.parent
@@ -114,6 +117,23 @@ class Settings(BaseSettings):
     # Host deploy/payment-pages/*.html on your domain (match nginx canonical host www vs apex).
     stripe_success_url: str = "https://www.octobetiq.com/payment/success"
     stripe_cancel_url: str = "https://www.octobetiq.com/payment/cancel"
+
+    @model_validator(mode="after")
+    def validate_production_config(self) -> "Settings":
+        env = (self.environment or "").lower()
+        if env != "production":
+            return self
+        if is_weak_jwt_secret(self.jwt_secret):
+            raise ValueError(
+                "Production requires JWT_SECRET with at least 32 characters "
+                "(not a default/dev value). Set JWT_SECRET in .env / .env.production."
+            )
+        redis = (self.redis_url or "").strip().lower()
+        if redis in ("", "disabled", "false"):
+            raise ValueError(
+                "Production requires REDIS_URL for rate limits and token revocation."
+            )
+        return self
 
 
 @lru_cache()

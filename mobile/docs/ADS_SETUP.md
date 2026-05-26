@@ -25,6 +25,10 @@ You can still use **Expo Go** for layout, navigation, and API work; use a **dev 
 
 ## Google AdMob configuration
 
+Production store builds set `EXPO_PUBLIC_ADMOB_PRODUCTION=true` (see `eas.json` production profile).
+Add real unit IDs via EAS secrets (`EXPO_PUBLIC_ADMOB_*`) — test IDs (`ca-app-pub-3940256099942544`)
+must not be used in production. Premium and Pro subscribers never see ads (`useAdsEnabled`).
+
 1. Create apps + ad units in [AdMob](https://admob.google.com/).
 2. Replace **test IDs** under `mobile/app.json` → `extra` (`adMobBannerIos`, `adMobRewardedIos`, …) with **your unit IDs**.
 3. The config plugin maps **App IDs**:

@@ -34,14 +34,16 @@
       "eas": {
         "projectId": "1c6a5910-f9f8-43fe-8aea-da17ac3331fb"
       },
-      "adMobBannerIos": "ca-app-pub-3940256099942544/2934735716",
-      "adMobBannerAndroid": "ca-app-pub-3940256099942544/6300978111",
-      "adMobNativeIos": "ca-app-pub-3940256099942544/3986624511",
-      "adMobNativeAndroid": "ca-app-pub-3940256099942544/2247696110",
-      "adMobRewardedIos": "ca-app-pub-3940256099942544/1712485313",
-      "adMobRewardedAndroid": "ca-app-pub-3940256099942544/5224354917",
-      "adMobInterstitialIos": "ca-app-pub-3940256099942544/4411468910",
-      "adMobInterstitialAndroid": "ca-app-pub-3940256099942544/1033173712"
+      "adMobAppIdIos": "",
+      "adMobAppIdAndroid": "",
+      "adMobBannerIos": "",
+      "adMobBannerAndroid": "",
+      "adMobNativeIos": "",
+      "adMobNativeAndroid": "",
+      "adMobRewardedIos": "",
+      "adMobRewardedAndroid": "",
+      "adMobInterstitialIos": "",
+      "adMobInterstitialAndroid": ""
     },
     "plugins": [
       "expo-font",

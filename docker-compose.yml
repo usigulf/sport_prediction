@@ -60,6 +60,7 @@ services:
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/sportsprediction
       REDIS_URL: redis://redis:6379/0
       # Set JWT_SECRET in project .env (min ~32 chars). Rotating logs everyone out.
+      # Same default as backend Settings; production must override (see docker-compose.prod.yml).
       JWT_SECRET: ${JWT_SECRET:-dev-secret-key-change-in-production-minimum-32-characters-long}
       CORS_ORIGINS: '["http://localhost:3000","http://localhost:19006"]'
       OPENAPI_DOCS_ENABLED: "false"

@@ -27,6 +27,7 @@ import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { SPORT_OPTIONS, HOME_HERO_EMPTY_TAGLINE } from '../constants/leagues';
 import { theme } from '../constants/theme';
 import { soccerBetaFetchParams } from '../utils/soccerBetaFetch';
+import { SoccerBetaNotice } from '../components/SoccerBetaNotice';
 import { useAdEngine } from '../ads/engine/AdEngineContext';
 import { NativeFeedAdCard } from '../ads/components/NativeFeedAdCard';
 import { BannerStrip } from '../ads/components/BannerStrip';
@@ -297,6 +298,8 @@ export const HomeScreen: React.FC = () => {
           </TouchableOpacity>
         </ScrollView>
       </View>
+
+      <SoccerBetaNotice />
 
       {/* User stats widget (logged in): always link to tracked model accuracy */}
       {isAuthenticated && (

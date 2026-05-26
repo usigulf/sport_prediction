@@ -6,6 +6,7 @@ import {
   testRewardedUnit,
   testInterstitialUnit,
 } from './adMobTestUnits';
+import { isGoogleTestAdUnit, isProductionAdsEnabled } from './adMobEnv';
 
 const extra = (): Record<string, unknown> =>
   (Constants.expoConfig?.extra as Record<string, unknown> | undefined) ?? {};
@@ -15,12 +16,28 @@ function pick(
   keyAndroid: string,
   testId: string,
 ): string {
-  if (__DEV__) return testId;
   const ios = extra()[keyIos];
   const android = extra()[keyAndroid];
-  if (Platform.OS === 'android' && typeof android === 'string' && android.length > 10)
-    return android;
-  if (Platform.OS === 'ios' && typeof ios === 'string' && ios.length > 10) return ios;
+  const configured =
+    Platform.OS === 'android' && typeof android === 'string' && android.length > 10
+      ? android
+      : Platform.OS === 'ios' && typeof ios === 'string' && ios.length > 10
+        ? ios
+        : null;
+
+  if (__DEV__ || !isProductionAdsEnabled()) {
+    return testId;
+  }
+
+  if (configured && !isGoogleTestAdUnit(configured)) {
+    return configured;
+  }
+
+  if (configured && isGoogleTestAdUnit(configured)) {
+    console.warn(
+      `[AdMob] Production build but ${keyIos}/${keyAndroid} is still a Google test unit. Set EAS secrets.`,
+    );
+  }
   return testId;
 }
 
