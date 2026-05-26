@@ -17,6 +17,9 @@
       "autoIncrement": true,
       "channel": "production",
       "node": "20.18.1",
+      "ios": {
+        "image": "latest"
+      },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.octobetiq.com/api/v1",
         "EXPO_PUBLIC_BETA_SOCCER_ONLY": "true"
@@ -26,7 +29,12 @@
   "submit": {
     "production": {
       "ios": {
-        "appleTeamId": "8QFCTR7BAL"
+        "appleTeamId": "8QFCTR7BAL",
+        "ascAppId": "6762173223"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./secrets/google-play-service-account.json",
+        "track": "internal"
       }
     }
   }

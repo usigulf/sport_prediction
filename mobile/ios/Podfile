@@ -109,6 +109,20 @@ target 'octobetiQ' do
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
 
+    def octobetiq_xcode14_patch_needed?
+      return false if ENV['EAS_BUILD'] == 'true'
+      return true if ENV['OCTO_PATCH_XCODE14'] == '1'
+      return false if ENV['OCTO_PATCH_XCODE14'] == '0'
+      xc_line = `xcodebuild -version 2>/dev/null`.strip.lines.first
+      xc_m = xc_line&.match(/Xcode\s+(\d+(?:\.\d+)*)/)
+      return true unless xc_m && Gem::Version.correct?(xc_m[1])
+      Gem::Version.new(xc_m[1]) < Gem::Version.new('16.1')
+    rescue StandardError
+      true
+    end
+
+    next unless octobetiq_xcode14_patch_needed?
+
     # Yoga (RN New Architecture headers): Xcode 14 libc++ may not expose std::bit_cast for iOS targets;
     # folly::bit_cast is always available via React Native dependencies.
     Dir.glob(File.join(installer.sandbox.root.to_s, '**', 'StyleValuePool.h')).each do |pool_path|

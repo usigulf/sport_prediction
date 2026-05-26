@@ -8,6 +8,23 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
+/** Xcode 14 workarounds break Reanimated on EAS (Xcode 16+). Local Xcode 16+ skips them too. */
+function needsXcode14NativePatches() {
+  if (process.env.EAS_BUILD === 'true') return false;
+  if (process.env.OCTO_PATCH_XCODE14 === '1') return true;
+  if (process.env.OCTO_PATCH_XCODE14 === '0') return false;
+  if (process.platform !== 'darwin') return false;
+  try {
+    const out = execSync('xcodebuild -version 2>/dev/null', { encoding: 'utf8' });
+    const m = out.match(/Xcode (\d+(?:\.\d+)*)/);
+    if (!m) return true;
+    const major = parseInt(m[1].split('.')[0], 10);
+    return Number.isFinite(major) && major < 16;
+  } catch {
+    return true;
+  }
+}
+
 const osxBin = path.join(
   __dirname,
   '..',
@@ -49,6 +66,8 @@ if (process.platform !== 'win32') {
   );
 }
 
+const applyXcode14Patches = needsXcode14NativePatches();
+
 // Xcode 14: StaticFeatureFlags::getFlag is patched non-constexpr (Podfile); this must not stay `if constexpr`.
 const workletsAnim = path.join(
   __dirname,
@@ -60,7 +79,7 @@ const workletsAnim = path.join(
   'apple',
   'AnimationFrameQueue.mm'
 );
-if (process.platform === 'darwin' && fs.existsSync(workletsAnim)) {
+if (applyXcode14Patches && process.platform === 'darwin' && fs.existsSync(workletsAnim)) {
   try {
     let mm = fs.readFileSync(workletsAnim, 'utf8');
     if (
@@ -140,7 +159,7 @@ const rnrValInterp = path.join(
   'ValueInterpolator.cpp'
 );
 
-if (process.platform === 'darwin') {
+if (applyXcode14Patches && process.platform === 'darwin') {
   try {
     if (fs.existsSync(rnrFf)) {
       let h = fs.readFileSync(rnrFf, 'utf8');

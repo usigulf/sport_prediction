@@ -15,8 +15,10 @@
     "update:production": "eas update --channel production --non-interactive",
     "update:preview": "eas update --channel preview --non-interactive",
     "eas:build:ios": "eas build --platform ios --profile production",
+    "eas:build:android": "eas build --platform android --profile production",
     "eas:submit:ios": "eas submit --platform ios --profile production --latest --wait",
-    "eas:submit:ios:ci": "eas submit --platform ios --profile production --latest --non-interactive --wait"
+    "eas:submit:ios:ci": "eas submit --platform ios --profile production --latest --non-interactive --wait",
+    "eas:submit:android": "eas submit --platform android --profile production --latest"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
