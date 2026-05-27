@@ -7,10 +7,14 @@
 # After deploy, verify soccer provider (must cd to repo — not from ~):
 #   cd /root/sport_prediction && VERIFY_API_BASE=http://127.0.0.1:8000 ./scripts/verify_clearsports_prod.sh .env.production
 #
-# In .env / .env.production on the server (recommended for beta):
-#   SOCCER_SYNC_LEAGUES=premier_league
+# In .env / .env.production on the server:
+#   CLEARSPORTS_API_KEY=...         # primary: soccer + NFL + NBA schedule sync
+#   CLEARSPORTS_NFL_SEASON=2025     # optional; inferred if unset
+#   CLEARSPORTS_NBA_SEASON=2025
+#   SPORTRADAR_API_KEY=...          # fallback for NFL/NBA only if ClearSports key empty
+#   SOCCER_SYNC_LEAGUES=premier_league  # optional soccer filter
 #   PREDICTION_INCLUDE_FINISHED_DAYS=14
-#   PREDICTION_LEAGUES=premier_league
+#   PREDICTION_LEAGUES=              # empty = all leagues with upcoming games
 #
 # Premier League real features (health → sync → predictions → sample upcoming):
 #   cd /home/YOU/sport_prediction && chmod +x scripts/setup_premier_league_features.sh
@@ -24,3 +28,6 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # Soccer fixtures (ClearSports or Sportradar) ~3x daily (UTC)
 30 6,14,22 * * * /root/sport_prediction/scripts/cron/internal_soccer_sync_schedules.sh >> /tmp/sport-prediction-cron.log 2>&1
+
+# NFL + NBA schedules (Sportradar; requires SPORTRADAR_API_KEY) ~3x daily (UTC)
+45 6,14,22 * * * /root/sport_prediction/scripts/cron/internal_us_sports_sync_schedules.sh >> /tmp/sport-prediction-cron.log 2>&1

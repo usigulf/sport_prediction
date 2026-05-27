@@ -1,10 +1,11 @@
 """
 Internal endpoints for cron or ops (e.g. push triggers, prediction refresh). Protected by PUSH_CRON_SECRET when set.
 """
+import ipaddress
 from typing import Optional
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Body, Depends, Header, HTTPException
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -20,6 +21,8 @@ from app.services.soccer_data_provider import configured_soccer_league_codes, us
 from app.services.soccer_sync_dispatch import sync_soccer_schedule_for_league, sync_soccer_standings_for_league
 from app.services.clearsports_client import clearsports_health_probe
 from app.services.clearsports_soccer_service import clearsports_soccer_health_probe
+from app.services.us_sports_sync_dispatch import sync_all_us_schedules, us_sync_result_payload
+from app.services.clearsports_us_service import clearsports_us_health_probe
 
 router = APIRouter(prefix="/internal", tags=["internal"])
 
@@ -55,7 +58,37 @@ class ReplacePlayerSpotlightsBody(BaseModel):
     spotlights: list[PlayerSpotlightItem] = Field(default_factory=list)
 
 
-def _require_cron_secret(x_cron_secret: str = Header(None, alias="X-Cron-Secret")):
+def _request_ip_for_internal(request: Request) -> str:
+    settings = get_settings()
+    if settings.trust_forwarded_headers:
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _is_ip_allowed(ip: str, allowed_cidrs_raw: str) -> bool:
+    cidrs = [c.strip() for c in (allowed_cidrs_raw or "").split(",") if c.strip()]
+    if not cidrs:
+        return True
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    for c in cidrs:
+        try:
+            if addr in ipaddress.ip_network(c, strict=False):
+                return True
+        except ValueError:
+            # Validation also happens in config; malformed entries fail closed here.
+            continue
+    return False
+
+
+def _require_cron_secret(
+    request: Request,
+    x_cron_secret: str = Header(None, alias="X-Cron-Secret"),
+):
     settings = get_settings()
     if not settings.push_cron_secret:
         raise HTTPException(
@@ -64,6 +97,10 @@ def _require_cron_secret(x_cron_secret: str = Header(None, alias="X-Cron-Secret"
         )
     if x_cron_secret != settings.push_cron_secret:
         raise HTTPException(status_code=401, detail="Invalid or missing X-Cron-Secret")
+    if settings.internal_allowed_cidrs:
+        ip = _request_ip_for_internal(request)
+        if not _is_ip_allowed(ip, settings.internal_allowed_cidrs):
+            raise HTTPException(status_code=403, detail="Internal endpoint access denied for client IP")
 
 
 @router.post("/push-triggers/run")
@@ -192,6 +229,20 @@ async def soccer_sync_schedules(
     return {"results": results}
 
 
+@router.post("/us-sports/sync-schedules")
+async def us_sports_sync_schedules(
+    db: Session = Depends(get_db),
+    _: None = Depends(_require_cron_secret),
+):
+    """
+    Import NFL and NBA schedules. Uses ClearSports when CLEARSPORTS_API_KEY is set;
+    otherwise Sportradar (SPORTRADAR_API_KEY). Then POST /internal/predictions/run.
+    """
+    settings = get_settings()
+    results = sync_all_us_schedules(db, settings)
+    return {"results": [us_sync_result_payload(r) for r in results]}
+
+
 @router.get("/health/sportradar")
 async def sportradar_health(_: None = Depends(_require_cron_secret)):
     """
@@ -234,4 +285,11 @@ async def clearsports_health(_: None = Depends(_require_cron_secret)):
         out["soccer_provider"] = "sportradar"
     else:
         out["soccer_provider"] = "none"
+    out.update(clearsports_us_health_probe(settings))
+    if (settings.clearsports_api_key or "").strip():
+        out["us_sports_provider"] = "clearsports"
+    elif (settings.sportradar_api_key or "").strip():
+        out["us_sports_provider"] = "sportradar"
+    else:
+        out["us_sports_provider"] = "none"
     return out

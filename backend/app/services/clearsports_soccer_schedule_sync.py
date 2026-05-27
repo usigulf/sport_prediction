@@ -136,7 +136,7 @@ def _extract_team(game: dict[str, Any], side: str) -> dict[str, Any] | None:
 
 
 def _game_external_id(game: dict[str, Any]) -> str | None:
-    for key in ("id", "game_id", "gameId", "external_id", "fixture_id"):
+    for key in ("id", "game_id", "gameId", "game_key", "external_id", "fixture_id"):
         v = game.get(key)
         if v is not None and str(v).strip():
             return str(v).strip()

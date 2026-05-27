@@ -2,6 +2,7 @@
 Application configuration management
 """
 from functools import lru_cache
+import ipaddress
 from pathlib import Path
 from typing import List, Optional
 
@@ -80,11 +81,15 @@ class Settings(BaseSettings):
     clearsports_soccer_season_bundesliga: Optional[str] = None
     clearsports_soccer_season_mls: Optional[str] = None
     clearsports_soccer_season_champions_league: Optional[str] = None
+    # ClearSports US sports season year (e.g. 2025 for NBA 2024-25 / NFL season)
+    clearsports_nfl_season: Optional[str] = None
+    clearsports_nba_season: Optional[str] = None
     # Comma-separated app league codes to sync (empty = all with season/config). Beta: premier_league
     soccer_sync_leagues: str = ""
     # NFL v7 standings: /nfl/official/{access}/v7/en/seasons/{year}/REG/standings/season.json
     sportradar_access_level: str = "trial"  # trial | production
-    sportradar_nfl_season_year: Optional[int] = None  # default: current UTC calendar year
+    sportradar_nfl_season_year: Optional[int] = None  # default: inferred from calendar (see us schedule sync)
+    sportradar_nba_season_year: Optional[int] = None  # default: NBA season start year (Oct–Sep)
     # Soccer v4 standings: /soccer/{access}/v4/en/seasons/{sr:season:...}/standings.json
     sportradar_soccer_season_premier_league: Optional[str] = None
     sportradar_soccer_season_champions_league: Optional[str] = None
@@ -108,6 +113,11 @@ class Settings(BaseSettings):
     openapi_docs_enabled: bool = True
     # Optional: secret for internal cron endpoints (e.g. push triggers). If set, require X-Cron-Secret header.
     push_cron_secret: Optional[str] = None
+    # Optional: comma-separated CIDRs allowed to access /internal/* (defense in depth).
+    # Example: "127.0.0.1/32,10.0.0.0/8".
+    internal_allowed_cidrs: str = ""
+    # When True, rate limits use X-Forwarded-For (first hop). Enable only behind a trusted reverse proxy.
+    trust_forwarded_headers: bool = False
     
     # Stripe (payments). Set STRIPE_SECRET_KEY to enable checkout. Webhook: POST /api/v1/subscription/webhook
     stripe_secret_key: Optional[str] = None
@@ -133,6 +143,16 @@ class Settings(BaseSettings):
             raise ValueError(
                 "Production requires REDIS_URL for rate limits and token revocation."
             )
+        cidrs = (self.internal_allowed_cidrs or "").strip()
+        if cidrs:
+            for raw in cidrs.split(","):
+                c = raw.strip()
+                if not c:
+                    continue
+                try:
+                    ipaddress.ip_network(c, strict=False)
+                except ValueError as e:
+                    raise ValueError(f"Invalid INTERNAL_ALLOWED_CIDRS entry: {c}") from e
         return self
 
 

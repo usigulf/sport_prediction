@@ -77,14 +77,15 @@ def _games_list(payload: Any) -> list[dict[str, Any]]:
     return []
 
 
-def fetch_clearsports_games(
+def fetch_clearsports_league_games(
     settings: Settings,
-    app_league: str,
+    slug: str,
     *,
     season: str | None = None,
     date: str | None = None,
 ) -> list[dict[str, Any]]:
-    slug = clearsports_league_slug(app_league)
+    """GET /v1/{slug}/games — used for soccer (epl, la_liga, …) and US sports (nfl, nba)."""
+    slug = (slug or "").strip().lower()
     if not slug:
         return []
     key = (settings.clearsports_api_key or "").strip()
@@ -101,6 +102,19 @@ def fetch_clearsports_games(
     if data is None or code != 200:
         return []
     return _games_list(data)
+
+
+def fetch_clearsports_games(
+    settings: Settings,
+    app_league: str,
+    *,
+    season: str | None = None,
+    date: str | None = None,
+) -> list[dict[str, Any]]:
+    slug = clearsports_league_slug(app_league)
+    if not slug:
+        return []
+    return fetch_clearsports_league_games(settings, slug, season=season, date=date)
 
 
 def _norm_name(s: str) -> str:
