@@ -13,7 +13,12 @@ import { AppNavigator } from './src/navigation/AppNavigator';
 import { LaunchScreen } from './src/components/LaunchScreen';
 import { getStoredAuth } from './src/utils/authStorage';
 import { setAuthToken, setOnUnauthorized, setOnAccessTokenRefreshed } from './src/services/api';
-import { setUser, logout, fetchUserProfile } from './src/store/slices/authSlice';
+import { setUser, logout, fetchUserProfile, setSubscriptionTier } from './src/store/slices/authSlice';
+import {
+  configurePurchases,
+  logOutPurchases,
+  addEntitlementListener,
+} from './src/services/purchases';
 import { registerPushTokenIfPossible } from './src/utils/pushNotifications';
 import { getPushNotificationsEnabled } from './src/utils/settingsStorage';
 import { RewardedUnlockProvider } from './src/ads/engine/RewardedUnlockContext';
@@ -98,6 +103,34 @@ function AppContent() {
 export default function App() {
   useEffect(() => {
     void initializeGoogleMobileAds();
+
+    // RevenueCat: configure, associate the signed-in user, and mirror store
+    // entitlements into Redux so a completed purchase unlocks access immediately.
+    let unsubEntitlements = () => {};
+    let lastUserId = store.getState().auth.user?.id ?? '';
+    (async () => {
+      await configurePurchases(lastUserId || undefined);
+      unsubEntitlements = addEntitlementListener((tier) => {
+        if (tier !== 'free') store.dispatch(setSubscriptionTier(tier));
+      });
+    })();
+
+    const unsubStore = store.subscribe(() => {
+      const auth = store.getState().auth;
+      const id = auth.user?.id ?? '';
+      if (id && id !== lastUserId) {
+        lastUserId = id;
+        void configurePurchases(id);
+      } else if (!auth.isAuthenticated && lastUserId) {
+        lastUserId = '';
+        void logOutPurchases();
+      }
+    });
+
+    return () => {
+      unsubEntitlements();
+      unsubStore();
+    };
   }, []);
 
   return (

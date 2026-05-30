@@ -9,6 +9,11 @@ const TEST_APP_ANDROID = 'ca-app-pub-3940256099942544~3347511713';
 const SOCCER_BETA_DESCRIPTION =
   'Informational AI soccer picks: Premier League, Champions League, La Liga, Serie A, Bundesliga, MLS. Tracked model accuracy. Not betting advice.';
 
+// RevenueCat public SDK key. Safe to ship in-app (publishable, not a secret).
+// Override per platform with EXPO_PUBLIC_REVENUECAT_IOS_KEY / _ANDROID_KEY (EAS secrets).
+// TODO: replace with platform-specific appl_/goog_ keys before production.
+const REVENUECAT_DEFAULT_KEY = 'test_PQaTluwkYojJCmXTsqDpgGtCAwD';
+
 module.exports = ({ config }) => {
   const base = appJson.expo ?? config;
   const useProductionAds = process.env.EXPO_PUBLIC_ADMOB_PRODUCTION === 'true';
@@ -103,6 +108,17 @@ module.exports = ({ config }) => {
         base.extra?.adMobInterstitialAndroid,
         'ca-app-pub-3940256099942544/1033173712',
       ),
+      revenueCatIosKey:
+        process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ||
+        base.extra?.revenueCatIosKey ||
+        REVENUECAT_DEFAULT_KEY,
+      revenueCatAndroidKey:
+        process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY ||
+        base.extra?.revenueCatAndroidKey ||
+        REVENUECAT_DEFAULT_KEY,
+      revenueCatEntitlementPremium:
+        base.extra?.revenueCatEntitlementPremium || 'premium',
+      revenueCatEntitlementPro: base.extra?.revenueCatEntitlementPro || 'pro',
     },
   };
 };

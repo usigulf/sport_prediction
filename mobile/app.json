@@ -50,7 +50,11 @@
       "adMobRewardedIos": "",
       "adMobRewardedAndroid": "",
       "adMobInterstitialIos": "",
-      "adMobInterstitialAndroid": ""
+      "adMobInterstitialAndroid": "",
+      "revenueCatIosKey": "",
+      "revenueCatAndroidKey": "",
+      "revenueCatEntitlementPremium": "premium",
+      "revenueCatEntitlementPro": "pro"
     },
     "plugins": [
       [

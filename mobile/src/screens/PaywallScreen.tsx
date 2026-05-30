@@ -16,12 +16,19 @@ import Constants from 'expo-constants';
 import * as WebBrowser from 'expo-web-browser';
 import { useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { fetchUserProfile } from '../store/slices/authSlice';
+import { fetchUserProfile, setSubscriptionTier } from '../store/slices/authSlice';
 import { apiService } from '../services/api';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { theme } from '../constants/theme';
 import { PLAN_MATRIX } from '../constants/planFeatures';
-import { normalizeSubscriptionTier } from '../utils/subscription';
+import { normalizeSubscriptionTier, type NormalizedTier } from '../utils/subscription';
+import {
+  isPurchasesAvailable,
+  getOfferingPackages,
+  purchasePackage,
+  restorePurchases,
+  type OfferingPackage,
+} from '../services/purchases';
 
 const CHECKOUT_TIMEOUT_MS = 20000;
 
@@ -83,6 +90,38 @@ export const PaywallScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [checkoutLoadingTier, setCheckoutLoadingTier] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [packages, setPackages] = useState<OfferingPackage[]>([]);
+  const [restoring, setRestoring] = useState(false);
+
+  // Store billing (App Store / Play Billing via RevenueCat) is the compliant
+  // path when the native SDK + a configured offering are present; otherwise we
+  // fall back to web (Stripe) checkout.
+  const storeBillingReady = isPurchasesAvailable() && packages.length > 0;
+
+  useEffect(() => {
+    if (!isPurchasesAvailable()) return;
+    let active = true;
+    void getOfferingPackages()
+      .then((pkgs) => {
+        if (active) setPackages(pkgs);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const applyTier = useCallback(
+    (tier: NormalizedTier) => {
+      dispatch(setSubscriptionTier(tier));
+      setCurrentTier(tier);
+      void dispatch(fetchUserProfile())
+        .unwrap()
+        .then((info) => setCurrentTier(normalizeSubscriptionTier(info.subscription_tier)))
+        .catch(() => {});
+    },
+    [dispatch],
+  );
 
   const loadTier = useCallback(async () => {
     setLoadError(null);
@@ -115,31 +154,75 @@ export const PaywallScreen: React.FC = () => {
     return () => sub.remove();
   }, [loadTier]);
 
-  const handleSubscribe = useCallback(async (tierId: string) => {
-    if (tierId === 'free') return;
-    if (tierId !== 'premium' && tierId !== 'premium_plus') return;
-    setCheckoutLoadingTier(tierId);
-    try {
-      const { url } = await withTimeout(
-        apiService.createCheckoutSession(tierId === 'premium_plus' ? 'premium_plus' : 'premium'),
-        CHECKOUT_TIMEOUT_MS
-      );
-      if (!url) {
-        Alert.alert('Checkout', 'Checkout URL missing. Payments may not be configured yet.');
-        return;
+  const purchaseViaStore = useCallback(
+    async (tierId: 'premium' | 'premium_plus'): Promise<boolean> => {
+      const pkg =
+        packages.find((p) => p.tier === tierId) ??
+        (tierId === 'premium' ? packages.find((p) => p.tier === 'premium') : undefined);
+      if (!pkg) return false;
+      const res = await purchasePackage(pkg.raw);
+      if (res.cancelled) return true;
+      if (res.tier !== 'free') {
+        applyTier(res.tier);
+      } else {
+        Alert.alert(
+          'Purchase',
+          'Purchase went through but no plan is active yet. Tap "Restore purchases" in a moment.',
+        );
       }
-      // Stripe Checkout: in-app browser. After payment, user can tap "Open octobetiQ" on the
-      // hosted success page (octobetiq://payment/success) — App.tsx refreshes profile on that URL.
-      setCheckoutLoadingTier(null);
-      await WebBrowser.openBrowserAsync(url);
-      const info = await dispatch(fetchUserProfile()).unwrap();
-      setCurrentTier(normalizeSubscriptionTier(info.subscription_tier));
+      return true;
+    },
+    [packages, applyTier],
+  );
+
+  const handleSubscribe = useCallback(
+    async (tierId: string) => {
+      if (tierId !== 'premium' && tierId !== 'premium_plus') return;
+      setCheckoutLoadingTier(tierId);
+      try {
+        // Preferred: in-app purchase via the store (App Store / Play Billing).
+        if (storeBillingReady) {
+          const handled = await purchaseViaStore(tierId);
+          if (handled) return;
+        }
+        // Fallback: Stripe web checkout (web platform or store billing unavailable).
+        const { url } = await withTimeout(
+          apiService.createCheckoutSession(tierId),
+          CHECKOUT_TIMEOUT_MS,
+        );
+        if (!url) {
+          Alert.alert('Checkout', 'Checkout URL missing. Payments may not be configured yet.');
+          return;
+        }
+        setCheckoutLoadingTier(null);
+        await WebBrowser.openBrowserAsync(url);
+        const info = await dispatch(fetchUserProfile()).unwrap();
+        setCurrentTier(normalizeSubscriptionTier(info.subscription_tier));
+      } catch (e) {
+        Alert.alert('Checkout', getUserFriendlyMessage(e));
+      } finally {
+        setCheckoutLoadingTier(null);
+      }
+    },
+    [storeBillingReady, purchaseViaStore, dispatch],
+  );
+
+  const handleRestore = useCallback(async () => {
+    setRestoring(true);
+    try {
+      const tier = await restorePurchases();
+      if (tier !== 'free') {
+        applyTier(tier);
+        Alert.alert('Restored', 'Your subscription has been restored.');
+      } else {
+        Alert.alert('Restore purchases', 'No active subscription found for this account.');
+      }
     } catch (e) {
-      Alert.alert('Checkout', getUserFriendlyMessage(e));
+      Alert.alert('Restore purchases', getUserFriendlyMessage(e));
     } finally {
-      setCheckoutLoadingTier(null);
+      setRestoring(false);
     }
-  }, []);
+  }, [applyTier]);
 
   if (loading) {
     return (
@@ -202,7 +285,9 @@ export const PaywallScreen: React.FC = () => {
               )}
               {tier.id === 'premium_plus' && !isCurrent && (
                 <View style={styles.availableBadge}>
-                  <Text style={styles.availableBadgeText}>Available now — Stripe Checkout</Text>
+                  <Text style={styles.availableBadgeText}>
+                    {storeBillingReady ? 'Available now — in-app purchase' : 'Available now'}
+                  </Text>
                 </View>
               )}
             </View>
@@ -268,10 +353,26 @@ export const PaywallScreen: React.FC = () => {
         );
       })}
 
+      {isPurchasesAvailable() ? (
+        <TouchableOpacity
+          style={styles.restoreButton}
+          onPress={handleRestore}
+          disabled={restoring}
+          accessibilityRole="button"
+          accessibilityLabel="Restore purchases"
+        >
+          {restoring ? (
+            <ActivityIndicator color={theme.colors.accent} />
+          ) : (
+            <Text style={styles.restoreButtonText}>Restore purchases</Text>
+          )}
+        </TouchableOpacity>
+      ) : null}
+
       <Text style={styles.footer}>
-        Billing is handled on the web by Stripe (not Apple/Google in-app purchase). Premium: 7-day free
-        trial, then $9.99/month until you cancel in Stripe. Pro: $29.99/month. Paid plans are ad-free.
-        After checkout, return to the app and open Subscription again to refresh your plan.
+        {storeBillingReady
+          ? 'Subscriptions are billed through your App Store / Google Play account and renew until cancelled in your store settings. Premium: 7-day free trial, then $9.99/month. Pro: $29.99/month. Paid plans are ad-free.'
+          : 'Premium: 7-day free trial, then $9.99/month until cancelled. Pro: $29.99/month. Paid plans are ad-free. After checkout, return to the app and open Subscription again to refresh your plan.'}
       </Text>
       <Text style={styles.footerVersion}>App v{appVersion}</Text>
     </ScrollView>
@@ -440,6 +541,19 @@ const styles = StyleSheet.create({
   },
   ctaTextCurrent: {
     color: theme.colors.textMuted,
+  },
+  restoreButton: {
+    alignSelf: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginTop: 4,
+    minHeight: theme.minTouchSize,
+    justifyContent: 'center',
+  },
+  restoreButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.accent,
   },
   footer: {
     fontSize: 13,

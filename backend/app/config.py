@@ -128,6 +128,14 @@ class Settings(BaseSettings):
     stripe_success_url: str = "https://www.octobetiq.com/payment/success"
     stripe_cancel_url: str = "https://www.octobetiq.com/payment/cancel"
 
+    # RevenueCat (in-app purchases). Set the Authorization header value you configure in the
+    # RevenueCat dashboard webhook so we can verify inbound events. Webhook:
+    #   POST {API_ORIGIN}/api/v1/subscription/revenuecat/webhook
+    # Entitlement ids map: `pro` → premium_plus, `premium` → premium.
+    revenuecat_webhook_auth: Optional[str] = None
+    revenuecat_entitlement_pro: str = "pro"
+    revenuecat_entitlement_premium: str = "premium"
+
     @model_validator(mode="after")
     def validate_production_config(self) -> "Settings":
         env = (self.environment or "").lower()

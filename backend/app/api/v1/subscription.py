@@ -182,3 +182,94 @@ async def stripe_webhook(
     else:
         logger.info("Stripe webhook ignored event type", extra={"event_id": event_id, "event_type": event_type})
     return {"received": True}
+
+
+# Events that grant/refresh access (derive tier from entitlement_ids).
+_RC_GRANTING_EVENTS = frozenset(
+    {
+        "INITIAL_PURCHASE",
+        "RENEWAL",
+        "UNCANCELLATION",
+        "PRODUCT_CHANGE",
+        "NON_RENEWING_PURCHASE",
+        "SUBSCRIPTION_EXTENDED",
+    }
+)
+# Events that revoke access. CANCELLATION is intentionally excluded — the user
+# keeps access until the period ends (EXPIRATION fires then).
+_RC_REVOKING_EVENTS = frozenset({"EXPIRATION"})
+
+
+def _rc_tier_from_entitlements(entitlement_ids: list, settings_obj) -> str:
+    ids = {str(e).lower() for e in (entitlement_ids or [])}
+    if settings_obj.revenuecat_entitlement_pro.lower() in ids:
+        return "premium_plus"
+    if settings_obj.revenuecat_entitlement_premium.lower() in ids:
+        return "premium"
+    return "premium"  # granted but unknown entitlement → default to premium
+
+
+@router.post("/revenuecat/webhook")
+async def revenuecat_webhook(
+    request: Request,
+    authorization: Optional[str] = Header(None, alias="Authorization"),
+    db: Session = Depends(get_db),
+):
+    """
+    RevenueCat webhook: keep `subscription_tier` in sync with store entitlements.
+    Configure in RevenueCat dashboard with the same Authorization header value as
+    REVENUECAT_WEBHOOK_AUTH. The app sets RevenueCat `app_user_id` to the backend
+    user id, so events map directly to a user.
+    """
+    req_settings = get_settings()
+    expected = req_settings.revenuecat_webhook_auth
+    if not expected:
+        raise HTTPException(status_code=503, detail="RevenueCat webhook not configured")
+    if not authorization or authorization != expected:
+        logger.warning("RevenueCat webhook auth failed")
+        raise HTTPException(status_code=401, detail="Invalid authorization")
+
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid payload")
+
+    event = (payload or {}).get("event") or {}
+    event_type = str(event.get("type") or "").upper()
+    app_user_id = event.get("app_user_id")
+    entitlement_ids = event.get("entitlement_ids")
+    if entitlement_ids is None and event.get("entitlement_id"):
+        entitlement_ids = [event.get("entitlement_id")]
+
+    if event_type in _RC_REVOKING_EVENTS:
+        new_tier = "free"
+    elif event_type in _RC_GRANTING_EVENTS:
+        new_tier = _rc_tier_from_entitlements(entitlement_ids or [], req_settings)
+    else:
+        logger.info("RevenueCat webhook ignored event type", extra={"event_type": event_type})
+        return {"received": True, "ignored": True}
+
+    if not app_user_id:
+        logger.warning("RevenueCat webhook missing app_user_id", extra={"event_type": event_type})
+        return {"received": True}
+
+    try:
+        from uuid import UUID
+
+        uid = UUID(str(app_user_id))
+    except (ValueError, TypeError):
+        uid = app_user_id
+    user = db.query(User).filter(User.id == uid).first()
+    if not user:
+        logger.warning(
+            "RevenueCat webhook user not found",
+            extra={"event_type": event_type, "app_user_id": str(app_user_id)},
+        )
+        return {"received": True}
+    user.subscription_tier = new_tier
+    db.commit()
+    logger.info(
+        "Updated user subscription tier from RevenueCat webhook",
+        extra={"event_type": event_type, "user_id": str(user.id), "tier": new_tier},
+    )
+    return {"received": True}
