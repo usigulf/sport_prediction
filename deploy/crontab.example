@@ -15,6 +15,9 @@
 #   SOCCER_SYNC_LEAGUES=premier_league  # optional soccer filter
 #   PREDICTION_INCLUDE_FINISHED_DAYS=14
 #   PREDICTION_LEAGUES=              # empty = all leagues with upcoming games
+#   MODEL_TRAIN_MIN_GAMES=60         # weekly retrain aborts below this unless MODEL_TRAIN_FORCE=true
+#   MODEL_TRAIN_FORCE=false
+#   MODEL_TRAIN_REFRESH_PREDICTIONS=true  # after train, run internal_predictions_run.sh
 #
 # Premier League real features (health → sync → predictions → sample upcoming):
 #   cd /home/YOU/sport_prediction && chmod +x scripts/setup_premier_league_features.sh
@@ -32,5 +35,6 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # NFL + NBA schedules (Sportradar; requires SPORTRADAR_API_KEY) ~3x daily (UTC)
 45 6,14,22 * * * /root/sport_prediction/scripts/cron/internal_us_sports_sync_schedules.sh >> /tmp/sport-prediction-cron.log 2>&1
 
-# Retrain win-probability model weekly (Sunday 05:15 UTC) after results + standings sync
+# Retrain win-probability model weekly (Sunday 05:15 UTC) after weekend results land.
+# Or install idempotently: ./scripts/setup_weekly_train_cron.sh
 15 5 * * 0 /root/sport_prediction/scripts/cron/internal_train_model.sh >> /tmp/sport-prediction-cron.log 2>&1
