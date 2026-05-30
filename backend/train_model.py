@@ -5,7 +5,7 @@ simple_model.pkl / feature_columns.pkl / metrics.json.
 
 Usage (from backend/ or inside Docker where WORKDIR=/app):
     python train_model.py                      # writes to configured model dir
-    python train_model.py --out /models        # explicit output dir (Docker)
+    python train_model.py --out /models        # explicit output dir (Docker: use /model-out — see below)
     python train_model.py --force              # train even on a small dataset
 
 After it writes artifacts, point inference at the dir and restart the API:
@@ -13,6 +13,7 @@ After it writes artifacts, point inference at the dir and restart the API:
 
 Note: repo-root scripts/ is mounted at /app/scripts in docker-compose (cron
 shell scripts only). This file lives at /app/train_model.py so it is not hidden.
+In Docker, write artifacts to /model-out (rw bind mount), not /models (:ro).
 """
 from __future__ import annotations
 

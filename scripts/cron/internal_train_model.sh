@@ -20,7 +20,9 @@ fi
 BASE="${API_INTERNAL_URL:-http://127.0.0.1:8000}"
 MIN_GAMES="${MODEL_TRAIN_MIN_GAMES:-60}"
 FORCE="${MODEL_TRAIN_FORCE:-false}"
-TRAIN_ARGS=(python train_model.py --out /models --min-games "${MIN_GAMES}")
+# Do NOT write to /models here — docker-compose mounts ./ml/models at /models:ro on the
+# api service, and compose run inherits that. Use a separate rw mount at /model-out.
+TRAIN_ARGS=(python train_model.py --out /model-out --min-games "${MIN_GAMES}")
 if [[ "${FORCE}" == "true" || "${FORCE}" == "1" ]]; then
   TRAIN_ARGS+=(--force)
 fi
@@ -29,17 +31,17 @@ import json, os
 print(json.dumps({
     "min_games": int(os.environ.get("MODEL_TRAIN_MIN_GAMES") or 60),
     "force": str(os.environ.get("MODEL_TRAIN_FORCE") or "false").lower() in ("1", "true", "yes"),
-    "out_dir": "/models",
+    "out_dir": "/model-out",
 }))
 PY
 )
 
-# Prefer a one-off container with a writable models mount (API service mount is :ro).
+# Prefer a one-off container with a writable host mount (api service /models is :ro).
 if command -v docker >/dev/null 2>&1 && [[ -f docker-compose.yml ]]; then
   mkdir -p ml/models
   echo "Training via docker compose run → ml/models ..."
   docker compose run --rm \
-    -v "${REPO_ROOT}/ml/models:/models" \
+    -v "${REPO_ROOT}/ml/models:/model-out:rw" \
     api "${TRAIN_ARGS[@]}"
   echo "Artifacts written to ${REPO_ROOT}/ml/models"
   exit 0
