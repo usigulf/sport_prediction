@@ -3,13 +3,16 @@
 Train the win-probability model from finished games in the database and write
 simple_model.pkl / feature_columns.pkl / metrics.json.
 
-Usage (from backend/):
-    python scripts/train_model.py                      # writes to configured model dir
-    python scripts/train_model.py --out ./models       # explicit output dir
-    python scripts/train_model.py --force              # train even on a small dataset
+Usage (from backend/ or inside Docker where WORKDIR=/app):
+    python train_model.py                      # writes to configured model dir
+    python train_model.py --out /models        # explicit output dir (Docker)
+    python train_model.py --force              # train even on a small dataset
 
 After it writes artifacts, point inference at the dir and restart the API:
     MODEL_ARTIFACT_DIR=/abs/path/to/models   (or EXPLANATION_MODEL_DIR)
+
+Note: repo-root scripts/ is mounted at /app/scripts in docker-compose (cron
+shell scripts only). This file lives at /app/train_model.py so it is not hidden.
 """
 from __future__ import annotations
 
@@ -20,7 +23,7 @@ import os
 import sys
 
 # Make `app` importable when run as a plain file from backend/.
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Register all ORM models so SQLAlchemy relationships resolve.
 import app.models.user  # noqa: F401,E402
@@ -40,7 +43,7 @@ def _default_out_dir() -> str:
     if configured and configured.strip():
         return configured.strip()
     # Repo default: ml/models (docker-compose mounts this read-only at /models).
-    backend_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    backend_root = os.path.dirname(os.path.abspath(__file__))
     return os.path.abspath(os.path.join(backend_root, "..", "ml", "models"))
 
 

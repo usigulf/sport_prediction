@@ -2,7 +2,7 @@
 """
 DEPRECATED — use the DB-backed training pipeline instead:
 
-    cd backend && python scripts/train_model.py --out ../ml/models
+    cd backend && python train_model.py --out ../ml/models
 
 That script builds features from finished games + standings (same vectors as
 production inference) and writes simple_model.pkl / feature_columns.pkl /
@@ -13,7 +13,7 @@ This file kept only as a historical synthetic-data demo.
 import sys
 
 print(__doc__, file=sys.stderr)
-print("Run: cd backend && python scripts/train_model.py", file=sys.stderr)
+print("Run: cd backend && python train_model.py --out ../ml/models", file=sys.stderr)
 raise SystemExit(1)
 
 # --- legacy implementation below (unreachable) ---

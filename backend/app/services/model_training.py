@@ -11,7 +11,7 @@ the output is a clean two-way edge; soccer's 1X2 draw arm is added downstream by
 `ml_artifacts.soccer_three_way_from_home_edge`. Point inference at the output
 dir via MODEL_ARTIFACT_DIR (or EXPLANATION_MODEL_DIR).
 
-Run via scripts/train_model.py.
+Run via backend/train_model.py (Docker: python train_model.py from /app).
 
 Caveat: features use the current standings snapshot (not point-in-time), while
 recent-form is computed strictly before each kickoff. Treat backtest metrics as

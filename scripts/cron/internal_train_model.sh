@@ -20,7 +20,7 @@ fi
 BASE="${API_INTERNAL_URL:-http://127.0.0.1:8000}"
 MIN_GAMES="${MODEL_TRAIN_MIN_GAMES:-60}"
 FORCE="${MODEL_TRAIN_FORCE:-false}"
-TRAIN_ARGS=(python scripts/train_model.py --out /models --min-games "${MIN_GAMES}")
+TRAIN_ARGS=(python train_model.py --out /models --min-games "${MIN_GAMES}")
 if [[ "${FORCE}" == "true" || "${FORCE}" == "1" ]]; then
   TRAIN_ARGS+=(--force)
 fi

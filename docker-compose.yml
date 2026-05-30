@@ -65,7 +65,7 @@ services:
       CORS_ORIGINS: '["http://localhost:3000","http://localhost:19006"]'
       OPENAPI_DOCS_ENABLED: "false"
       LOG_LEVEL: INFO
-      # Sklearn pickles for predictions (train: backend/scripts/train_model.py or scripts/cron/internal_train_model.sh)
+      # Sklearn pickles for predictions (train: backend/train_model.py or scripts/cron/internal_train_model.sh)
       EXPLANATION_MODEL_DIR: /models
       # Required for `--profile predictions` schedulers and any /internal cron calls. Empty = cron returns 501 (safe default; no weak placeholder).
       PUSH_CRON_SECRET: ${PUSH_CRON_SECRET:-}
