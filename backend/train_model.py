@@ -14,6 +14,8 @@ After it writes artifacts, point inference at the dir and restart the API:
 Note: repo-root scripts/ is mounted at /app/scripts in docker-compose (cron
 shell scripts only). This file lives at /app/train_model.py so it is not hidden.
 In Docker, write artifacts to /model-out (rw bind mount), not /models (:ro).
+Use `docker compose run --user root` so the non-root api user (uid 1000) can
+write into the host-mounted output directory.
 """
 from __future__ import annotations
 

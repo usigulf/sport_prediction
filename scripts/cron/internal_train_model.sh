@@ -40,7 +40,7 @@ PY
 if command -v docker >/dev/null 2>&1 && [[ -f docker-compose.yml ]]; then
   mkdir -p ml/models
   echo "Training via docker compose run → ml/models ..."
-  docker compose run --rm \
+  docker compose run --rm --user root \
     -v "${REPO_ROOT}/ml/models:/model-out:rw" \
     api "${TRAIN_ARGS[@]}"
   echo "Artifacts written to ${REPO_ROOT}/ml/models"
