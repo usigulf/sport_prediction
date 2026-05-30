@@ -339,10 +339,17 @@ def build_metric_comparison_rows(
     momentum = (
         f"Lean {home}" if form_gap > 0.02 else f"Lean {away}" if form_gap < -0.02 else "Neutral"
     )
-    soccer_table = feature_source in ("soccer_db_standings", "soccer_sportradar_api")
+    soccer_table = feature_source in (
+        "soccer_pit_standings",
+        "soccer_db_standings",
+        "soccer_sportradar_api",
+    )
     if soccer_table:
         season_label = "Season strength (table)"
-        season_fn = "(Wins + ½ draws) ÷ matches played — from league standings."
+        if feature_source == "soccer_pit_standings":
+            season_fn = "(Wins + ½ draws) ÷ matches played — from league results before this kickoff."
+        else:
+            season_fn = "(Wins + ½ draws) ÷ matches played — from league standings."
         recent_label = "Form index (last 5 league games)"
         recent_fn = (
             f"{momentum} Index = points per game (win = 1, draw = ½) over recent league matches in our DB."
@@ -450,7 +457,12 @@ def build_data_coverage_note(
     soccer = league_l in SOCCER_LEAGUES_SET
     chunks: list[str] = []
     if soccer:
-        if src == "soccer_db_standings":
+        if src == "soccer_pit_standings":
+            chunks.append(
+                "Inputs use point-in-time league table rates rebuilt from finished fixtures "
+                "before this kickoff, plus recent league results when available."
+            )
+        elif src == "soccer_db_standings":
             chunks.append(
                 "Inputs use league standings stored in our database, "
                 "plus recent league results when we have enough finished fixtures."
@@ -474,7 +486,12 @@ def build_data_coverage_note(
         else:
             chunks.append("Recent form window is sparse until more finished league games exist in our DB.")
     else:
-        if src == "us_db_standings":
+        if src == "us_pit_standings":
+            chunks.append(
+                "Inputs use point-in-time records rebuilt from finished league games before kickoff, "
+                "plus points scored in recent finished games."
+            )
+        elif src == "us_db_standings":
             chunks.append(
                 "Inputs use synced league standings (records) plus points scored in recent finished games."
             )

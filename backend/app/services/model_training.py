@@ -13,9 +13,9 @@ dir via MODEL_ARTIFACT_DIR (or EXPLANATION_MODEL_DIR).
 
 Run via backend/train_model.py (Docker: python train_model.py from /app).
 
-Caveat: features use the current standings snapshot (not point-in-time), while
-recent-form is computed strictly before each kickoff. Treat backtest metrics as
-indicative until point-in-time standings are stored.
+Caveat: features use point-in-time standings rebuilt from finished league games
+before each kickoff when enough history exists; otherwise they fall back to the
+current `team_standings` snapshot or provider APIs.
 """
 from __future__ import annotations
 
@@ -31,6 +31,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.models.game import Game
 from app.services.feature_builder import build_game_features
+from app.services.point_in_time_standings import PitStandingsCache
 
 logger = logging.getLogger(__name__)
 
@@ -74,13 +75,14 @@ def build_training_frame(db: Session):
     import pandas as pd
 
     games = _finished_decisive_games(db)
+    pit_cache = PitStandingsCache.from_games(db, games)
     rows: list[list[float]] = []
     labels: list[int] = []
     leagues: list[str] = []
     times: list[Any] = []
     for g in games:
         try:
-            feats, _src = build_game_features(g, db)
+            feats, _src = build_game_features(g, db, pit_cache=pit_cache)
         except Exception:
             logger.exception("feature build failed for game %s", g.id)
             continue
@@ -195,8 +197,9 @@ def train_and_save(
         "eval": eval_metrics,
         "trained_at": datetime.now(timezone.utc).isoformat(),
         "note": (
-            "Predicts P(home | decisive); draws excluded from training. Features use "
-            "current standings snapshot (not point-in-time); recent-form is pre-kickoff."
+            "Predicts P(home | decisive); draws excluded from training. Standings "
+            "features are point-in-time from finished league games before kickoff "
+            "when enough history exists; recent-form is always pre-kickoff."
         ),
     }
     with open(os.path.join(out_dir, ARTIFACT_METRICS), "w") as f:

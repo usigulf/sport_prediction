@@ -6,7 +6,6 @@ Other sports: synthetic random features with time-bucket drift for demo refreshe
 from __future__ import annotations
 
 import random
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Literal
 from uuid import UUID
@@ -17,32 +16,20 @@ from sqlalchemy.orm import Session
 from app.constants.soccer import SOCCER_LEAGUES_SET
 from app.models.game import Game
 from app.models.team_standing import TeamStanding
+from app.services.point_in_time_standings import PitStandingsCache, SoccerTableRec, pit_table_pair_for_game
 
 FeatureSource = Literal[
     "synthetic",
+    "soccer_pit_standings",
     "soccer_db_standings",
     "soccer_sportradar_api",
+    "us_pit_standings",
     "us_db_standings",
     "us_recent_form",
     "neutral_baseline",
 ]
 
 US_SPORTS_SET = frozenset({"nfl", "nba"})
-
-
-@dataclass(frozen=True)
-class SoccerTableRec:
-    wins: int
-    draws: int
-    losses: int
-    goals_for: int
-    goals_against: int
-    league_rank: int
-    points: int
-
-    @property
-    def played(self) -> int:
-        return max(self.wins + self.draws + self.losses, 1)
 
 
 def _seed_from_uuid(game_id: UUID) -> int:
@@ -302,6 +289,31 @@ def _build_soccer_features_from_recs(
     return features
 
 
+def _pit_pair(
+    db: Session,
+    game: Game,
+    pit_cache: PitStandingsCache | None,
+) -> tuple[SoccerTableRec, SoccerTableRec] | None:
+    if pit_cache is not None:
+        return pit_cache.pit_pair_for_game(game)
+    return pit_table_pair_for_game(db, game)
+
+
+def _soccer_features_from_pit(
+    db: Session,
+    game: Game,
+    pit_cache: PitStandingsCache | None = None,
+) -> dict[str, float | int] | None:
+    league = (game.league or "").lower()
+    if league not in SOCCER_LEAGUES_SET or not game.home_team or not game.away_team:
+        return None
+    pair = _pit_pair(db, game, pit_cache)
+    if pair is None:
+        return None
+    rh, ra = pair
+    return _build_soccer_features_from_recs(db, game, league, rh, ra)
+
+
 def _soccer_features_from_standings(db: Session, game: Game) -> dict[str, float | int] | None:
     league = (game.league or "").lower()
     if league not in SOCCER_LEAGUES_SET or not game.home_team or not game.away_team:
@@ -449,6 +461,66 @@ def _us_avg_points_from_recent_games(
     return round(sum(scored) / len(scored), 4)
 
 
+def _us_sports_features_from_pit(
+    db: Session,
+    game: Game,
+    pit_cache: PitStandingsCache | None = None,
+) -> dict[str, float | int] | None:
+    league = (game.league or "").lower()
+    if league not in US_SPORTS_SET or not game.home_team or not game.away_team:
+        return None
+    pair = _pit_pair(db, game, pit_cache)
+    if pair is None:
+        return None
+    rh, ra = pair
+    kickoff = _as_utc(game.scheduled_time)
+    base_h, base_a = _LEAGUE_SCORE_BASE.get(league, (24.0, 21.0))
+
+    def win_rate(rec: SoccerTableRec) -> float:
+        p = rec.played
+        return round((rec.wins + 0.5 * rec.draws) / p, 4)
+
+    h_wr, a_wr = win_rate(rh), win_rate(ra)
+    h_form = _form_from_recent_games(db, game.home_team_id, league, kickoff)
+    a_form = _form_from_recent_games(db, game.away_team_id, league, kickoff)
+    h_score = _us_avg_points_from_recent_games(db, game.home_team_id, league, kickoff)
+    a_score = _us_avg_points_from_recent_games(db, game.away_team_id, league, kickoff)
+    if h_form is None:
+        h_form = h_wr
+    if a_form is None:
+        a_form = a_wr
+    h_avg = h_score if h_score is not None else base_h
+    a_avg = a_score if a_score is not None else base_a
+
+    rank_gap = ra.league_rank - rh.league_rank
+    home_adv = round(0.032 + 0.006 * max(-5, min(5, rank_gap)), 4)
+    home_adv = max(0.02, min(0.10, home_adv))
+    rest_h = _rest_days_before(db, game.home_team_id, league, kickoff)
+    rest_a = _rest_days_before(db, game.away_team_id, league, kickoff)
+
+    features: dict[str, float | int] = {
+        "home_team_win_rate": h_wr,
+        "away_team_win_rate": a_wr,
+        "home_team_avg_score": round(float(h_avg), 4),
+        "away_team_avg_score": round(float(a_avg), 4),
+        "home_team_recent_form": round(float(h_form), 4),
+        "away_team_recent_form": round(float(a_form), 4),
+        "home_advantage": home_adv,
+        "rest_days_home": rest_h,
+        "rest_days_away": rest_a,
+    }
+    if game.status == "live":
+        margin = (game.home_score or 0) - (game.away_score or 0)
+        bump = max(-0.2, min(0.2, margin * 0.012))
+        features["home_team_recent_form"] = round(
+            min(0.95, float(features["home_team_recent_form"]) + bump), 4
+        )
+        features["away_team_recent_form"] = round(
+            max(0.05, float(features["away_team_recent_form"]) - bump * 0.85), 4
+        )
+    return features
+
+
 def _us_sports_features(
     db: Session, game: Game
 ) -> tuple[dict[str, float | int], FeatureSource] | None:
@@ -541,10 +613,18 @@ def _neutral_feature_dict(game: Game) -> dict[str, float | int]:
     return features
 
 
-def build_game_features(game: Game, db: Session | None) -> tuple[dict[str, float | int], FeatureSource]:
+def build_game_features(
+    game: Game,
+    db: Session | None,
+    *,
+    pit_cache: PitStandingsCache | None = None,
+) -> tuple[dict[str, float | int], FeatureSource]:
     if db is not None:
         league = (game.league or "").lower()
         if league in SOCCER_LEAGUES_SET and game.home_team and game.away_team:
+            soccer = _soccer_features_from_pit(db, game, pit_cache)
+            if soccer is not None:
+                return soccer, "soccer_pit_standings"
             soccer = _soccer_features_from_standings(db, game)
             if soccer is not None:
                 return soccer, "soccer_db_standings"
@@ -558,6 +638,9 @@ def build_game_features(game: Game, db: Session | None) -> tuple[dict[str, float
             if soccer is not None:
                 return soccer, "soccer_sportradar_api"
         elif league in US_SPORTS_SET and game.home_team and game.away_team:
+            us_pit = _us_sports_features_from_pit(db, game, pit_cache)
+            if us_pit is not None:
+                return us_pit, "us_pit_standings"
             us = _us_sports_features(db, game)
             if us is not None:
                 return us
@@ -623,8 +706,13 @@ def build_rich_analysis_dict(
     form_gap = h_form - a_form
     wr_gap = h_wr - a_wr
     rest_gap = rest_h - rest_a
-    table_backed = feature_source in ("soccer_db_standings", "soccer_sportradar_api")
+    table_backed = feature_source in (
+        "soccer_pit_standings",
+        "soccer_db_standings",
+        "soccer_sportradar_api",
+    )
     from_sportradar_fetch = feature_source == "soccer_sportradar_api"
+    from_pit = feature_source == "soccer_pit_standings"
 
     # Real-time / state
     if game.status == "live":
@@ -648,11 +736,17 @@ def build_rich_analysis_dict(
         )
 
     if table_backed:
-        src_line = (
-            "Sportradar season standings (live API fetch, short cache)—`team_standings` was empty or incomplete."
-            if from_sportradar_fetch
-            else "Synced `team_standings` for this league; refresh via soccer schedule + standings sync."
-        )
+        if from_pit:
+            src_line = (
+                "Season rates rebuilt from finished league fixtures strictly before this kickoff "
+                "(point-in-time table — no future results)."
+            )
+        elif from_sportradar_fetch:
+            src_line = (
+                "Sportradar season standings (live API fetch, short cache)—`team_standings` was empty or incomplete."
+            )
+        else:
+            src_line = "Synced `team_standings` for this league; refresh via soccer schedule + standings sync."
         form_standings = (
             f"• Table-backed season rates: {home} {_pct(h_wr)} vs {away} {_pct(a_wr)} (W/D/L-derived; goals/game in inputs).\n"
             f"• Recent-form index: {home} {_pct(h_form)} vs {away} {_pct(a_form)} "
