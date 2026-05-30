@@ -81,6 +81,9 @@ Thumbs.db
 
 # ML Models / artifacts (do not use bare `models/` — it ignores backend/app/models/)
 *.pkl
+
+# Trained model artifacts (regenerate with backend/scripts/train_model.py)
+backend/models/
 *.h5
 *.pb
 /models/

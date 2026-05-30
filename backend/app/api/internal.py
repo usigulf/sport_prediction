@@ -15,6 +15,7 @@ from app.models.game import Game
 from app.models.game_player_spotlight import GamePlayerSpotlight
 from app.services.push_trigger_service import send_game_starting_reminders, send_high_confidence_picks
 from app.services.prediction_inference_service import run_prediction_job
+from app.services.model_training import train_and_save
 from app.services.sportradar_nfl_service import fetch_nfl_standings_json
 from app.services.sportradar_soccer_service import soccer_health_probe
 from app.services.soccer_data_provider import configured_soccer_league_codes, use_clearsports_soccer
@@ -56,6 +57,19 @@ class ReplacePlayerSpotlightsBody(BaseModel):
     """Full replace: existing rows for this game are deleted, then these are inserted."""
 
     spotlights: list[PlayerSpotlightItem] = Field(default_factory=list)
+
+
+class TrainModelBody(BaseModel):
+    """Train sklearn artifacts from finished games in the DB."""
+
+    out_dir: Optional[str] = Field(
+        None,
+        description="Directory for simple_model.pkl + feature_columns.pkl + metrics.json. "
+        "Defaults to MODEL_ARTIFACT_DIR / EXPLANATION_MODEL_DIR.",
+    )
+    test_frac: float = Field(0.2, ge=0.05, le=0.5)
+    min_games: int = Field(60, ge=10, le=10000)
+    force: bool = Field(False, description="Train even when usable games < min_games.")
 
 
 def _request_ip_for_internal(request: Request) -> str:
@@ -145,6 +159,46 @@ async def run_predictions_cron(
         "skipped_cooldown": result.skipped_cooldown,
         "errors": result.errors,
     }
+
+
+@router.post("/ml/train")
+async def train_model_cron(
+    db: Session = Depends(get_db),
+    _: None = Depends(_require_cron_secret),
+    body: TrainModelBody = Body(default_factory=TrainModelBody),
+):
+    """
+    Retrain the win-probability model from finished games and write sklearn artifacts.
+    Schedule weekly (after standings + results sync) with X-Cron-Secret.
+
+    Writes simple_model.pkl + feature_columns.pkl + metrics.json to out_dir
+    (MODEL_ARTIFACT_DIR / EXPLANATION_MODEL_DIR, or body.out_dir). In Docker the
+    API mount at /models is read-only — use scripts/cron/internal_train_model.sh
+    on the host to write into ml/models, or pass a writable out_dir here.
+    """
+    settings = get_settings()
+    out_dir = (body.out_dir or settings.model_artifact_dir or settings.explanation_model_dir or "").strip()
+    if not out_dir:
+        raise HTTPException(
+            status_code=503,
+            detail="Model output dir not configured (set MODEL_ARTIFACT_DIR or pass out_dir)",
+        )
+    try:
+        summary = train_and_save(
+            db,
+            out_dir,
+            test_frac=body.test_frac,
+            min_games=body.min_games,
+            force=body.force,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except OSError as e:
+        raise HTTPException(
+            status_code=507,
+            detail=f"Could not write model artifacts to {out_dir}: {e}",
+        )
+    return summary
 
 
 @router.put("/games/{game_id}/player-spotlights")

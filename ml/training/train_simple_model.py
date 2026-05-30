@@ -1,7 +1,22 @@
+#!/usr/bin/env python
 """
-Simple ML model training example
-This is a basic implementation to get started with ML predictions
+DEPRECATED — use the DB-backed training pipeline instead:
+
+    cd backend && python scripts/train_model.py --out ../ml/models
+
+That script builds features from finished games + standings (same vectors as
+production inference) and writes simple_model.pkl / feature_columns.pkl /
+metrics.json for predict_from_artifacts.
+
+This file kept only as a historical synthetic-data demo.
 """
+import sys
+
+print(__doc__, file=sys.stderr)
+print("Run: cd backend && python scripts/train_model.py", file=sys.stderr)
+raise SystemExit(1)
+
+# --- legacy implementation below (unreachable) ---
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split

@@ -31,3 +31,6 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # NFL + NBA schedules (Sportradar; requires SPORTRADAR_API_KEY) ~3x daily (UTC)
 45 6,14,22 * * * /root/sport_prediction/scripts/cron/internal_us_sports_sync_schedules.sh >> /tmp/sport-prediction-cron.log 2>&1
+
+# Retrain win-probability model weekly (Sunday 05:15 UTC) after results + standings sync
+15 5 * * 0 /root/sport_prediction/scripts/cron/internal_train_model.sh >> /tmp/sport-prediction-cron.log 2>&1

@@ -256,3 +256,29 @@ def test_soccer_sync_schedules_route(monkeypatch, client):
     assert body["results"][0]["league"] == "premier_league"
     assert body["results"][0]["games_upserted"] == 2
     assert body["results"][0]["standings_upserted"] == 18
+
+
+def test_internal_ml_train(client, monkeypatch, tmp_path):
+    monkeypatch.setenv("MODEL_ARTIFACT_DIR", str(tmp_path))
+    get_settings.cache_clear()
+    captured: dict = {}
+
+    def fake_train(db, out_dir, **kwargs):
+        captured["out_dir"] = out_dir
+        captured["kwargs"] = kwargs
+        return {"games": 120, "eval": {"accuracy": 0.61}, "out_dir": out_dir}
+
+    monkeypatch.setattr("app.api.internal.train_and_save", fake_train)
+    try:
+        r = client.post(
+            "/internal/ml/train",
+            headers=_headers(),
+            json={"min_games": 50, "force": True},
+        )
+        assert r.status_code == status.HTTP_200_OK, r.text
+        assert r.json()["games"] == 120
+        assert captured["out_dir"] == str(tmp_path)
+        assert captured["kwargs"]["min_games"] == 50
+        assert captured["kwargs"]["force"] is True
+    finally:
+        get_settings.cache_clear()
