@@ -3,5 +3,12 @@
     "strict": true,
     "skipLibCheck": true
   },
-  "exclude": ["node_modules", "mobile", "apps", "backend", "web"]
+  "exclude": [
+    "node_modules",
+    "mobile",
+    "apps",
+    "backend",
+    "web"
+  ],
+  "extends": "expo/tsconfig.base"
 }

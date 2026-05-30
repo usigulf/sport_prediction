@@ -72,10 +72,15 @@ export const RewardedUnlockCTA: React.FC<Props> = ({
       ad.removeAllListeners();
     });
 
-    ad.addAdEventListener(RewardedAdEventType.CLOSED, () => {
-      if (!handledRef.current) setBusy(false);
-      ad.removeAllListeners();
-    });
+    const closeEvent =
+      (RewardedAdEventType as unknown as { CLOSED?: string }).CLOSED ??
+      (gma as { AdEventType?: { CLOSED?: string } }).AdEventType?.CLOSED;
+    if (closeEvent) {
+      ad.addAdEventListener(closeEvent as never, () => {
+        if (!handledRef.current) setBusy(false);
+        ad.removeAllListeners();
+      });
+    }
 
     ad.load();
   }, [engine, gameId, onSubscribePress, onUnlock, unlock]);

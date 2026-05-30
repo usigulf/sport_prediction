@@ -1,6 +1,6 @@
 /**
  * Best Picks carousel: horizontal FlatList with snap (no Reanimated for Expo compatibility).
- * Uses octobetiQ palette: #0A1428, #F1F5F9/#FFFFFF, #22C55E, #60A5FA/#FBBF24.
+ * Colors from `theme` (dark navy + accent + confidence scale).
  * Tap → onPickPress(id) and optional onSetFeatured(id) to swap Featured Game.
  */
 import React from 'react';
@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { theme } from '../constants/theme';
 import type { BestPickItem } from './BestPickMiniCard';
 import { confidenceToPickStrength } from './PredictionCard';
 
@@ -23,16 +24,6 @@ const H_PADDING = 16;
 const CARD_MARGIN = 10;
 const CARD_WIDTH = Math.min(168, Math.floor((SCREEN_WIDTH - H_PADDING * 2 - CARD_MARGIN * 2) * 0.48));
 export const CAROUSEL_ITEM_WIDTH = CARD_WIDTH + CARD_MARGIN;
-
-const CAROUSEL_COLORS = {
-  textWhite: '#FFFFFF',
-  green: '#22C55E',
-  accentBlue: '#60A5FA',
-  accentAmber: '#FBBF24',
-  cardBg: '#152642',
-  border: 'rgba(255,255,255,0.1)',
-  muted: '#94A3B8',
-} as const;
 
 const getSportIcon = (leagueId: string): keyof typeof Ionicons.glyphMap => {
   switch (leagueId) {
@@ -87,7 +78,7 @@ const CarouselCard = React.memo<CarouselCardProps>(function CarouselCard({
       >
         <View style={styles.header}>
           <View style={styles.sportIconWrap}>
-            <Ionicons name={getSportIcon(pick.league)} size={18} color={CAROUSEL_COLORS.accentBlue} />
+            <Ionicons name={getSportIcon(pick.league)} size={18} color={theme.colors.textSecondary} />
           </View>
           <Text style={styles.league} numberOfLines={1}>
             {pick.league.toUpperCase().replace('_', ' ')}
@@ -104,7 +95,7 @@ const CarouselCard = React.memo<CarouselCardProps>(function CarouselCard({
                   key={i}
                   name={i <= stars ? 'star' : 'star-outline'}
                   size={10}
-                  color={i <= stars ? CAROUSEL_COLORS.accentAmber : CAROUSEL_COLORS.muted}
+                  color={i <= stars ? theme.colors.confidenceMedium : theme.colors.textMuted}
                 />
               ))}
             </View>
@@ -115,7 +106,7 @@ const CarouselCard = React.memo<CarouselCardProps>(function CarouselCard({
                     styles.barFill,
                     {
                       width: `${Math.round(probHome * 100)}%`,
-                      backgroundColor: CAROUSEL_COLORS.green,
+                      backgroundColor: theme.colors.accent,
                     },
                   ]}
                 />
@@ -173,11 +164,11 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
     marginRight: CARD_MARGIN,
     padding: 12,
-    backgroundColor: CAROUSEL_COLORS.cardBg,
-    borderRadius: 16,
+    backgroundColor: theme.colors.backgroundCard,
+    borderRadius: theme.radii.md,
     borderWidth: 1,
-    borderColor: CAROUSEL_COLORS.border,
-    shadowColor: '#000',
+    borderColor: theme.colors.border,
+    shadowColor: theme.colors.background,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 6,
@@ -193,21 +184,21 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(96, 165, 250, 0.2)',
+    backgroundColor: theme.colors.accentDim,
     alignItems: 'center',
     justifyContent: 'center',
   },
   league: {
     fontSize: 10,
     fontWeight: '700',
-    color: CAROUSEL_COLORS.muted,
+    color: theme.colors.textMuted,
     letterSpacing: 0.5,
     flex: 1,
   },
   matchup: {
     fontSize: 13,
     fontWeight: '600',
-    color: CAROUSEL_COLORS.textWhite,
+    color: theme.colors.text,
     marginBottom: 6,
     lineHeight: 18,
   },
@@ -235,7 +226,7 @@ const styles = StyleSheet.create({
   pct: {
     fontSize: 11,
     fontWeight: '700',
-    color: CAROUSEL_COLORS.green,
+    color: theme.colors.accent,
     minWidth: 28,
   },
 });

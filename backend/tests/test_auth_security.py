@@ -26,6 +26,36 @@ def test_refresh_rejects_access_token(client, test_user):
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
+def test_logout_does_not_revoke_another_users_refresh_token(client, test_user, premium_user):
+    """P0: A user must not be able to revoke another account's refresh token via /logout."""
+    u2 = client.post(
+        "/api/v1/auth/login",
+        data={"username": premium_user.email, "password": "premium123"},
+    )
+    assert u2.status_code == 200
+    other_refresh = u2.json()["refresh_token"]
+
+    u1 = client.post(
+        "/api/v1/auth/login",
+        data={"username": test_user.email, "password": "testpass123"},
+    )
+    assert u1.status_code == 200
+    u1_access = u1.json()["access_token"]
+
+    logout = client.post(
+        "/api/v1/auth/logout",
+        json={"refresh_token": other_refresh},
+        headers={"Authorization": f"Bearer {u1_access}"},
+    )
+    assert logout.status_code == status.HTTP_200_OK
+
+    still = client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": other_refresh},
+    )
+    assert still.status_code == status.HTTP_200_OK
+
+
 def test_logout_revokes_refresh_token(client, test_user):
     login = client.post(
         "/api/v1/auth/login",

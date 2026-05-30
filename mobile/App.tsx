@@ -3,7 +3,9 @@
  */
 import 'react-native-gesture-handler';
 import React, { useEffect, useState } from 'react';
+import { Linking } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
+import * as WebBrowser from 'expo-web-browser';
 import { initializeGoogleMobileAds } from './src/ads/native/loadGma';
 import { Provider } from 'react-redux';
 import { store } from './src/store/store';
@@ -21,6 +23,9 @@ SplashScreen.preventAutoHideAsync().catch(() => {
   /* Expo Go may not support native splash */
 });
 
+/** Close Stripe Checkout auth session cleanly when returning via `octobetiq://payment/*`. */
+WebBrowser.maybeCompleteAuthSession();
+
 function AppContent() {
   const [appReady, setAppReady] = useState(false);
 
@@ -36,6 +41,25 @@ function AppContent() {
       setOnUnauthorized(null);
       setOnAccessTokenRefreshed(null);
     };
+  }, []);
+
+  useEffect(() => {
+    const onUrl = ({ url }: { url: string }) => {
+      const u = url.toLowerCase();
+      if (
+        u.includes('payment/success') ||
+        u.includes('checkout/success') ||
+        u.includes('payment/cancel') ||
+        u.includes('checkout/cancel')
+      ) {
+        void store.dispatch(fetchUserProfile());
+      }
+    };
+    const sub = Linking.addEventListener('url', onUrl);
+    void Linking.getInitialURL().then((initial) => {
+      if (initial) onUrl({ url: initial });
+    });
+    return () => sub.remove();
   }, []);
 
   useEffect(() => {

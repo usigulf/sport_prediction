@@ -27,6 +27,7 @@ import {
   mergeListWithNativeAds,
   type MergedRow,
 } from '../ads/hooks/mergeListWithNativeAds';
+import { LIVE_HUB_SUBTITLE } from '../constants/leagues';
 import { soccerBetaFetchParams } from '../utils/soccerBetaFetch';
 
 type LiveHubNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -121,7 +122,7 @@ export const LiveHubScreen: React.FC = () => {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Live Hub</Text>
-        <Text style={styles.subtitle}>Today&apos;s best picks & upcoming games</Text>
+        <Text style={styles.subtitle}>{LIVE_HUB_SUBTITLE}</Text>
       </View>
       {error ? (
         <View style={styles.errorBanner}>

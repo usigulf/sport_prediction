@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>octobetiQ — Checkout cancelled</title>
   <style>
-    :root { --bg: #0b1020; --text: #f1f5f9; --muted: #94a3b8; }
+    :root { --bg: #0b1020; --text: #f1f5f9; --muted: #94a3b8; --accent: #22c55e; }
     * { box-sizing: border-box; }
     body {
       margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
@@ -18,12 +18,25 @@
     }
     h1 { font-size: 1.25rem; margin: 0 0 0.5rem; }
     p { margin: 0; color: var(--muted); font-size: 0.95rem; line-height: 1.5; }
+    .btn {
+      display: inline-block;
+      margin-top: 1.25rem;
+      padding: 0.65rem 1.25rem;
+      background: rgba(148, 163, 184, 0.25);
+      color: var(--text);
+      font-weight: 600;
+      font-size: 0.95rem;
+      border-radius: 999px;
+      text-decoration: none;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+    }
   </style>
 </head>
 <body>
   <div class="card">
     <h1>Checkout cancelled</h1>
     <p>No charge was made. You can try again anytime from the <strong>octobetiQ</strong> app.</p>
+    <p style="margin-top:1rem;"><a class="btn" href="octobetiq://payment/cancel">Return to octobetiQ</a></p>
   </div>
 </body>
 </html>

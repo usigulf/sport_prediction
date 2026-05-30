@@ -96,6 +96,9 @@ def test_get_prediction_explanation(client, auth_headers, test_game, test_predic
     assert "data_quality_score" in data
     assert "data_quality_label" in data
     assert "quality_gate_applied" in data
+    names = {f.get("feature") for f in (data.get("top_features") or [])}
+    # P2: prefer matchup-specific factors over generic fallback strings.
+    assert "Season win-rate edge" in names
 
 
 def test_get_prediction_explanation_quality_gate(client, auth_headers, test_game, test_prediction, db):

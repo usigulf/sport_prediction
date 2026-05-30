@@ -42,11 +42,18 @@ export const ChallengesScreen: React.FC = () => {
   const load = useCallback(async () => {
     try {
       setError(null);
+      let tier = 'free';
       try {
         const u = await apiService.getCurrentUser() as { subscription_tier?: string };
-        setSubscriptionTier(u?.subscription_tier ?? 'free');
+        tier = u?.subscription_tier ?? 'free';
+        setSubscriptionTier(tier);
       } catch {
         setSubscriptionTier('free');
+        return;
+      }
+      if (!hasProAccess(tier)) {
+        setChallenges([]);
+        return;
       }
       const res = await apiService.getChallenges({ limit: 20 });
       setChallenges(res.challenges ?? []);

@@ -27,6 +27,7 @@ from app.models.user import User
 from app.models.user_prediction_view import UserPredictionView
 from app.services.prediction_service import PredictionService
 from app.services.explanation_service import get_model_feature_importance
+from app.services.feature_builder import build_game_features
 from app.services.analysis_context_service import enrich_rich_analysis, build_structured_game_analysis
 from app.services.data_quality_service import compute_prediction_quality
 from app.services.share_image_service import generate_share_image
@@ -34,6 +35,68 @@ from app.config import get_settings
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+def _game_specific_explanation_factors(game: Game, db: Session) -> list[FeatureImportance]:
+    """
+    Build matchup-specific factors from the same feature vector used for inference.
+    This avoids showing only global model importance when local game context is available.
+    """
+    features, source = build_game_features(game, db)
+    h_wr = float(features.get("home_team_win_rate", 0.5))
+    a_wr = float(features.get("away_team_win_rate", 0.5))
+    h_form = float(features.get("home_team_recent_form", 0.5))
+    a_form = float(features.get("away_team_recent_form", 0.5))
+    h_avg = float(features.get("home_team_avg_score", 0.0))
+    a_avg = float(features.get("away_team_avg_score", 0.0))
+    rest_h = int(features.get("rest_days_home", 4))
+    rest_a = int(features.get("rest_days_away", 4))
+    home_adv = float(features.get("home_advantage", 0.0))
+
+    # Keep magnitudes bounded and easy to compare in UI.
+    def _cap(v: float, limit: float = 1.0) -> float:
+        return max(-limit, min(limit, v))
+
+    factors: list[FeatureImportance] = [
+        FeatureImportance(
+            feature="Season win-rate edge",
+            shap_value=round(_cap((h_wr - a_wr) * 2.0), 4),
+            description=f"Home {h_wr:.1%} vs away {a_wr:.1%} from current matchup feature inputs.",
+        ),
+        FeatureImportance(
+            feature="Recent form edge",
+            shap_value=round(_cap((h_form - a_form) * 2.0), 4),
+            description=f"Recent-form index home {h_form:.1%} vs away {a_form:.1%}.",
+        ),
+        FeatureImportance(
+            feature="Home advantage",
+            shap_value=round(_cap(home_adv * 8.0), 4),
+            description="Venue/home-field bump applied by the model.",
+        ),
+        FeatureImportance(
+            feature="Rest days differential",
+            shap_value=round(_cap((rest_h - rest_a) / 7.0), 4),
+            description=f"Home {rest_h}d rest vs away {rest_a}d.",
+        ),
+        FeatureImportance(
+            feature="Scoring environment tilt",
+            shap_value=round(_cap((h_avg - a_avg) / max(1.0, (h_avg + a_avg) / 2.0)), 4),
+            description=f"Expected scoring context home {h_avg:.2f} vs away {a_avg:.2f}.",
+        ),
+    ]
+    # Most influential first.
+    factors.sort(key=lambda f: abs(f.shap_value), reverse=True)
+    # Mention data source in top description for transparency.
+    if factors:
+        src = (
+            "synced soccer standings"
+            if source == "soccer_db_standings"
+            else "provider standings fetch"
+            if source == "soccer_sportradar_api"
+            else "synthetic baseline inputs"
+        )
+        factors[0].description = f"{factors[0].description} Source: {src}."
+    return factors
 
 
 def _rich_analysis_from_prediction(prediction: Prediction) -> Optional[RichAnalysisSections]:
@@ -303,27 +366,35 @@ async def get_prediction_explanation(
             "Detailed explanation is temporarily limited because current data quality is low. "
             "Try again after a fresh sync."
         )
-    elif model_factors:
-        top_features = [
-            FeatureImportance(feature=f["feature"], shap_value=f["shap_value"], description=f.get("description"))
-            for f in model_factors[:10]
-        ]
-        confidence_explanation = (
-            f"This prediction has {prediction.confidence_level} confidence. "
-            "Factors below are the model's global feature importance (what drives predictions overall)."
-        )
     else:
-        home_prob = float(prediction.home_win_probability)
-        away_prob = float(prediction.away_win_probability)
-        top_features = [
-            FeatureImportance(feature="Home win probability", shap_value=home_prob - 0.5, description="Model estimate for home team"),
-            FeatureImportance(feature="Away win probability", shap_value=away_prob - 0.5, description="Model estimate for away team"),
-            FeatureImportance(feature="Confidence", shap_value=abs(home_prob - 0.5) * 2, description=f"Confidence level: {prediction.confidence_level}"),
-        ]
-        confidence_explanation = (
-            f"This prediction has {prediction.confidence_level} confidence. "
-            "Factors below summarize how strongly the model leans on each side."
-        )
+        game_specific = _game_specific_explanation_factors(game, db)
+        if game_specific:
+            top_features = game_specific
+            confidence_explanation = (
+                f"This prediction has {prediction.confidence_level} confidence. "
+                "Factors below are computed from this matchup's current feature snapshot."
+            )
+        elif model_factors:
+            top_features = [
+                FeatureImportance(feature=f["feature"], shap_value=f["shap_value"], description=f.get("description"))
+                for f in model_factors[:10]
+            ]
+            confidence_explanation = (
+                f"This prediction has {prediction.confidence_level} confidence. "
+                "Factors below are the model's global feature importance (what drives predictions overall)."
+            )
+        else:
+            home_prob = float(prediction.home_win_probability)
+            away_prob = float(prediction.away_win_probability)
+            top_features = [
+                FeatureImportance(feature="Home win probability", shap_value=home_prob - 0.5, description="Model estimate for home team"),
+                FeatureImportance(feature="Away win probability", shap_value=away_prob - 0.5, description="Model estimate for away team"),
+                FeatureImportance(feature="Confidence", shap_value=abs(home_prob - 0.5) * 2, description=f"Confidence level: {prediction.confidence_level}"),
+            ]
+            confidence_explanation = (
+                f"This prediction has {prediction.confidence_level} confidence. "
+                "Factors below summarize how strongly the model leans on each side."
+            )
     base_rich_analysis = _rich_analysis_from_prediction(prediction)
     rich_analysis = base_rich_analysis
     structured_analysis = None

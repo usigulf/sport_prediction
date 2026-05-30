@@ -128,8 +128,8 @@ export const PaywallScreen: React.FC = () => {
         Alert.alert('Checkout', 'Checkout URL missing. Payments may not be configured yet.');
         return;
       }
-      // Stripe Checkout: use in-app browser (SFSafariViewController / Chrome Custom Tabs).
-      // Linking.openURL often flashes or fails to stay open during hosted checkout.
+      // Stripe Checkout: in-app browser. After payment, user can tap "Open octobetiQ" on the
+      // hosted success page (octobetiq://payment/success) — App.tsx refreshes profile on that URL.
       setCheckoutLoadingTier(null);
       await WebBrowser.openBrowserAsync(url);
       const info = await dispatch(fetchUserProfile()).unwrap();

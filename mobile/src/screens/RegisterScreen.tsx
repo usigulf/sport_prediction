@@ -17,6 +17,7 @@ import { apiService } from '../services/api';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { theme } from '../constants/theme';
+import { AUTH_SCREEN_TAGLINE } from '../constants/leagues';
 import { AuthTrustLinks } from '../components/AuthTrustLinks';
 
 type RegisterScreenNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -54,11 +55,7 @@ export const RegisterScreen: React.FC = () => {
         },
       ]);
     } catch (error: any) {
-      const msg = getUserFriendlyMessage(error);
-      const hint = msg.includes('reach') || msg.includes('timed out')
-        ? '\n\nStart backend: cd backend && ./run.sh'
-        : '';
-      Alert.alert('Registration Failed', msg + hint);
+      Alert.alert('Registration Failed', getUserFriendlyMessage(error));
     } finally {
       setLoading(false);
     }
@@ -72,13 +69,13 @@ export const RegisterScreen: React.FC = () => {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
           <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Join octobetiQ</Text>
+          <Text style={styles.subtitle}>{AUTH_SCREEN_TAGLINE}</Text>
 
           <View style={styles.form}>
             <TextInput
               style={styles.input}
               placeholder="Email"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.colors.textMuted}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -89,7 +86,7 @@ export const RegisterScreen: React.FC = () => {
             <TextInput
               style={styles.input}
               placeholder="Password"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.colors.textMuted}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -99,7 +96,7 @@ export const RegisterScreen: React.FC = () => {
             <TextInput
               style={styles.input}
               placeholder="Confirm Password"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.colors.textMuted}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry

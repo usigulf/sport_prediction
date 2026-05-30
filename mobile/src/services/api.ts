@@ -84,13 +84,13 @@ export function getWebSocketOrigin(): string {
   return origin;
 }
 
-/** Full URL for authenticated live game WebSocket. */
-export function buildLiveWebSocketUrl(gameId: string, accessToken: string): string {
+/** Base URL path for live game WebSocket (no credentials in URL). Auth via Authorization header at connect time. */
+export function buildLiveWebSocketUrl(gameId: string): string {
   const base = getWebSocketOrigin();
-  return `${base}/ws/live/${gameId}?token=${encodeURIComponent(accessToken)}`;
+  return `${base}/ws/live/${gameId}`;
 }
 
-// Token is set on login and cleared on logout. For persistence across app restarts, use AsyncStorage (P1).
+// Token is set on login and cleared on logout. Persistence: SecureStore (native) / AsyncStorage (web); see authStorage.
 let authToken: string | null = null;
 
 export function setAuthToken(token: string | null): void {

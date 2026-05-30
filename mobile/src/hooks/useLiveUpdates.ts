@@ -1,9 +1,11 @@
 /**
  * Hook to subscribe to live game updates via WebSocket.
  * Connects to WS /ws/live/{gameId} (same host as API, ws/wss scheme).
- * Requires JWT in query for auth; premium tier required on backend.
+ * Sends JWT via WebSocket Authorization header (not query string).
+ * Premium tier required on backend.
  */
 import { useEffect, useState, useRef } from 'react';
+import { Platform } from 'react-native';
 import { buildLiveWebSocketUrl, subscribeApiOriginChanged } from '../services/api';
 import { useAppSelector } from '../store/hooks';
 
@@ -53,10 +55,21 @@ export function useLiveUpdates(
       setConnected(false);
       return;
     }
-    const wsUrl = buildLiveWebSocketUrl(gameId, accessToken);
+    const wsUrl = buildLiveWebSocketUrl(gameId);
 
     setError(null);
-    const ws = new WebSocket(wsUrl);
+    // Native: Bearer in handshake headers. Web/React-Native-web: no custom WS headers — legacy query (server accepts both).
+    const NativeWS = WebSocket as unknown as new (
+      url: string,
+      protocols?: string | string[],
+      options?: unknown
+    ) => WebSocket;
+    const ws =
+      Platform.OS === 'web'
+        ? new WebSocket(`${wsUrl}?token=${encodeURIComponent(accessToken)}`)
+        : new NativeWS(wsUrl, [], {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
     wsRef.current = ws;
 
     ws.onopen = () => {

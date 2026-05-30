@@ -97,7 +97,7 @@ def sync_clearsports_soccer_standings_for_league(
             .first()
         )
         if existing:
-            existing.rank = rk
+            existing.league_rank = rk
             existing.wins = w
             existing.draws = d
             existing.losses = l
@@ -108,7 +108,7 @@ def sync_clearsports_soccer_standings_for_league(
                 TeamStanding(
                     league=app_league,
                     team_id=team.id,
-                    rank=rk,
+                    league_rank=rk,
                     wins=w,
                     draws=d,
                     losses=l,

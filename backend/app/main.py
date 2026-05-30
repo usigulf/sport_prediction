@@ -105,7 +105,16 @@ async def health_check():
 
 
 def _get_ws_token(websocket: WebSocket) -> Optional[str]:
-    """Get JWT from WebSocket query string (?token=...) or (?access_token=...)."""
+    """
+    JWT for WebSocket auth: prefer Authorization Bearer header (not logged in URLs/referrers).
+    Falls back to query ?token= / ?access_token= for older clients.
+    """
+    auth = websocket.headers.get("authorization") or websocket.headers.get("Authorization")
+    if auth:
+        auth = auth.strip()
+        if auth.lower().startswith("bearer "):
+            return auth[7:].strip()
+        return auth or None
     query_string = websocket.scope.get("query_string") or b""
     query = parse_qs(query_string.decode("utf-8"))
     token = (query.get("token") or query.get("access_token")) or []
@@ -124,7 +133,8 @@ async def websocket_live_updates(
 ):
     """
     Live updates stream for a game. Sends prediction + score every 30s (stub until real live pipeline).
-    Requires JWT in query: ?token=<access_token>. Premium tier required for live updates.
+    Requires JWT: Authorization: Bearer <access_token> (preferred), or legacy ?token= on the URL.
+    Premium tier required for live updates.
     """
     # Accept first: if we close() before accept(), uvicorn maps that to HTTP 403 on the handshake,
     # which breaks clients and confuses operators — use WS close codes after accept instead.
@@ -146,8 +156,13 @@ async def websocket_live_updates(
 
         token = _get_ws_token(websocket)
         if not token:
-            await websocket.send_json({"error": "Missing token. Use ?token=<access_token>"})
-            await websocket.close(code=1008, reason="Missing token. Use ?token=<access_token>")
+            await websocket.send_json(
+                {"error": "Missing token. Send Authorization: Bearer <access_token> or use ?token=<access_token>"}
+            )
+            await websocket.close(
+                code=1008,
+                reason="Missing token — use Authorization header or legacy ?token=",
+            )
             return
         payload = verify_access_token(token)
         if not payload:

@@ -10,7 +10,8 @@ import {
   Animated,
   FlatList,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { CompositeNavigationProp, useNavigation } from '@react-navigation/native';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { GameCard } from '../components/GameCard';
@@ -22,17 +23,27 @@ import { OctobetiQWordmark } from '../components/OctobetiQWordmark';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchUpcomingGames, restoreGamesFromCache } from '../store/slices/gamesSlice';
 import { apiService } from '../services/api';
-import { RootStackParamList } from '../navigation/AppNavigator';
+import { MainTabParamList, RootStackParamList } from '../navigation/AppNavigator';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
-import { SPORT_OPTIONS, HOME_HERO_EMPTY_TAGLINE } from '../constants/leagues';
+import {
+  compareLeagueDisplayOrder,
+  HOME_HEADER_SUBTITLE,
+  HOME_HERO_EMPTY_TAGLINE,
+  isSoccerLeague,
+} from '../constants/leagues';
+import { formatLeagueLabel } from '../utils/leagueDisplay';
 import { theme } from '../constants/theme';
 import { soccerBetaFetchParams } from '../utils/soccerBetaFetch';
+import { hasProAccess } from '../utils/subscription';
 import { SoccerBetaNotice } from '../components/SoccerBetaNotice';
 import { useAdEngine } from '../ads/engine/AdEngineContext';
 import { NativeFeedAdCard } from '../ads/components/NativeFeedAdCard';
 import { BannerStrip } from '../ads/components/BannerStrip';
 
-type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList>;
+type HomeScreenNavigationProp = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabParamList, 'Home'>,
+  StackNavigationProp<RootStackParamList>
+>;
 
 function formatCachedAt(iso: string | null): string {
   if (!iso) return '';
@@ -157,24 +168,57 @@ export const HomeScreen: React.FC = () => {
     }).catch(() => {});
   }, []);
 
+  const loadChallengeCount = useCallback(async (tier: string) => {
+    if (!hasProAccess(tier)) {
+      setChallengeCount(0);
+      return;
+    }
+    try {
+      const r = await apiService.getChallenges({ limit: 50 });
+      setChallengeCount(r?.count ?? r?.challenges?.length ?? 0);
+    } catch {
+      setChallengeCount(0);
+    }
+  }, []);
+
   useEffect(() => {
     if (!isAuthenticated) {
       setFavoritesCount(null);
+      setChallengeCount(0);
       return;
     }
-    apiService.getCurrentUser().then((u: any) => {
-      if (u?.subscription_tier) setSubscriptionTier(u.subscription_tier);
-    }).catch(() => {});
-    apiService.getChallenges({ limit: 50 }).then((r: any) => {
-      setChallengeCount(r?.count ?? r?.challenges?.length ?? 0);
-    }).catch(() => {});
-    apiService.getFavorites().then((favs: any) => {
-      setFavoritesCount({
-        leagues: favs?.leagues?.length ?? 0,
-        teams: favs?.teams?.length ?? 0,
-      });
-    }).catch(() => setFavoritesCount(null));
-  }, [isAuthenticated]);
+    let cancelled = false;
+    (async () => {
+      let tier = user?.subscriptionTier ?? subscriptionTier;
+      try {
+        const u = (await apiService.getCurrentUser()) as { subscription_tier?: string };
+        if (u?.subscription_tier) {
+          tier = u.subscription_tier;
+          if (!cancelled) setSubscriptionTier(u.subscription_tier);
+        }
+      } catch {
+        /* profile optional for home */
+      }
+      if (!cancelled) await loadChallengeCount(tier);
+      if (!cancelled) {
+        try {
+          const favs = (await apiService.getFavorites()) as {
+            leagues?: unknown[];
+            teams?: unknown[];
+          };
+          setFavoritesCount({
+            leagues: favs?.leagues?.length ?? 0,
+            teams: favs?.teams?.length ?? 0,
+          });
+        } catch {
+          setFavoritesCount(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, loadChallengeCount, user?.subscriptionTier]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -185,12 +229,15 @@ export const HomeScreen: React.FC = () => {
       apiService.getAccuracy().then((d) => {
         if (d?.accuracy_pct != null) setAccuracyPct(Math.round(d.accuracy_pct));
       }).catch(() => {}),
-      isAuthenticated ? apiService.getChallenges({ limit: 50 }).then((r: any) => {
-        setChallengeCount(r?.count ?? r?.challenges?.length ?? 0);
-      }).catch(() => {}) : Promise.resolve(),
-      isAuthenticated ? apiService.getCurrentUser().then((u: any) => {
-        if (u?.subscription_tier) setSubscriptionTier(u.subscription_tier);
-      }).catch(() => {}) : Promise.resolve(),
+      isAuthenticated
+        ? apiService
+            .getCurrentUser()
+            .then((u: { subscription_tier?: string }) => {
+              if (u?.subscription_tier) setSubscriptionTier(u.subscription_tier);
+              return loadChallengeCount(u?.subscription_tier ?? subscriptionTier);
+            })
+            .catch(() => loadChallengeCount(subscriptionTier))
+        : Promise.resolve(),
       isAuthenticated ? apiService.getFavorites().then((favs: any) => {
         setFavoritesCount({
           leagues: favs?.leagues?.length ?? 0,
@@ -257,7 +304,7 @@ export const HomeScreen: React.FC = () => {
           <View style={styles.logoContainer}>
             <View style={styles.headerTextContainer}>
               <OctobetiQWordmark variant="header" />
-              <Text style={styles.headerSubtitle}>AI Picks That Win More</Text>
+              <Text style={styles.headerSubtitle}>{HOME_HEADER_SUBTITLE}</Text>
             </View>
           </View>
         </View>
@@ -527,9 +574,11 @@ export const HomeScreen: React.FC = () => {
       )}
 
       {/* Games by League */}
-      {Object.entries(gamesByLeague).map(([league, games], sectionIndex) => {
+      {Object.entries(gamesByLeague)
+        .sort(([a], [b]) => compareLeagueDisplayOrder(a, b))
+        .map(([league, games], sectionIndex) => {
         if (games.length === 0 || games[0]?.id === featuredGame?.id) return null;
-        const leagueLabel = SPORT_OPTIONS.find((s) => s.id === league)?.label || league.toUpperCase().replace('_', ' ');
+        const leagueLabel = formatLeagueLabel(league);
         const spacing = adEngine.initialized ? adEngine.spacingForHome() : 4;
         const showMidRail =
           adEngine.initialized &&
@@ -543,7 +592,13 @@ export const HomeScreen: React.FC = () => {
               <Text style={styles.sectionTitle}>{leagueLabel}</Text>
               <TouchableOpacity
                 onPress={() => {
-                  navigation.navigate('Games');
+                  const hub =
+                    league === 'nfl' || league === 'nba'
+                      ? league
+                      : isSoccerLeague(league)
+                        ? 'soccer'
+                        : league;
+                  navigation.navigate('Games', { league: hub });
                 }}
                 style={styles.seeAllButton}
               >

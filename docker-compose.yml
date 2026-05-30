@@ -67,8 +67,8 @@ services:
       LOG_LEVEL: INFO
       # Sklearn pickles for explanations + POST /internal/predictions/run (train: ml/training/train_simple_model.py)
       EXPLANATION_MODEL_DIR: /models
-      # Same secret as prediction-scheduler / scripts/run_predictions_job.py
-      PUSH_CRON_SECRET: ${PUSH_CRON_SECRET:-changeme}
+      # Required for `--profile predictions` schedulers and any /internal cron calls. Empty = cron returns 501 (safe default; no weak placeholder).
+      PUSH_CRON_SECRET: ${PUSH_CRON_SECRET:-}
       # Stripe: passed via Compose substitution from project-root .env (same file as POSTGRES_PASSWORD).
       # If unset here, env_file can still supply them unless an empty key in another file overrides.
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
@@ -98,7 +98,8 @@ services:
     image: curlimages/curl:8.5.0
     container_name: sport-prediction-prediction-scheduler
     environment:
-      PUSH_CRON_SECRET: ${PUSH_CRON_SECRET:-changeme}
+      # Same value as api PUSH_CRON_SECRET in .env; empty curls get 401/501 from /internal/*
+      PUSH_CRON_SECRET: ${PUSH_CRON_SECRET:-}
       API_INTERNAL_URL: http://api:8000
     # curl image ENTRYPOINT is ["curl"] — override with sh -c. One line only (multiline YAML breaks || parsing).
     entrypoint: ["/bin/sh", "-c"]
@@ -116,7 +117,7 @@ services:
     image: curlimages/curl:8.5.0
     container_name: sport-prediction-soccer-schedule-sync
     environment:
-      PUSH_CRON_SECRET: ${PUSH_CRON_SECRET:-changeme}
+      PUSH_CRON_SECRET: ${PUSH_CRON_SECRET:-}
       API_INTERNAL_URL: http://api:8000
     entrypoint: ["/bin/sh", "-c"]
     command:

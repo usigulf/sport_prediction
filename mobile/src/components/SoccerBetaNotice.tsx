@@ -25,7 +25,7 @@ const styles = StyleSheet.create({
     marginHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.sm,
     padding: theme.spacing.sm,
-    borderRadius: theme.borderRadius.md,
+    borderRadius: theme.radii.md,
     backgroundColor: theme.colors.backgroundElevated,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: theme.colors.borderSubtle,

@@ -57,6 +57,30 @@ function stripDevConfidenceCopy(text: string): string | null {
   return t.length > 0 ? t : null;
 }
 
+const FACTOR_HELP: Record<string, string> = {
+  'Season win-rate edge':
+    'Difference in season-level win-rate inputs between home and away.',
+  'Recent form edge':
+    'Difference in recent-form inputs (recent finished fixtures carry more weight).',
+  'Home advantage':
+    'Home venue bump in the model feature set.',
+  'Rest days differential':
+    'Recovery-time difference between the two teams.',
+  'Scoring environment tilt':
+    'Relative scoring environment expected for each side in this matchup.',
+};
+
+function factorLabel(name: string): string {
+  switch (name) {
+    case 'Home win probability':
+      return 'Home win probability (fallback)';
+    case 'Away win probability':
+      return 'Away win probability (fallback)';
+    default:
+      return name;
+  }
+}
+
 function AnalysisSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <View style={styles.sectionCard}>
@@ -526,10 +550,11 @@ export const ExplanationView: React.FC<ExplanationViewProps> = ({
       {showModelDrivers ? (
         <AnalysisSection title="What drove this pick">
           <Text style={styles.bodyLead}>Strongest model inputs for this version (not live odds).</Text>
+          <Text style={styles.driverHint}>Positive values lean home; negative values lean away.</Text>
           {explanation.top_features!.map((feature: { feature: string; shap_value: number; description?: string }, index: number) => (
             <View key={index} style={styles.featureItem}>
               <View style={styles.featureHeader}>
-                <Text style={styles.featureName}>{feature.feature}</Text>
+                <Text style={styles.featureName}>{factorLabel(feature.feature)}</Text>
                 <View
                   style={[
                     styles.shapBadge,
@@ -552,9 +577,9 @@ export const ExplanationView: React.FC<ExplanationViewProps> = ({
                   </Text>
                 </View>
               </View>
-              {feature.description ? (
-                <Text style={styles.featureDescription}>{feature.description}</Text>
-              ) : null}
+              <Text style={styles.featureDescription}>
+                {feature.description?.trim() || FACTOR_HELP[feature.feature] || 'Model-derived matchup factor.'}
+              </Text>
             </View>
           ))}
         </AnalysisSection>
@@ -783,6 +808,12 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     lineHeight: 21,
     marginBottom: theme.spacing.sm,
+  },
+  driverHint: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    marginBottom: theme.spacing.sm,
+    lineHeight: 18,
   },
   oneX2Grid: {
     flexDirection: 'row',

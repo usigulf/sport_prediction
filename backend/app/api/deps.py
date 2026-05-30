@@ -76,10 +76,17 @@ def get_current_user_optional(
 
 
 def _client_ip(request: Request) -> str:
-    """Client IP for rate limiting (X-Forwarded-For if present, else client.host)."""
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
+    """
+    Client IP for rate limiting.
+
+    X-Forwarded-For is only honored when trust_forwarded_headers is True (e.g. behind nginx
+    with proxy_set_header). Otherwise it is trivially spoofed and would break per-IP buckets.
+    """
+    settings = get_settings()
+    if settings.trust_forwarded_headers:
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
     return request.client.host if request.client else "unknown"
 
 

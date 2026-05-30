@@ -20,7 +20,7 @@ def test_normalize_clearsports_game_basic():
     raw = {
         "id": "99",
         "status": "scheduled",
-        "start_time": "2025-05-23T15:00:00Z",
+        "start_time": "2030-05-23T15:00:00Z",
         "home_team": {"name": "Arsenal", "abbreviation": "ARS"},
         "away_team": {"name": "Chelsea", "abbreviation": "CHE"},
         "home_score": 0,

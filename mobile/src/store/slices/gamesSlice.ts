@@ -7,7 +7,7 @@ import { apiService } from '../../services/api';
 import { Game, Prediction, PredictionExplanation } from '../../types';
 
 /** Bump when API shape changes (e.g. team logos) so stale offline cache is not reused forever. */
-const GAMES_CACHE_KEY = '@sport_prediction_games_cache_v4';
+const GAMES_CACHE_KEY = '@sport_prediction_games_cache_v5';
 
 interface GamesState {
   upcomingGames: Game[];

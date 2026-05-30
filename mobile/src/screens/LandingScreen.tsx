@@ -26,6 +26,8 @@ import {
   PRICING_FREE_LEAGUES_LINE,
 } from '../constants/leagues';
 import { apiService } from '../services/api';
+import { soccerBetaFetchParams } from '../utils/soccerBetaFetch';
+import { formatLeagueLabel } from '../utils/leagueDisplay';
 
 type LandingScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -73,11 +75,11 @@ export const LandingScreen: React.FC = () => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await apiService.getTopPicks({ limit: 4 });
+        const res = await apiService.getTopPicks({ limit: 4, ...soccerBetaFetchParams() });
         const mapped = (res.picks ?? []).slice(0, 4).map((p, i) => ({
           match: `${p.home_team_name} vs ${p.away_team_name}`,
           confidence: Math.round(Math.max(p.home_win_probability, p.away_win_probability) * 100),
-          reason: `${p.league} · ${p.confidence_level} confidence`,
+          reason: `${formatLeagueLabel(p.league)} · ${p.confidence_level} confidence`,
           locked: i % 2 === 1,
         }));
         if (!cancelled && mapped.length > 0) setTeaserPicks(mapped);

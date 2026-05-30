@@ -8,18 +8,22 @@ import {
   Alert,
   Linking,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { CompositeNavigationProp, useNavigation } from '@react-navigation/native';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { apiService, setAuthToken } from '../services/api';
 import { getStoredAuth, clearStoredAuth } from '../utils/authStorage';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { logout, fetchUserProfile } from '../store/slices/authSlice';
-import { RootStackParamList } from '../navigation/AppNavigator';
+import { MainTabParamList, RootStackParamList } from '../navigation/AppNavigator';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { theme } from '../constants/theme';
 import { OctobetiQWordmark } from '../components/OctobetiQWordmark';
 
-type ProfileScreenNavigationProp = StackNavigationProp<RootStackParamList>;
+type ProfileScreenNavigationProp = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabParamList, 'Profile'>,
+  StackNavigationProp<RootStackParamList>
+>;
 
 function subscriptionTierLabel(tier: string | undefined): string {
   switch (tier) {

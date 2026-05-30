@@ -137,7 +137,9 @@ async def logout(
         if body.refresh_token:
             payload = verify_refresh_token(body.refresh_token)
             if payload:
-                revoke_token_by_payload(payload)
+                token_uid = payload.get("user_id")
+                if token_uid is not None and str(token_uid) == str(current_user.id):
+                    revoke_token_by_payload(payload)
         if body.access_token:
             payload = verify_access_token(body.access_token)
             if payload and str(payload.get("user_id")) == str(current_user.id):

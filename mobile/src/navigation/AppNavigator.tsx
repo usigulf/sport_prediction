@@ -39,8 +39,8 @@ export type RootStackParamList = {
   MainTabs: undefined;
   GameDetail: { gameId: string };
   PredictionHistory: undefined;
-  /** Params all optional — omit when opening Subscription from the menu. */
-  Paywall: { emphasizeTier?: 'premium' | 'premium_plus'; contextMessage?: string };
+  /** Params optional — can navigate('Paywall') or pass emphasis/context. */
+  Paywall: { emphasizeTier?: 'premium' | 'premium_plus'; contextMessage?: string } | undefined;
   Accuracy: undefined;
   Leaderboards: undefined;
   Challenges: undefined;

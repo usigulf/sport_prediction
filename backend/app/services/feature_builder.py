@@ -18,7 +18,16 @@ from app.constants.soccer import SOCCER_LEAGUES_SET
 from app.models.game import Game
 from app.models.team_standing import TeamStanding
 
-FeatureSource = Literal["synthetic", "soccer_db_standings", "soccer_sportradar_api"]
+FeatureSource = Literal[
+    "synthetic",
+    "soccer_db_standings",
+    "soccer_sportradar_api",
+    "us_db_standings",
+    "us_recent_form",
+    "neutral_baseline",
+]
+
+US_SPORTS_SET = frozenset({"nfl", "nba"})
 
 
 @dataclass(frozen=True)
@@ -406,6 +415,132 @@ def _soccer_features_from_sportradar_api(db: Session, game: Game, settings) -> d
     return _build_soccer_features_from_recs(db, game, league, rh, ra)
 
 
+def _us_winrate_rank_from_standings(db: Session, team_id, league: str) -> tuple[float, int] | None:
+    """(win_rate, league_rank) from a synced US standings row, or None when absent."""
+    r = (
+        db.query(TeamStanding)
+        .filter(TeamStanding.league == league, TeamStanding.team_id == team_id)
+        .first()
+    )
+    if r is None:
+        return None
+    played = (r.wins or 0) + (r.losses or 0) + (r.draws or 0)
+    if played <= 0:
+        return None
+    win_rate = (r.wins + 0.5 * (r.draws or 0)) / played
+    return round(float(win_rate), 4), int(r.league_rank or 99)
+
+
+def _us_avg_points_from_recent_games(
+    db: Session, team_id, league: str, before: datetime | None, limit: int = 8
+) -> float | None:
+    """Average points the team actually scored in its last finished league games."""
+    past = _recent_finished_league_games_for_team(db, team_id, league, before, limit)
+    if not past:
+        return None
+    scored: list[int] = []
+    for g in past:
+        if g.home_team_id == team_id:
+            scored.append(g.home_score or 0)
+        else:
+            scored.append(g.away_score or 0)
+    if not scored:
+        return None
+    return round(sum(scored) / len(scored), 4)
+
+
+def _us_sports_features(
+    db: Session, game: Game
+) -> tuple[dict[str, float | int], FeatureSource] | None:
+    """
+    Real NFL/NBA features from synced standings and recent finished games.
+    Returns None when no real signal exists for either side (caller falls back
+    to a neutral baseline rather than random noise).
+    """
+    league = (game.league or "").lower()
+    if league not in US_SPORTS_SET or not game.home_team or not game.away_team:
+        return None
+    kickoff = _as_utc(game.scheduled_time)
+    base_h, base_a = _LEAGUE_SCORE_BASE.get(league, (24.0, 21.0))
+
+    h_rec = _us_winrate_rank_from_standings(db, game.home_team_id, league)
+    a_rec = _us_winrate_rank_from_standings(db, game.away_team_id, league)
+    h_form = _form_from_recent_games(db, game.home_team_id, league, kickoff)
+    a_form = _form_from_recent_games(db, game.away_team_id, league, kickoff)
+    h_score = _us_avg_points_from_recent_games(db, game.home_team_id, league, kickoff)
+    a_score = _us_avg_points_from_recent_games(db, game.away_team_id, league, kickoff)
+
+    has_standings = h_rec is not None and a_rec is not None
+    has_any_signal = any(v is not None for v in (h_rec, a_rec, h_form, a_form, h_score, a_score))
+    if not has_any_signal:
+        return None
+
+    h_wr = h_rec[0] if h_rec else (h_form if h_form is not None else 0.5)
+    a_wr = a_rec[0] if a_rec else (a_form if a_form is not None else 0.5)
+    if h_form is None:
+        h_form = h_wr
+    if a_form is None:
+        a_form = a_wr
+    h_avg = h_score if h_score is not None else base_h
+    a_avg = a_score if a_score is not None else base_a
+
+    rank_gap = (a_rec[1] - h_rec[1]) if (h_rec and a_rec) else 0
+    home_adv = round(0.032 + 0.006 * max(-5, min(5, rank_gap)), 4)
+    home_adv = max(0.02, min(0.10, home_adv))
+
+    rest_h = _rest_days_before(db, game.home_team_id, league, kickoff)
+    rest_a = _rest_days_before(db, game.away_team_id, league, kickoff)
+
+    features: dict[str, float | int] = {
+        "home_team_win_rate": round(float(h_wr), 4),
+        "away_team_win_rate": round(float(a_wr), 4),
+        "home_team_avg_score": round(float(h_avg), 4),
+        "away_team_avg_score": round(float(a_avg), 4),
+        "home_team_recent_form": round(float(h_form), 4),
+        "away_team_recent_form": round(float(a_form), 4),
+        "home_advantage": home_adv,
+        "rest_days_home": rest_h,
+        "rest_days_away": rest_a,
+    }
+    if game.status == "live":
+        margin = (game.home_score or 0) - (game.away_score or 0)
+        bump = max(-0.2, min(0.2, margin * 0.012))
+        features["home_team_recent_form"] = round(
+            min(0.95, float(features["home_team_recent_form"]) + bump), 4
+        )
+        features["away_team_recent_form"] = round(
+            max(0.05, float(features["away_team_recent_form"]) - bump * 0.85), 4
+        )
+    return features, ("us_db_standings" if has_standings else "us_recent_form")
+
+
+def _neutral_feature_dict(game: Game) -> dict[str, float | int]:
+    """
+    Deterministic, honest priors for matchups with no synced data yet — an even
+    contest with a small home edge. Replaces random synthetic features so the
+    app never presents fabricated confidence.
+    """
+    league = (game.league or "").lower()
+    base_h, base_a = _LEAGUE_SCORE_BASE.get(league, (2.0, 1.8))
+    features: dict[str, float | int] = {
+        "home_team_win_rate": 0.5,
+        "away_team_win_rate": 0.5,
+        "home_team_avg_score": float(base_h),
+        "away_team_avg_score": float(base_a),
+        "home_team_recent_form": 0.5,
+        "away_team_recent_form": 0.5,
+        "home_advantage": 0.04,
+        "rest_days_home": 4,
+        "rest_days_away": 4,
+    }
+    if game.status == "live":
+        margin = (game.home_score or 0) - (game.away_score or 0)
+        bump = max(-0.2, min(0.2, margin * 0.012))
+        features["home_team_recent_form"] = round(min(0.95, 0.5 + bump), 4)
+        features["away_team_recent_form"] = round(max(0.05, 0.5 - bump * 0.85), 4)
+    return features
+
+
 def build_game_features(game: Game, db: Session | None) -> tuple[dict[str, float | int], FeatureSource]:
     if db is not None:
         league = (game.league or "").lower()
@@ -422,6 +557,16 @@ def build_game_features(game: Game, db: Session | None) -> tuple[dict[str, float
             soccer = _soccer_features_from_sportradar_api(db, game, settings)
             if soccer is not None:
                 return soccer, "soccer_sportradar_api"
+        elif league in US_SPORTS_SET and game.home_team and game.away_team:
+            us = _us_sports_features(db, game)
+            if us is not None:
+                return us
+            return _neutral_feature_dict(game), "neutral_baseline"
+    # Production never serves random features; non-prod keeps drift for demos.
+    from app.config import get_settings
+
+    if (get_settings().environment or "").lower() == "production":
+        return _neutral_feature_dict(game), "neutral_baseline"
     return _synthetic_feature_dict(game), "synthetic"
 
 

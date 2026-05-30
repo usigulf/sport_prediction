@@ -154,7 +154,7 @@ export const AccuracyScreen: React.FC = () => {
         <Text style={styles.bigNumber}>{d.accuracy_pct}%</Text>
         <Text style={styles.cardLabel}>Overall accuracy</Text>
         <Text style={styles.cardDetail}>
-          {d.correct} correct out of {d.total_games} games
+          {d.correct} correct out of {d.total} games
         </Text>
       </View>
 
@@ -163,11 +163,11 @@ export const AccuracyScreen: React.FC = () => {
         <Text style={styles.windowHint}>Since {formatWindowStart(roll.window_start_iso)}</Text>
         <Text style={styles.bigNumberSmall}>{roll.accuracy_pct}%</Text>
         <Text style={styles.cardDetail}>
-          {roll.correct} correct out of {roll.total_games} games (in window)
+          {roll.correct} correct out of {roll.total} games (in window)
         </Text>
       </View>
 
-      {d.total_games === 0 && (
+      {d.total === 0 && (
         <Text style={styles.emptyText}>
           No finished games with predictions yet. Accuracy will appear here as games complete.
         </Text>

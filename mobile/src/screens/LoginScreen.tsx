@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { apiService, setAuthToken, checkBackendHealth } from '../services/api';
+import { apiService, setAuthToken } from '../services/api';
 import { setStoredAuth } from '../utils/authStorage';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useAppDispatch } from '../store/hooks';
@@ -21,6 +21,7 @@ import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { registerPushTokenIfPossible } from '../utils/pushNotifications';
 import { getPushNotificationsEnabled } from '../utils/settingsStorage';
 import { theme } from '../constants/theme';
+import { AUTH_SCREEN_TAGLINE } from '../constants/leagues';
 import { OctobetiQWordmark } from '../components/OctobetiQWordmark';
 import { AuthTrustLinks } from '../components/AuthTrustLinks';
 
@@ -32,15 +33,6 @@ export const LoginScreen: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [backendStatus, setBackendStatus] = useState<{ ok: boolean; url: string } | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    checkBackendHealth().then((r) => {
-      if (!cancelled) setBackendStatus(r);
-    });
-    return () => { cancelled = true; };
-  }, []);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -53,21 +45,29 @@ export const LoginScreen: React.FC = () => {
       const response = await apiService.login(email, password);
       setAuthToken(response.access_token);
       dispatch(setUser({ email, token: response.access_token }));
-      await setStoredAuth({
-        accessToken: response.access_token,
-        refreshToken: response.refresh_token,
-        email,
-      });
+      // Persistence/profile/push failures should not invalidate a successful sign-in.
+      try {
+        await setStoredAuth({
+          accessToken: response.access_token,
+          refreshToken: response.refresh_token,
+          email,
+        });
+      } catch {
+        /* non-blocking */
+      }
       await dispatch(fetchUserProfile()).unwrap().catch(() => {});
-
-      const pushEnabled = await getPushNotificationsEnabled();
-      if (pushEnabled) registerPushTokenIfPossible();
+      try {
+        const pushEnabled = await getPushNotificationsEnabled();
+        if (pushEnabled) registerPushTokenIfPossible();
+      } catch {
+        /* non-blocking */
+      }
       // Auth state update causes AppNavigator to show the authenticated stack (MainTabs)
     } catch (error: any) {
       const msg = getUserFriendlyMessage(error);
       const hint = msg.includes('reach') || msg.includes('timed out')
-        ? '\n\nStart backend: cd backend && ./run.sh'
-        : '.\n\nIf you don\'t have an account, tap Sign Up.';
+        ? ''
+        : '\n\nIf you don\'t have an account, tap Sign Up.';
       Alert.alert('Login Failed', msg + hint);
     } finally {
       setLoading(false);
@@ -81,23 +81,7 @@ export const LoginScreen: React.FC = () => {
     >
       <View style={styles.content}>
         <OctobetiQWordmark variant="title" style={styles.title} />
-        <Text style={styles.subtitle}>AI-Powered Predictions</Text>
-
-        {backendStatus && (
-          <View style={styles.backendStatus}>
-            <Text style={[styles.backendStatusText, backendStatus.ok ? styles.backendOk : styles.backendFail]}>
-              {backendStatus.ok ? '✓ Backend connected' : '✗ Backend not reachable'}
-            </Text>
-            <Text style={styles.backendUrl}>{backendStatus.url}</Text>
-            {!backendStatus.ok && (
-              <Text style={styles.backendHint}>
-                1) Start backend: cd backend && ./run.sh{'\n'}
-                2) In mobile/.env set EXPO_PUBLIC_API_URL={backendStatus.url}/api/v1 (try :8000 or :8001 to match backend){'\n'}
-                3) Restart Expo. On a device, allow firewall for port 8000/8001.
-              </Text>
-            )}
-          </View>
-        )}
+        <Text style={styles.subtitle}>{AUTH_SCREEN_TAGLINE}</Text>
 
         <View style={styles.form}>
           <TextInput
@@ -167,33 +151,6 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     textAlign: 'center',
     marginBottom: theme.spacing.lg,
-  },
-  backendStatus: {
-    backgroundColor: theme.colors.backgroundCard,
-    borderRadius: theme.radii.md,
-    padding: theme.spacing.sm + 4,
-    marginBottom: theme.spacing.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  backendStatusText: {
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  backendOk: { color: theme.colors.accent },
-  backendFail: { color: theme.colors.secondary },
-  backendUrl: {
-    fontSize: 11,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
-    marginTop: theme.spacing.xs,
-  },
-  backendHint: {
-    fontSize: 11,
-    color: theme.colors.textMuted,
-    textAlign: 'center',
-    marginTop: theme.spacing.sm,
   },
   form: {
     width: '100%',

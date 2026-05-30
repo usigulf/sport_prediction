@@ -474,7 +474,19 @@ def build_data_coverage_note(
         else:
             chunks.append("Recent form window is sparse until more finished league games exist in our DB.")
     else:
-        if src == "synthetic":
+        if src == "us_db_standings":
+            chunks.append(
+                "Inputs use synced league standings (records) plus points scored in recent finished games."
+            )
+        elif src == "us_recent_form":
+            chunks.append(
+                "Inputs use recent finished games (form and points scored); full standings will sharpen this as they sync."
+            )
+        elif src == "neutral_baseline":
+            chunks.append(
+                "No synced results yet for this matchup — an even baseline with a small home edge is used until data lands."
+            )
+        elif src == "synthetic":
             chunks.append(
                 "Feature priors are synthetic for this league until full season data is wired in."
             )

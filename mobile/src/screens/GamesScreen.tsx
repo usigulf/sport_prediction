@@ -321,9 +321,13 @@ export const GamesScreen: React.FC = () => {
           <Text style={styles.headerSubtitle}>
             {selectedLeague === 'soccer'
               ? 'Pick a day — all soccer competitions for that date'
-              : selectedLeague == null
-                ? GAMES_ALL_SPORTS_SUBTITLE
-                : 'Pick a sport, then a view'}
+              : selectedLeague === 'nfl'
+                ? 'NFL schedule & model picks'
+                : selectedLeague === 'nba'
+                  ? 'NBA schedule & model picks'
+                  : selectedLeague == null
+                    ? GAMES_ALL_SPORTS_SUBTITLE
+                    : 'Pick a sport, then a view'}
           </Text>
         </View>
         <ScrollView

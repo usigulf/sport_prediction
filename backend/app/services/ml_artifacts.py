@@ -88,6 +88,39 @@ def predict_from_artifacts(
     }
 
 
+def soccer_three_way_from_home_edge(home_two_way: float) -> tuple[float, float, float]:
+    """
+    Convert a two-way (home-vs-away) win probability into a calibrated soccer
+    1X2 distribution returned as (home, draw, away) that sums to 1.0.
+
+    The draw arm peaks for evenly matched sides (~0.38, enough to be the modal
+    outcome of a coin-flip fixture) and shrinks toward ~0.11 for lopsided
+    matchups, bracketing the ~0.25 long-run draw rate seen in major leagues.
+    Home/away mass is split proportionally from the remaining probability, so the
+    stored pair sums to (1 − draw) and the implied draw used throughout the app
+    equals this draw value. Because the peak exceeds 1/3, the most even matchups
+    are correctly predicted as draws instead of always defaulting to a side.
+    """
+    p = max(0.02, min(0.98, home_two_way))
+    closeness = 1.0 - 2.0 * abs(p - 0.5)  # 1.0 when even, 0.0 when lopsided
+    draw_p = 0.11 + 0.27 * closeness
+    draw_p = max(0.10, min(0.38, draw_p))
+    rem = 1.0 - draw_p
+    home_p = p * rem
+    away_p = (1.0 - p) * rem
+    return round(home_p, 4), round(draw_p, 4), round(away_p, 4)
+
+
+def confidence_from_three_way(home_p: float, draw_p: float, away_p: float) -> str:
+    """Confidence for a 1X2 distribution, based on the leading outcome's mass."""
+    top = max(home_p, draw_p, away_p)
+    if top >= 0.55:
+        return "high"
+    if top >= 0.42:
+        return "medium"
+    return "low"
+
+
 def heuristic_predict(features: dict[str, Any], default_version: str) -> dict[str, Any]:
     """When no pickle model is available, use a linear blend of form features."""
     h_wr = float(features["home_team_win_rate"])

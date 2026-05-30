@@ -22,7 +22,13 @@ from app.services.feature_builder import (
     build_rich_analysis_dict,
     expected_scores_for_league,
 )
-from app.services.ml_artifacts import heuristic_predict, predict_from_artifacts
+from app.constants.soccer import SOCCER_LEAGUES_SET
+from app.services.ml_artifacts import (
+    confidence_from_three_way,
+    heuristic_predict,
+    predict_from_artifacts,
+    soccer_three_way_from_home_edge,
+)
 from app.services.prediction_service import PredictionService
 
 logger = logging.getLogger(__name__)
@@ -75,9 +81,13 @@ def _predict_for_game(
     out = predict_from_artifacts(model_dir, features) if model_dir else None
     if not out:
         out = heuristic_predict(features, get_settings().ml_model_version)
+
+    # The model emits a two-way (home-vs-away) probability. Expected scores use
+    # this true edge before any 1X2 reshaping.
+    home_two_way = float(out["home_win_probability"])
     exp_h, exp_a = expected_scores_for_league(
         game.league,
-        float(out["home_win_probability"]),
+        home_two_way,
         home_team_avg_score=float(features["home_team_avg_score"])
         if isinstance(features.get("home_team_avg_score"), (int, float))
         else None,
@@ -85,6 +95,16 @@ def _predict_for_game(
         if isinstance(features.get("away_team_avg_score"), (int, float))
         else None,
     )
+
+    # Soccer is a 3-outcome market: carve out a real draw arm so the stored
+    # home/away pair sums to (1 − draw). Downstream code derives draw as
+    # 1 − home − away, so this is what makes a draw pick possible at all.
+    if (game.league or "").lower() in SOCCER_LEAGUES_SET:
+        home_p, draw_p, away_p = soccer_three_way_from_home_edge(home_two_way)
+        out["home_win_probability"] = home_p
+        out["away_win_probability"] = away_p
+        out["confidence_level"] = confidence_from_three_way(home_p, draw_p, away_p)
+
     out["expected_home_score"] = exp_h
     out["expected_away_score"] = exp_a
     return out, features, feat_src

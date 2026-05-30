@@ -6,12 +6,18 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_BETA_SOCCER_ONLY": "false"
+      }
     },
     "preview": {
       "distribution": "internal",
       "channel": "preview",
-      "node": "20.18.1"
+      "node": "20.18.1",
+      "env": {
+        "EXPO_PUBLIC_BETA_SOCCER_ONLY": "false"
+      }
     },
     "production": {
       "autoIncrement": true,
@@ -22,7 +28,7 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.octobetiq.com/api/v1",
-        "EXPO_PUBLIC_BETA_SOCCER_ONLY": "true",
+        "EXPO_PUBLIC_BETA_SOCCER_ONLY": "false",
         "EXPO_PUBLIC_ADMOB_PRODUCTION": "true"
       }
     }

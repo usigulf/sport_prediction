@@ -186,6 +186,38 @@ def test_clearsports_health_requires_secret(client):
     assert r.status_code == status.HTTP_401_UNAUTHORIZED
 
 
+def test_internal_allowlist_blocks_disallowed_ip(monkeypatch, client):
+    monkeypatch.setenv("INTERNAL_ALLOWED_CIDRS", "10.0.0.0/8")
+    monkeypatch.setenv("TRUST_FORWARDED_HEADERS", "true")
+    get_settings.cache_clear()
+    r = client.get(
+        "/internal/health/clearsports",
+        headers={**_headers(), "X-Forwarded-For": "8.8.8.8"},
+    )
+    assert r.status_code == status.HTTP_403_FORBIDDEN
+
+
+def test_internal_allowlist_allows_allowed_ip(monkeypatch, client):
+    monkeypatch.setenv("INTERNAL_ALLOWED_CIDRS", "10.0.0.0/8,127.0.0.1/32")
+    monkeypatch.setenv("TRUST_FORWARDED_HEADERS", "true")
+    monkeypatch.setattr(
+        "app.api.internal.clearsports_health_probe",
+        lambda _s: {
+            "clearsports_configured": True,
+            "clearsports_ok": True,
+            "clearsports_http_status": 200,
+            "sample_epl_games_count": 1,
+            "clearsports_base_url": "https://api.clearsportsapi.com",
+        },
+    )
+    get_settings.cache_clear()
+    r = client.get(
+        "/internal/health/clearsports",
+        headers={**_headers(), "X-Forwarded-For": "10.1.2.3"},
+    )
+    assert r.status_code == status.HTTP_200_OK
+
+
 def test_soccer_sync_schedules_route(monkeypatch, client):
     from app.services.sportradar_soccer_schedule_sync import SoccerScheduleSyncResult
     from app.services.sportradar_soccer_standings_sync import SoccerStandingsSyncResult
