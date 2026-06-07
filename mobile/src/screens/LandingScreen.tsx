@@ -37,12 +37,41 @@ const PICK_CARD_WIDTH = 300;
 
 const FALLBACK_BG = 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1200&q=80';
 
-const FALLBACK_TEASER_PICKS = [
-  { match: 'Lakers vs Celtics', confidence: 68, reason: 'Matchup & pace inputs', locked: false },
-  { match: 'Chiefs vs Bills', confidence: 72, reason: 'Strength vs strength', locked: true },
-  { match: 'Man City vs Arsenal', confidence: 61, reason: 'Form & table context', locked: false },
-  { match: 'Real Madrid vs Barcelona', confidence: 65, reason: 'Rivalry form snapshot', locked: true },
-];
+type TeaserPick = {
+  id: string;
+  match: string;
+  confidence: number;
+  reason: string;
+  locked: boolean;
+};
+
+function mapFeedPickToTeaser(pick: {
+  id: string;
+  league: string;
+  home_team?: { name?: string } | null;
+  away_team?: { name?: string } | null;
+  prediction?: {
+    home_win_probability: number;
+    away_win_probability: number;
+    confidence_level?: string;
+  } | null;
+}, index: number): TeaserPick | null {
+  const pred = pick.prediction;
+  if (!pred) return null;
+  const home = pick.home_team?.name?.trim() || 'Home';
+  const away = pick.away_team?.name?.trim() || 'Away';
+  const confidence = Math.round(
+    Math.max(pred.home_win_probability, pred.away_win_probability) * 100,
+  );
+  if (!Number.isFinite(confidence) || confidence <= 0) return null;
+  return {
+    id: pick.id,
+    match: `${home} vs ${away}`,
+    confidence,
+    reason: `${formatLeagueLabel(pick.league)} · ${pred.confidence_level ?? 'model'} confidence`,
+    locked: index % 2 === 1,
+  };
+}
 
 const FEATURES = [
   {
@@ -69,22 +98,24 @@ const FEATURES = [
 
 export const LandingScreen: React.FC = () => {
   const navigation = useNavigation<LandingScreenNavigationProp>();
-  const [teaserPicks, setTeaserPicks] = useState(FALLBACK_TEASER_PICKS);
+  const [teaserPicks, setTeaserPicks] = useState<TeaserPick[]>([]);
+  const [teaserLoading, setTeaserLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      setTeaserLoading(true);
       try {
         const res = await apiService.getTopPicks({ limit: 4, ...soccerBetaFetchParams() });
-        const mapped = (res.picks ?? []).slice(0, 4).map((p, i) => ({
-          match: `${p.home_team_name} vs ${p.away_team_name}`,
-          confidence: Math.round(Math.max(p.home_win_probability, p.away_win_probability) * 100),
-          reason: `${formatLeagueLabel(p.league)} · ${p.confidence_level} confidence`,
-          locked: i % 2 === 1,
-        }));
-        if (!cancelled && mapped.length > 0) setTeaserPicks(mapped);
+        const mapped = (res.picks ?? [])
+          .map((p, i) => mapFeedPickToTeaser(p, i))
+          .filter((p): p is TeaserPick => p != null)
+          .slice(0, 4);
+        if (!cancelled) setTeaserPicks(mapped);
       } catch {
-        // keep fallback picks
+        if (!cancelled) setTeaserPicks([]);
+      } finally {
+        if (!cancelled) setTeaserLoading(false);
       }
     })();
     return () => {
@@ -140,27 +171,56 @@ export const LandingScreen: React.FC = () => {
         {/* Today's Picks Teaser */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>High-Confidence Picks Today</Text>
-          <Text style={styles.sectionDisclaimer}>Illustrative examples — not live predictions</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.picksScroll}
-            snapToInterval={PICK_CARD_WIDTH + theme.spacing.md}
-            snapToAlignment="start"
-            decelerationRate="fast"
-          >
-            {teaserPicks.map((pick, i) => (
-              <View key={i} style={styles.pickCard}>
-                {pick.locked && <View style={styles.pickCardLock}><Text style={styles.pickCardLockText}>Premium Unlock</Text></View>}
-                <Text style={styles.pickMatch} numberOfLines={2}>{pick.match}</Text>
-                <View style={styles.confidenceRow}>
-                  <View style={styles.confidenceBarBg}><View style={[styles.confidenceBarFill, { width: `${pick.confidence}%` }]} /></View>
-                  <Text style={styles.confidencePct}>{pick.confidence}%</Text>
+          <Text style={styles.sectionDisclaimer}>
+            {teaserPicks.length > 0
+              ? "Live model picks for today's games — informational only"
+              : 'Fresh picks appear when games are scheduled and modeled'}
+          </Text>
+          {teaserLoading ? (
+            <View style={styles.teaserSkeletonRow}>
+              {[1, 2].map((i) => (
+                <View key={i} style={styles.teaserSkeletonCard}>
+                  <View style={styles.teaserSkeletonLine} />
+                  <View style={[styles.teaserSkeletonLine, styles.teaserSkeletonLineShort]} />
                 </View>
-                <Text style={styles.pickReason} numberOfLines={1}>{pick.reason}</Text>
-              </View>
-            ))}
-          </ScrollView>
+              ))}
+            </View>
+          ) : teaserPicks.length === 0 ? (
+            <View style={styles.teaserEmpty}>
+              <Ionicons name="calendar-outline" size={28} color={theme.colors.textMuted} />
+              <Text style={styles.teaserEmptyTitle}>No picks on the board right now</Text>
+              <Text style={styles.teaserEmptySub}>
+                Sign up free to get alerts when high-confidence plays are ready.
+              </Text>
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.picksScroll}
+              snapToInterval={PICK_CARD_WIDTH + theme.spacing.md}
+              snapToAlignment="start"
+              decelerationRate="fast"
+            >
+              {teaserPicks.map((pick) => (
+                <View key={pick.id} style={styles.pickCard}>
+                  {pick.locked && (
+                    <View style={styles.pickCardLock}>
+                      <Text style={styles.pickCardLockText}>Premium Unlock</Text>
+                    </View>
+                  )}
+                  <Text style={styles.pickMatch} numberOfLines={2}>{pick.match}</Text>
+                  <View style={styles.confidenceRow}>
+                    <View style={styles.confidenceBarBg}>
+                      <View style={[styles.confidenceBarFill, { width: `${pick.confidence}%` }]} />
+                    </View>
+                    <Text style={styles.confidencePct}>{pick.confidence}%</Text>
+                  </View>
+                  <Text style={styles.pickReason} numberOfLines={1}>{pick.reason}</Text>
+                </View>
+              ))}
+            </ScrollView>
+          )}
           <TouchableOpacity style={styles.unlockButton} onPress={handleUnlockMore}>
             <Text style={styles.unlockButtonText}>Unlock More → Sign Up Free</Text>
           </TouchableOpacity>
@@ -352,6 +412,51 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginTop: -theme.spacing.sm,
     marginBottom: theme.spacing.md,
+  },
+  teaserSkeletonRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+    paddingBottom: theme.spacing.sm,
+  },
+  teaserSkeletonCard: {
+    width: PICK_CARD_WIDTH,
+    backgroundColor: theme.colors.backgroundCard,
+    borderRadius: theme.radii.lg,
+    padding: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSubtle,
+  },
+  teaserSkeletonLine: {
+    height: 14,
+    borderRadius: theme.radii.xs,
+    backgroundColor: theme.colors.border,
+    marginBottom: theme.spacing.sm,
+  },
+  teaserSkeletonLineShort: {
+    width: '60%',
+  },
+  teaserEmpty: {
+    alignItems: 'center',
+    paddingVertical: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
+    backgroundColor: theme.colors.backgroundCard,
+    borderRadius: theme.radii.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSubtle,
+  },
+  teaserEmptyTitle: {
+    marginTop: theme.spacing.sm,
+    fontSize: 17,
+    fontWeight: '700',
+    color: theme.colors.text,
+    textAlign: 'center',
+  },
+  teaserEmptySub: {
+    marginTop: theme.spacing.xs,
+    fontSize: 14,
+    color: theme.colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   picksScroll: {
     paddingRight: theme.spacing.lg,
