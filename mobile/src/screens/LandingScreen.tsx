@@ -190,7 +190,7 @@ export const LandingScreen: React.FC = () => {
             </View>
             <View style={[styles.pricingCard, styles.pricingCardHighlight]}>
               <Text style={styles.pricingName}>Premium</Text>
-              <Text style={styles.pricingPrice}>$9.99/mo</Text>
+              <Text style={styles.pricingPrice}>$29.99/mo</Text>
               <Text style={styles.pricingDesc}>Unlimited AI, ad-free, priority props, custom alerts</Text>
               <Text style={styles.pricingTrial}>7-Day Free Trial • Cancel anytime</Text>
             </View>
@@ -200,7 +200,7 @@ export const LandingScreen: React.FC = () => {
               <Text style={styles.proAvailablePill}>Available now</Text>
             </View>
             <Text style={styles.pricingName}>Pro</Text>
-            <Text style={styles.pricingPrice}>$29.99/mo</Text>
+            <Text style={styles.pricingPrice}>$9.99/mo</Text>
             <Text style={styles.pricingDesc}>
               Everything in Premium, plus challenges, leaderboards, and the full player-props experience.
             </Text>

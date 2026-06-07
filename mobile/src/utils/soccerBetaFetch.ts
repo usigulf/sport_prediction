@@ -1,4 +1,4 @@
-import { BETA_SOCCER_ONLY } from '../constants/leagues';
+import { BETA_SOCCER_ONLY, SOCCER_LEAGUE_IDS } from '../constants/leagues';
 import { formatLocalYMD } from './soccerWeek';
 
 /** Query params for games/feed when EXPO_PUBLIC_BETA_SOCCER_ONLY=true */
@@ -14,6 +14,6 @@ export function soccerBetaFetchParams(): {
   return {
     date: formatLocalYMD(new Date()),
     time_zone: tz,
-    leagues: 'premier_league',
+    leagues: SOCCER_LEAGUE_IDS.join(','),
   };
 }

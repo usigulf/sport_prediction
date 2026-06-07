@@ -9,7 +9,12 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppSelector } from '../store/hooks';
 import { theme } from '../constants/theme';
-import { getOnboardingComplete } from '../utils/onboardingStorage';
+import { getOnboardingComplete, setOnboardingComplete } from '../utils/onboardingStorage';
+import { linking } from './linking';
+import { navigationRef } from './navigationRef';
+
+const skipOnboardingForCapture =
+  process.env.EXPO_PUBLIC_APP_STORE_CAPTURE === 'true';
 
 // Screens
 import { HomeScreen } from '../screens/HomeScreen';
@@ -31,6 +36,7 @@ import { LiveHubScreen } from '../screens/LiveHubScreen';
 import { LeaderboardsScreen } from '../screens/LeaderboardsScreen';
 import { ChallengesScreen } from '../screens/ChallengesScreen';
 import { CreateChallengeScreen } from '../screens/CreateChallengeScreen';
+import { ChallengeDetailScreen } from '../screens/ChallengeDetailScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 
 // Types
@@ -45,6 +51,7 @@ export type RootStackParamList = {
   Leaderboards: undefined;
   Challenges: undefined;
   CreateChallenge: undefined;
+  ChallengeDetail: { challengeId: string };
   Settings: undefined;
   Help: undefined;
   PrivacyPolicy: undefined;
@@ -192,6 +199,11 @@ function AuthenticatedStack({ showOnboarding }: { showOnboarding: boolean }) {
               options={{ title: 'Create challenge' }}
             />
             <Stack.Screen
+              name="ChallengeDetail"
+              component={ChallengeDetailScreen}
+              options={{ title: 'Challenge' }}
+            />
+            <Stack.Screen
               name="Settings"
               component={SettingsScreen}
               options={{ title: 'Settings' }}
@@ -227,19 +239,25 @@ export function AppNavigator() {
       return;
     }
     let cancelled = false;
-    getOnboardingComplete().then((done) => {
+    (async () => {
+      if (skipOnboardingForCapture) {
+        await setOnboardingComplete().catch(() => {});
+      }
+      const done = skipOnboardingForCapture
+        ? true
+        : await getOnboardingComplete();
       if (!cancelled) {
         setShowOnboarding(!done);
         setOnboardingChecked(true);
       }
-    });
+    })();
     return () => {
       cancelled = true;
     };
   }, [isAuthenticated]);
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef} linking={linking}>
       {!isAuthenticated ? (
         <Stack.Navigator
           screenOptions={{
@@ -276,6 +294,16 @@ export function AppNavigator() {
             name="Help"
             component={HelpScreen}
             options={{ title: 'Help & FAQ' }}
+          />
+          <Stack.Screen
+            name="PrivacyPolicy"
+            component={PrivacyPolicyScreen}
+            options={{ title: 'Privacy Policy' }}
+          />
+          <Stack.Screen
+            name="TermsOfService"
+            component={TermsOfServiceScreen}
+            options={{ title: 'Terms of Service' }}
           />
         </Stack.Navigator>
       ) : !onboardingChecked ? (

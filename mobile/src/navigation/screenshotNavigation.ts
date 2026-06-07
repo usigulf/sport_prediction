@@ -1,0 +1,170 @@
+/**
+ * Programmatic navigation for App Store screenshots.
+ * Driven by: com.sportsprediction.app://capture/home
+ */
+import { CommonActions } from '@react-navigation/native';
+import { store } from '../store/store';
+import { navigationRef } from './navigationRef';
+
+const TAB_INDEX = {
+  Home: 0,
+  LiveHub: 1,
+  Games: 2,
+  Favorites: 3,
+  Profile: 4,
+} as const;
+
+type TabName = keyof typeof TAB_INDEX;
+
+const ALL_TAB_ROUTES = (
+  ['Home', 'LiveHub', 'Games', 'Favorites', 'Profile'] as const
+).map((name) => ({ name }));
+
+function tabState(active: TabName) {
+  return {
+    index: TAB_INDEX[active],
+    routes: ALL_TAB_ROUTES,
+  };
+}
+
+function waitForNavigationReady(): Promise<void> {
+  return new Promise((resolve) => {
+    if (navigationRef.isReady()) {
+      resolve();
+      return;
+    }
+    const started = Date.now();
+    const tick = setInterval(() => {
+      if (navigationRef.isReady() || Date.now() - started > 10000) {
+        clearInterval(tick);
+        resolve();
+      }
+    }, 50);
+  });
+}
+
+function goToTab(screen: TabName) {
+  navigationRef.dispatch(
+    CommonActions.reset({
+      index: 0,
+      routes: [
+        {
+          name: 'MainTabs',
+          state: tabState(screen),
+        },
+      ],
+    }),
+  );
+}
+
+function goToStackScreen(
+  screen: 'Paywall' | 'Leaderboards' | 'Accuracy' | 'GameDetail',
+  params?: { gameId: string },
+) {
+  navigationRef.dispatch(
+    CommonActions.reset({
+      index: 1,
+      routes: [
+        {
+          name: 'MainTabs',
+          state: tabState('Home'),
+        },
+        {
+          name: screen,
+          params,
+        },
+      ],
+    }),
+  );
+}
+
+export function captureRoutesEnabled(): boolean {
+  if (process.env.EXPO_PUBLIC_APP_STORE_CAPTURE === 'true') return true;
+  return typeof __DEV__ === 'boolean' && __DEV__;
+}
+
+/** Navigate for a capture/* path segment (without prefix). */
+export async function navigateScreenshotRoute(route: string): Promise<void> {
+  await waitForNavigationReady();
+  if (!navigationRef.isReady()) {
+    throw new Error('Navigation not ready');
+  }
+
+  const authed = store.getState().auth.isAuthenticated;
+
+  switch (route) {
+    case 'landing':
+      if (!authed) {
+        navigationRef.dispatch(CommonActions.navigate('Landing'));
+      }
+      return;
+    case 'accuracy':
+      if (authed) {
+        goToStackScreen('Accuracy');
+      } else {
+        navigationRef.dispatch(CommonActions.navigate('Accuracy'));
+      }
+      return;
+    case 'home':
+      if (!authed) throw new Error('Not signed in — log in on the simulator first');
+      goToTab('Home');
+      return;
+    case 'games':
+      if (!authed) throw new Error('Not signed in');
+      goToTab('Games');
+      return;
+    case 'trending':
+      if (!authed) throw new Error('Not signed in');
+      goToTab('LiveHub');
+      return;
+    case 'favorites':
+      if (!authed) throw new Error('Not signed in');
+      goToTab('Favorites');
+      return;
+    case 'profile':
+      if (!authed) throw new Error('Not signed in');
+      goToTab('Profile');
+      return;
+    case 'paywall':
+      if (!authed) throw new Error('Not signed in');
+      goToStackScreen('Paywall');
+      return;
+    case 'leaderboards':
+      if (!authed) throw new Error('Not signed in');
+      goToStackScreen('Leaderboards');
+      return;
+    default: {
+      const gameMatch = route.match(/^game\/(.+)$/);
+      if (gameMatch && authed) {
+        goToStackScreen('GameDetail', { gameId: gameMatch[1] });
+        return;
+      }
+      throw new Error(`Unknown capture route: ${route}`);
+    }
+  }
+}
+
+export async function handleScreenshotDeepLink(url: string): Promise<boolean> {
+  if (!captureRoutesEnabled()) return false;
+
+  const m = url.match(/:\/\/\/?([^?#]+)/);
+  if (!m) return false;
+  const path = m[1].replace(/\/$/, '');
+  if (!path.startsWith('capture/')) return false;
+
+  const route = path.slice('capture/'.length);
+  try {
+    await navigateScreenshotRoute(route);
+    if (__DEV__) {
+      // eslint-disable-next-line no-console
+      console.log(`[screenshot] navigated → capture/${route}`);
+    }
+    return true;
+  } catch (e) {
+    if (__DEV__) {
+      // eslint-disable-next-line no-console
+      console.warn(`[screenshot] capture/${route} failed:`, e);
+    }
+    return false;
+  }
+}

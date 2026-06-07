@@ -1,19 +1,25 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Linking } from 'react-native';
 import { theme } from '../constants/theme';
+
+const SUPPORT_EMAIL = 'support@sportsprediction.com';
+const PRIVACY_URL = 'https://octobetiq.com/privacy';
 
 export const PrivacyPolicyScreen: React.FC = () => {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Privacy Policy</Text>
-      <Text style={styles.updated}>Last updated: February 2025</Text>
+      <Text style={styles.updated}>Last updated: June 2026</Text>
+      <Text style={styles.link} onPress={() => Linking.openURL(PRIVACY_URL).catch(() => {})}>
+        Full policy: {PRIVACY_URL}
+      </Text>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>1. Introduction</Text>
         <Text style={styles.body}>
           octobetiQ ("we", "our", or "the app") is an information-only sports prediction service.
-          This policy describes what data we collect, how we use it, and your rights. We do not sell
-          your personal data.
+          This policy describes what data we collect, how we use it, who we share it with, and your
+          rights. We do not sell your personal information.
         </Text>
       </View>
 
@@ -21,55 +27,62 @@ export const PrivacyPolicyScreen: React.FC = () => {
         <Text style={styles.sectionTitle}>2. Data we collect</Text>
         <Text style={styles.body}>
           • Account: email address and a hashed password when you register.{'\n'}
-          • Usage: which games and predictions you view (prediction history), and your favorite
-          teams and leagues, to personalize your experience and show accuracy stats.{'\n'}
-          • Notifications: if you enable push notifications, we store your device push token to
-          send you game reminders and high-confidence pick alerts.{'\n'}
-          • Technical: we may log general usage (e.g. errors) to improve the service. We do not
-          track you across other apps or sites.
+          • Usage: games and predictions you view, favorites, leagues, and related activity.{'\n'}
+          • Purchases: subscription tier via App Store (RevenueCat) and/or Stripe on the web.{'\n'}
+          • Push: device push token when you enable notifications in Settings.{'\n'}
+          • Ads (free tier): Google AdMob may show ads; on iOS, if you allow App Tracking
+          Transparency, AdMob may use your advertising identifier (IDFA) for ad delivery and
+          measurement.{'\n'}
+          • Technical: server logs and errors to operate and improve the service.
         </Text>
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>3. How we use your data</Text>
         <Text style={styles.body}>
-          We use your data to: provide and personalize the app; send you push notifications you
-          have opted into; enforce subscription and usage limits; improve our models and product;
-          and comply with law. We do not use your data for advertising or sell it to third parties.
+          We use your data to provide and personalize the app; manage subscriptions and limits;
+          send opted-in push notifications; show ads on the free tier; improve our product; and
+          comply with law. We do not sell your personal data.
         </Text>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>4. Data retention</Text>
+        <Text style={styles.sectionTitle}>4. Third parties</Text>
         <Text style={styles.body}>
-          We keep your account and associated data until you delete your account. You can request
-          account deletion by contacting us; we will remove your data within 30 days.
+          We use Google (AdMob), Apple (in-app purchases), RevenueCat (subscriptions), Stripe (web
+          billing), and licensed sports data providers. They process data under their own policies.
         </Text>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>5. Your rights (GDPR / CCPA)</Text>
+        <Text style={styles.sectionTitle}>5. Tracking</Text>
         <Text style={styles.body}>
-          You have the right to: access the personal data we hold about you; correct it; request
-          deletion; and (where applicable) data portability. If you are in the EU/EEA or California,
-          you may also have the right to object or restrict processing and to lodge a complaint
-          with a supervisory authority. To exercise these rights or delete your account, contact us
-          at support@sportsprediction.com.
+          On iOS you may be asked to allow tracking for more relevant ads (ATT). You can change this
+          in Settings → Privacy & Security → Tracking. Premium may not show ads depending on plan.
         </Text>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>6. Security</Text>
+        <Text style={styles.sectionTitle}>6. Data retention & deletion</Text>
         <Text style={styles.body}>
-          We use industry-standard measures (e.g. encryption, secure storage) to protect your
-          data. Passwords are hashed; we do not store plain-text passwords.
+          We keep account data while your account is active. Delete your account in Profile → Delete
+          account, or email {SUPPORT_EMAIL}. We remove personal data within 30 days of a confirmed
+          request.
         </Text>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>7. Contact</Text>
+        <Text style={styles.sectionTitle}>7. Your rights (GDPR / CCPA)</Text>
         <Text style={styles.body}>
-          Questions about this policy or your data: support@sportsprediction.com.
+          You may have the right to access, correct, delete, or export your data, and to object or
+          restrict processing. Contact {SUPPORT_EMAIL} to exercise these rights.
+        </Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>8. Security & contact</Text>
+        <Text style={styles.body}>
+          We use encryption in transit and hashed passwords. Questions: {SUPPORT_EMAIL}.
         </Text>
       </View>
     </ScrollView>
@@ -94,6 +107,11 @@ const styles = StyleSheet.create({
   updated: {
     fontSize: 12,
     color: theme.colors.textMuted,
+    marginBottom: 8,
+  },
+  link: {
+    fontSize: 12,
+    color: theme.colors.accent,
     marginBottom: 20,
   },
   section: {

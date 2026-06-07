@@ -9,6 +9,7 @@ import {
   impliedDrawForSoccer,
   normalizeThreeWay,
 } from '../utils/predictionDisplay';
+import { demoModelDisclaimer, isDemoModelPrediction } from '../utils/predictionTrust';
 
 /** BetQL-style pick strength 1–5 from confidence (high→5, medium→3, low→1). */
 export function confidenceToPickStrength(confidenceLevel: string | undefined): number {
@@ -106,9 +107,13 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
   const qualityLabel = prediction.data_quality_label
     ? `Data quality: ${prediction.data_quality_label.toUpperCase()}`
     : null;
+  const showDemoNote = isDemoModelPrediction(prediction, league);
 
   const content = (
     <>
+      {showDemoNote ? (
+        <Text style={styles.demoNote}>{demoModelDisclaimer(league)}</Text>
+      ) : null}
       <View style={styles.header}>
         <View style={styles.headerTitleCol}>
           <Text style={styles.title}>Prediction</Text>
@@ -253,6 +258,13 @@ const styles = StyleSheet.create({
   },
   cardEmbedded: {
     marginHorizontal: 0,
+  },
+  demoNote: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    lineHeight: 17,
+    marginBottom: theme.spacing.sm,
+    fontStyle: 'italic',
   },
   cardPressed: {
     opacity: 0.85,

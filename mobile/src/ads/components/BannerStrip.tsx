@@ -5,6 +5,7 @@ import { useAdsEnabled } from '../hooks/useAdsEnabled';
 import { AD_UNITS } from '../config/adUnits';
 import { AD_PLATFORM_SUPPORTED, ADS_NATIVE_MODULE_AVAILABLE } from '../constants';
 import { loadGoogleMobileAdsModule } from '../native/loadGma';
+import { HousePromotionCard } from './HousePromotionCard';
 import { theme } from '../../constants/theme';
 
 type Props = {
@@ -37,16 +38,23 @@ export const BannerStrip: React.FC<Props> = ({ screen }) => {
     return null;
   }
 
-  if (
-    !AD_PLATFORM_SUPPORTED ||
-    Platform.OS === 'web' ||
-    !ADS_NATIVE_MODULE_AVAILABLE ||
-    failed
-  ) {
+  if (!AD_PLATFORM_SUPPORTED || Platform.OS === 'web' || !ADS_NATIVE_MODULE_AVAILABLE) {
     return (
-      <View style={styles.placeholder} accessibilityElementsHidden>
-        <Text style={styles.phText} />
-      </View>
+      <HousePromotionCard
+        surface={screen}
+        title="Try octobetiQ Premium"
+        subtitle="Ads unavailable in this build — upgrade for an ad-free experience."
+      />
+    );
+  }
+
+  if (failed) {
+    return (
+      <HousePromotionCard
+        surface={screen}
+        title="Try octobetiQ Premium"
+        subtitle="No ad fill yet — new AdMob units can take up to 48 hours. Premium is ad-free."
+      />
     );
   }
 
@@ -66,7 +74,10 @@ export const BannerStrip: React.FC<Props> = ({ screen }) => {
         onAdLoaded={() => {
           void engine.trackEvent(screen, 'impression', 'banner');
         }}
-        onAdFailedToLoad={() => setFailed(true)}
+        onAdFailedToLoad={(err) => {
+          console.warn('[AdMob] banner failed', screen, err);
+          setFailed(true);
+        }}
       />
     </View>
   );

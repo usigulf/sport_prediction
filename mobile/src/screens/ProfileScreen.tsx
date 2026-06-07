@@ -7,14 +7,17 @@ import {
   TouchableOpacity,
   Alert,
   Linking,
+  ActivityIndicator,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { CompositeNavigationProp, useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { apiService, setAuthToken } from '../services/api';
-import { getStoredAuth, clearStoredAuth } from '../utils/authStorage';
+import { apiService } from '../services/api';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
-import { logout, fetchUserProfile } from '../store/slices/authSlice';
+import { fetchUserProfile } from '../store/slices/authSlice';
+import { signOut } from '../utils/signOut';
 import { MainTabParamList, RootStackParamList } from '../navigation/AppNavigator';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { theme } from '../constants/theme';
@@ -48,6 +51,8 @@ export const ProfileScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const loadUserInfo = async () => {
     setLoadError(null);
@@ -64,25 +69,18 @@ export const ProfileScreen: React.FC = () => {
 
   const tier = user?.subscriptionTier ?? 'free';
 
-  const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Logout',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            const stored = await getStoredAuth();
-            await apiService.logout(stored?.refreshToken, stored?.accessToken);
-          } catch {
-            // still clear local session
-          }
-          await clearStoredAuth();
-          setAuthToken(null);
-          dispatch(logout());
-        },
-      },
-    ]);
+  const handleLogoutPress = () => {
+    if (loggingOut) return;
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    void signOut(dispatch).finally(() => {
+      setLoggingOut(false);
+      setShowLogoutModal(false);
+    });
   };
 
   const handleDeleteAccount = () => {
@@ -97,9 +95,7 @@ export const ProfileScreen: React.FC = () => {
           onPress: async () => {
             try {
               await apiService.deleteAccount();
-              await clearStoredAuth();
-              setAuthToken(null);
-              dispatch(logout());
+              await signOut(dispatch);
               // Navigator switches to unauthenticated stack (Landing) when isAuthenticated becomes false
             } catch (e) {
               Alert.alert('Error', getUserFriendlyMessage(e));
@@ -123,7 +119,12 @@ export const ProfileScreen: React.FC = () => {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      keyboardShouldPersistTaps="handled"
+    >
       {loadError ? (
         <View style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>{loadError}</Text>
@@ -242,10 +243,62 @@ export const ProfileScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Logout</Text>
+      <TouchableOpacity
+        style={[styles.logoutButton, loggingOut && styles.logoutButtonDisabled]}
+        onPress={handleLogoutPress}
+        disabled={loggingOut}
+      >
+        {loggingOut ? (
+          <ActivityIndicator color={theme.colors.text} />
+        ) : (
+          <Text style={styles.logoutText}>Logout</Text>
+        )}
       </TouchableOpacity>
     </ScrollView>
+
+    <Modal
+      visible={showLogoutModal}
+      transparent
+      animationType="fade"
+      onRequestClose={() => {
+        if (!loggingOut) setShowLogoutModal(false);
+      }}
+    >
+      <Pressable
+        style={styles.modalBackdrop}
+        onPress={() => {
+          if (!loggingOut) setShowLogoutModal(false);
+        }}
+      >
+        <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+          <Text style={styles.modalTitle}>Logout</Text>
+          <Text style={styles.modalMessage}>
+            Are you sure you want to logout?
+          </Text>
+          <View style={styles.modalActions}>
+            <TouchableOpacity
+              style={styles.modalCancelButton}
+              onPress={() => setShowLogoutModal(false)}
+              disabled={loggingOut}
+            >
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalConfirmButton, loggingOut && styles.logoutButtonDisabled]}
+              onPress={confirmLogout}
+              disabled={loggingOut}
+            >
+              {loggingOut ? (
+                <ActivityIndicator color={theme.colors.text} />
+              ) : (
+                <Text style={styles.modalConfirmText}>Logout</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+    </>
   );
 };
 
@@ -253,6 +306,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  scrollContent: {
+    paddingBottom: theme.spacing.xl * 2,
   },
   header: {
     backgroundColor: theme.colors.backgroundElevated,
@@ -364,9 +420,71 @@ const styles = StyleSheet.create({
     minHeight: theme.minTouchSize,
     justifyContent: 'center',
   },
+  logoutButtonDisabled: {
+    opacity: 0.6,
+  },
   logoutText: {
     color: theme.colors.text,
     fontSize: 16,
     fontWeight: '600',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing.lg,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: theme.colors.backgroundElevated,
+    borderRadius: theme.radii.lg,
+    padding: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSubtle,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginBottom: theme.spacing.sm,
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: theme.colors.textSecondary,
+    lineHeight: 22,
+    marginBottom: theme.spacing.lg,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+  },
+  modalCancelButton: {
+    flex: 1,
+    minHeight: theme.minTouchSize,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  modalCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.text,
+  },
+  modalConfirmButton: {
+    flex: 1,
+    minHeight: theme.minTouchSize,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: theme.radii.md,
+    backgroundColor: theme.colors.secondary,
+  },
+  modalConfirmText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.text,
   },
 });

@@ -301,8 +301,9 @@ class ApiService {
     } catch (error: any) {
       clearTimeout(timeoutId);
       if (error?.status === 401) {
-        const isRefreshEndpoint = endpoint.startsWith('/auth/refresh');
-        if (!isRetryAfterRefresh && !isRefreshEndpoint) {
+        const isAuthSessionEndpoint =
+          endpoint.startsWith('/auth/refresh') || endpoint.startsWith('/auth/logout');
+        if (!isRetryAfterRefresh && !isAuthSessionEndpoint) {
           try {
             const stored = await getStoredAuth();
             const rt = stored?.refreshToken;
@@ -324,9 +325,11 @@ class ApiService {
             // refresh failed or no refresh token
           }
         }
-        setAuthToken(null);
-        clearStoredAuth().catch(() => {});
-        onUnauthorized?.();
+        if (!endpoint.startsWith('/auth/logout')) {
+          setAuthToken(null);
+          clearStoredAuth().catch(() => {});
+          onUnauthorized?.();
+        }
       }
       const errMsg = error?.message ?? String(error);
       const isNetworkError = errMsg.includes('Network request failed') || errMsg.includes('Failed to fetch');
@@ -346,14 +349,18 @@ class ApiService {
       }
       if (error?.name !== 'AbortError') {
         const st = error?.status;
-        console.error(
-          `API Error [${method} ${endpoint}]${st != null ? ` HTTP ${st}` : ''} base=${effectiveBaseUrl}:`,
-          error
-        );
-        if (__DEV__ && st === 503) {
+        const expectedMissing =
+          st === 404 && /\/explanation\b/.test(endpoint);
+        if (!expectedMissing) {
           console.error(
-            '503 usually means the backend DB connection failed (check server DATABASE_URL / Postgres).'
+            `API Error [${method} ${endpoint}]${st != null ? ` HTTP ${st}` : ''} base=${effectiveBaseUrl}:`,
+            error
           );
+          if (__DEV__ && st === 503) {
+            console.error(
+              '503 usually means the backend DB connection failed (check server DATABASE_URL / Postgres).'
+            );
+          }
         }
       }
       if (error?.name === 'AbortError') {
@@ -565,8 +572,8 @@ class ApiService {
     return this.request<CoverageResponse>('/stats/coverage', { requireAuth: false });
   }
 
-  // Feed (top picks)
-  async getTopPicks(params?: {
+  // Feed (top picks + personalized for-you)
+  private feedQueryParams(params?: {
     league?: string;
     leagues?: string;
     limit?: number;
@@ -579,10 +586,34 @@ class ApiService {
     if (params?.limit) queryParams.append('limit', String(params.limit ?? 20));
     if (params?.date) queryParams.append('date', params.date);
     if (params?.time_zone) queryParams.append('time_zone', params.time_zone);
-    const query = queryParams.toString();
+    return queryParams.toString();
+  }
+
+  async getTopPicks(params?: {
+    league?: string;
+    leagues?: string;
+    limit?: number;
+    date?: string;
+    time_zone?: string;
+  }) {
+    const query = this.feedQueryParams(params);
     return this.request<{ picks: TopPick[]; count: number }>(
       `/feed/top-picks${query ? `?${query}` : ''}`,
       { requireAuth: false }
+    );
+  }
+
+  async getForYouFeed(params?: {
+    league?: string;
+    leagues?: string;
+    limit?: number;
+    date?: string;
+    time_zone?: string;
+  }) {
+    const query = this.feedQueryParams(params);
+    return this.request<{ picks: TopPick[]; count: number; personalized: boolean }>(
+      `/feed/for-you${query ? `?${query}` : ''}`,
+      { sendAuthIfPresent: true }
     );
   }
 

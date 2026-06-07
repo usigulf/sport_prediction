@@ -67,9 +67,8 @@ export const GameDetailScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const { gameId } = route.params as { gameId: string };
 
-  const { currentGame, currentPrediction, loading, loadingPrediction } = useAppSelector(
-    (state) => state.games
-  );
+  const { currentGame, currentPrediction, loading, loadingPrediction, error: gamesError } =
+    useAppSelector((state) => state.games);
 
   const [refreshing, setRefreshing] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
@@ -414,11 +413,30 @@ export const GameDetailScreen: React.FC = () => {
           </>
         ) : (
           <View style={styles.predictionPlaceholder}>
-            <Text style={styles.mutedText}>
-              {isPremium
-                ? 'Full analysis will be available closer to game time.'
-                : 'No prediction available for this game.'}
-            </Text>
+            {gamesError && /daily prediction limit/i.test(gamesError) ? (
+              <>
+                <Text style={styles.mutedText}>{getUserFriendlyMessage(gamesError)}</Text>
+                <TouchableOpacity
+                  style={styles.upgradeButton}
+                  onPress={() =>
+                    navigation.navigate('Paywall', {
+                      emphasizeTier: 'premium',
+                      contextMessage: 'Premium unlocks unlimited daily predictions.',
+                    })
+                  }
+                >
+                  <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <Text style={styles.mutedText}>
+                {isPremium
+                  ? 'Full analysis will be available closer to game time.'
+                  : gamesError
+                    ? getUserFriendlyMessage(gamesError)
+                    : 'No prediction available for this game.'}
+              </Text>
+            )}
           </View>
         )}
       </View>
@@ -426,7 +444,10 @@ export const GameDetailScreen: React.FC = () => {
       {/* Live updates (WebSocket, premium) */}
       {isPremium && (
         <View style={styles.infoSection}>
-          <Text style={styles.sectionTitle}>Live updates</Text>
+          <Text style={styles.sectionTitle}>Pre-game updates</Text>
+          <Text style={styles.mutedText}>
+            Refreshes the latest pre-game model while the match is on — not in-play betting odds.
+          </Text>
           {liveError ? (
             <Text style={styles.playerPropsError}>{liveError}</Text>
           ) : (
@@ -452,9 +473,12 @@ export const GameDetailScreen: React.FC = () => {
 
       {/* Player Props */}
       <View style={styles.infoSection}>
-        <Text style={styles.sectionTitle}>Player props</Text>
+        <Text style={styles.sectionTitle}>Player props (preview)</Text>
         {isPremium ? (
           <>
+            <Text style={styles.mutedText}>
+              Sample projections for layout preview — not licensed sportsbook lines.
+            </Text>
             {playerPropsLoading ? (
               <ActivityIndicator size="small" color={theme.colors.accent} style={styles.playerPropsLoader} />
             ) : playerPropsError ? (

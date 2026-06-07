@@ -45,7 +45,13 @@ const entPremium = (): string => extra().revenueCatEntitlementPremium || 'premiu
 function apiKey(): string | null {
   const e = extra();
   const key = Platform.OS === 'ios' ? e.revenueCatIosKey : e.revenueCatAndroidKey;
-  return key && key.trim().length > 8 ? key.trim() : null;
+  const trimmed = key?.trim();
+  if (!trimmed || trimmed.length < 12) return null;
+  // Placeholder from docs/setup — configuring with this crashes the native SDK.
+  if (/YOUR_KEY|XXXX|placeholder/i.test(trimmed)) return null;
+  const prefix = Platform.OS === 'ios' ? 'appl_' : 'goog_';
+  if (!trimmed.startsWith(prefix) && !trimmed.startsWith('test_')) return null;
+  return trimmed;
 }
 
 /** True only when the native SDK is present AND a key is configured. */
@@ -54,6 +60,8 @@ export function isPurchasesAvailable(): boolean {
 }
 
 let configured = false;
+/** True after RC is associated with an app user id (not anonymous). */
+let linkedToAppUser = false;
 
 /** Configure once at startup; call again with a user id after login to associate purchases. */
 export async function configurePurchases(appUserId?: string): Promise<void> {
@@ -64,8 +72,10 @@ export async function configurePurchases(appUserId?: string): Promise<void> {
     if (!configured) {
       m.default.configure({ apiKey: key, appUserID: appUserId });
       configured = true;
+      linkedToAppUser = Boolean(appUserId);
     } else if (appUserId) {
       await m.default.logIn(appUserId);
+      linkedToAppUser = true;
     }
   } catch {
     /* non-fatal — features fall back to web checkout */
@@ -75,11 +85,13 @@ export async function configurePurchases(appUserId?: string): Promise<void> {
 /** Disassociate the device from the user on logout (anonymous id afterwards). */
 export async function logOutPurchases(): Promise<void> {
   const m = loadPurchases();
-  if (!m || !configured) return;
+  if (!m || !configured || !linkedToAppUser) return;
   try {
     await m.default.logOut();
   } catch {
     /* ignore */
+  } finally {
+    linkedToAppUser = false;
   }
 }
 

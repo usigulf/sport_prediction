@@ -4,6 +4,8 @@ const appJson = require('./app.json');
 const TEST_BANNER_IOS = 'ca-app-pub-3940256099942544/2934735716';
 const TEST_BANNER_ANDROID = 'ca-app-pub-3940256099942544/6300978111';
 const TEST_APP_IOS = 'ca-app-pub-3940256099942544~1458002511';
+/** octobetiQ iOS — AdMob console app id (public; safe in repo). */
+const OCTOBETIQ_ADMOB_APP_IOS = 'ca-app-pub-1914108971892809~4005514565';
 const TEST_APP_ANDROID = 'ca-app-pub-3940256099942544~3347511713';
 
 const SOCCER_BETA_DESCRIPTION =
@@ -28,7 +30,7 @@ module.exports = ({ config }) => {
   const adMobAppIdIos = pickUnit(
     process.env.EXPO_PUBLIC_ADMOB_APP_ID_IOS,
     base.extra?.adMobAppIdIos,
-    TEST_APP_IOS,
+    OCTOBETIQ_ADMOB_APP_IOS,
   );
   const adMobAppIdAndroid = pickUnit(
     process.env.EXPO_PUBLIC_ADMOB_APP_ID_ANDROID,
@@ -51,10 +53,7 @@ module.exports = ({ config }) => {
     ? SOCCER_BETA_DESCRIPTION
     : base.description;
 
-  return {
-    ...base,
-    description,
-    plugins: (base.plugins ?? []).map((plugin) => {
+  const plugins = (base.plugins ?? []).map((plugin) => {
       if (
         Array.isArray(plugin) &&
         plugin[0] === 'react-native-google-mobile-ads'
@@ -65,11 +64,24 @@ module.exports = ({ config }) => {
             ...(plugin[1] ?? {}),
             iosAppId: adMobAppIdIos,
             androidAppId: adMobAppIdAndroid,
+            delayAppMeasurementInit: true,
           },
         ];
       }
-      return plugin;
-    }),
+    return plugin;
+  });
+  if (
+    !plugins.some(
+      (p) => p === 'expo-web-browser' || (Array.isArray(p) && p[0] === 'expo-web-browser'),
+    )
+  ) {
+    plugins.push('expo-web-browser');
+  }
+
+  return {
+    ...base,
+    description,
+    plugins,
     extra: {
       ...base.extra,
       betaSoccerOnly,

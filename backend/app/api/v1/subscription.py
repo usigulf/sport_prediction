@@ -5,7 +5,8 @@ Env: STRIPE_SECRET_KEY, STRIPE_PRICE_ID_PREMIUM, STRIPE_PRICE_ID_PREMIUM_PLUS (P
 
 Stripe Dashboard → Webhooks → endpoint URL (public HTTPS):
   POST {API_ORIGIN}/api/v1/subscription/webhook
-Event: checkout.session.completed
+Events: checkout.session.completed, customer.subscription.updated,
+  customer.subscription.deleted
 """
 from __future__ import annotations
 import logging
@@ -51,6 +52,59 @@ def _db_tier_from_checkout_metadata(session: dict) -> str:
     if t in ("premium", "premium_plus"):
         return t
     return "premium"
+
+
+_SUBSCRIPTION_GRANT_STATUSES = frozenset({"active", "trialing"})
+
+
+def _tier_from_stripe_subscription(sub: dict, settings_obj) -> str | None:
+    meta = sub.get("metadata") or {}
+    t = meta.get("subscription_tier")
+    if t in ("premium", "premium_plus"):
+        return t
+    items = (sub.get("items") or {}).get("data") or []
+    for item in items:
+        price = _as_plain_dict(item.get("price") if isinstance(item, dict) else getattr(item, "price", None))
+        pid = price.get("id")
+        if pid and pid == settings_obj.stripe_price_id_premium_plus:
+            return "premium_plus"
+        if pid and pid == settings_obj.stripe_price_id_premium:
+            return "premium"
+    return None
+
+
+def _user_id_from_stripe_metadata(meta: dict) -> str | None:
+    uid = meta.get("user_id")
+    return str(uid) if uid else None
+
+
+def _apply_stripe_subscription_lifecycle(
+    db: Session,
+    *,
+    user: User,
+    subscription: dict,
+    settings_obj,
+    event_id: str,
+    event_type: str,
+) -> None:
+    status = str(subscription.get("status") or "").lower()
+    if status in _SUBSCRIPTION_GRANT_STATUSES:
+        tier = _tier_from_stripe_subscription(subscription, settings_obj)
+        if tier:
+            user.subscription_tier = tier
+            db.commit()
+            logger.info(
+                "Stripe subscription active",
+                extra={"event_id": event_id, "event_type": event_type, "user_id": str(user.id), "tier": tier},
+            )
+        return
+    if status in ("canceled", "unpaid", "incomplete_expired"):
+        user.subscription_tier = "free"
+        db.commit()
+        logger.info(
+            "Stripe subscription ended — tier set to free",
+            extra={"event_id": event_id, "event_type": event_type, "user_id": str(user.id), "status": status},
+        )
 
 
 def _as_plain_dict(obj) -> dict:
@@ -99,8 +153,13 @@ async def create_checkout_session(
         "success_url": settings.stripe_success_url + "?session_id={CHECKOUT_SESSION_ID}",
         "cancel_url": settings.stripe_cancel_url,
     }
+    sub_meta = {
+        "user_id": str(current_user.id),
+        "subscription_tier": body.tier,
+    }
+    create_kwargs["subscription_data"] = {"metadata": sub_meta}
     if body.tier == "premium":
-        create_kwargs["subscription_data"] = {"trial_period_days": 7}
+        create_kwargs["subscription_data"]["trial_period_days"] = 7
     try:
         session = stripe.checkout.Session.create(**create_kwargs)
         return {"url": session.url}
@@ -178,6 +237,45 @@ async def stripe_webhook(
             logger.warning(
                 "Stripe checkout.session.completed missing client_reference_id",
                 extra={"event_id": event_id},
+            )
+    elif event_type in ("customer.subscription.updated", "customer.subscription.deleted"):
+        sub_obj = _as_plain_dict((event_data.get("data") or {}).get("object"))
+        meta = sub_obj.get("metadata") or {}
+        user_id = _user_id_from_stripe_metadata(meta)
+        if not user_id:
+            logger.warning(
+                "Stripe subscription event missing user_id metadata",
+                extra={"event_id": event_id, "event_type": event_type},
+            )
+            return {"received": True}
+        try:
+            from uuid import UUID
+
+            uid = UUID(user_id)
+        except (ValueError, TypeError):
+            uid = user_id
+        user = db.query(User).filter(User.id == uid).first()
+        if not user:
+            logger.warning(
+                "Stripe subscription event user not found",
+                extra={"event_id": event_id, "user_id": user_id},
+            )
+            return {"received": True}
+        if event_type == "customer.subscription.deleted":
+            user.subscription_tier = "free"
+            db.commit()
+            logger.info(
+                "Stripe subscription deleted",
+                extra={"event_id": event_id, "user_id": str(user.id)},
+            )
+        else:
+            _apply_stripe_subscription_lifecycle(
+                db,
+                user=user,
+                subscription=sub_obj,
+                settings_obj=req_settings,
+                event_id=event_id,
+                event_type=event_type,
             )
     else:
         logger.info("Stripe webhook ignored event type", extra={"event_id": event_id, "event_type": event_type})

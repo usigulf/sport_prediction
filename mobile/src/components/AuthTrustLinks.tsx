@@ -33,6 +33,24 @@ export function AuthTrustLinks({ style }: AuthTrustLinksProps) {
       >
         <Text style={styles.link}>FAQ & trust</Text>
       </TouchableOpacity>
+      <Text style={styles.sep}>·</Text>
+      <TouchableOpacity
+        onPress={() => navigation.navigate('PrivacyPolicy')}
+        hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+        accessibilityRole="button"
+        accessibilityLabel="Privacy policy"
+      >
+        <Text style={styles.link}>Privacy</Text>
+      </TouchableOpacity>
+      <Text style={styles.sep}>·</Text>
+      <TouchableOpacity
+        onPress={() => navigation.navigate('TermsOfService')}
+        hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+        accessibilityRole="button"
+        accessibilityLabel="Terms of service"
+      >
+        <Text style={styles.link}>Terms</Text>
+      </TouchableOpacity>
     </View>
   );
 }

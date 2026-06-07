@@ -57,6 +57,24 @@ def test_normalize_schedule_row_live():
     assert f["home_score"] == 1
 
 
+def test_normalize_schedule_row_past_kickoff_becomes_finished():
+    row = {
+        "sport_event": {
+            "id": "sr:sport_event:past",
+            "start_time": "2020-01-01T15:00:00+00:00",
+            "competitors": [
+                {"qualifier": "home", "name": "A", "abbreviation": "AA"},
+                {"qualifier": "away", "name": "B", "abbreviation": "BB"},
+            ],
+        },
+        "sport_event_status": {"status": "not_started", "home_score": 2, "away_score": 1},
+    }
+    f = normalize_schedule_row(row)
+    assert f is not None
+    assert f["game_status"] == "finished"
+    assert f["home_score"] == 2
+
+
 def test_normalize_schedule_row_skips_virtual():
     row = {
         "sport_event": {

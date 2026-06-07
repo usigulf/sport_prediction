@@ -112,19 +112,9 @@ export const HomeScreen: React.FC = () => {
   const loadForYou = useCallback(async () => {
     setForYouLoading(true);
     try {
-      let leaguesParam: string | undefined;
-      if (isAuthenticated) {
-        try {
-          const favs = (await apiService.getFavorites()) as { leagues?: { id: string }[] };
-          const ids = favs.leagues?.map((l) => l.id).filter(Boolean) ?? [];
-          if (ids.length > 0) leaguesParam = ids.join(',');
-        } catch {
-          // not logged in or favorites failed
-        }
-      }
       const beta = soccerBetaFetchParams();
-      const res = await apiService.getTopPicks({
-        leagues: beta.leagues ?? leaguesParam,
+      const res = await apiService.getForYouFeed({
+        leagues: beta.leagues,
         date: beta.date,
         time_zone: beta.time_zone,
         limit: 10,
@@ -135,7 +125,7 @@ export const HomeScreen: React.FC = () => {
     } finally {
       setForYouLoading(false);
     }
-  }, [isAuthenticated]);
+  }, []);
 
   useEffect(() => {
     dispatch(restoreGamesFromCache());

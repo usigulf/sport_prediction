@@ -34,9 +34,11 @@
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>GADApplicationIdentifier</key>
-    <string>ca-app-pub-3940256099942544~1458002511</string>
+    <string>ca-app-pub-1914108971892809~4005514565</string>
     <key>GADDelayAppMeasurementInit</key>
-    <false/>
+    <true/>
+    <key>NSUserTrackingUsageDescription</key>
+    <string>Allow tracking so we can show more relevant ads and measure ad performance. We never sell your personal data.</string>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>LSMinimumSystemVersion</key>

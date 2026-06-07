@@ -53,14 +53,14 @@ const TIERS = [
   {
     id: 'premium',
     name: 'Premium',
-    price: '$9.99',
+    price: '$29.99',
     period: '/month',
     features: [...PLAN_MATRIX.premium],
   },
   {
     id: 'premium_plus',
     name: 'Pro',
-    price: '$29.99',
+    price: '$9.99',
     period: '/month',
     features: [...PLAN_MATRIX.pro],
   },
@@ -269,13 +269,15 @@ export const PaywallScreen: React.FC = () => {
         const isPaid = tier.id !== 'free';
         const loadingThis = checkoutLoadingTier === tier.id;
         const showSubscribe = isPaid && !isCurrent;
+        const storePrice = packages.find((p) => p.tier === tier.id)?.priceString;
+        const displayPrice = storePrice || tier.price;
 
         const cardBody = (
           <>
             <View style={styles.cardHeader}>
               <Text style={styles.tierName}>{tier.name}</Text>
               <View style={styles.priceRow}>
-                <Text style={styles.price}>{tier.price}</Text>
+                <Text style={styles.price}>{displayPrice}</Text>
                 <Text style={styles.period}>{tier.period}</Text>
               </View>
               {isCurrent && (
@@ -306,7 +308,7 @@ export const PaywallScreen: React.FC = () => {
                       ? 'Current plan'
                       : tier.id === 'premium'
                         ? 'Start 7-day free trial'
-                        : 'Subscribe to Pro for $29.99/mo'}
+                        : 'Subscribe to Pro for $9.99/mo'}
                   </Text>
                 )}
               </View>
@@ -322,7 +324,7 @@ export const PaywallScreen: React.FC = () => {
               accessibilityLabel={
                 tier.id === 'premium'
                   ? 'Subscribe to Premium with 7-day free trial'
-                  : 'Subscribe to Pro for 29.99 dollars per month'
+                  : 'Subscribe to Pro for 9.99 dollars per month'
               }
               disabled={loadingThis}
               onPress={() => handleSubscribe(tier.id)}
@@ -371,8 +373,8 @@ export const PaywallScreen: React.FC = () => {
 
       <Text style={styles.footer}>
         {storeBillingReady
-          ? 'Subscriptions are billed through your App Store / Google Play account and renew until cancelled in your store settings. Premium: 7-day free trial, then $9.99/month. Pro: $29.99/month. Paid plans are ad-free.'
-          : 'Premium: 7-day free trial, then $9.99/month until cancelled. Pro: $29.99/month. Paid plans are ad-free. After checkout, return to the app and open Subscription again to refresh your plan.'}
+          ? 'Subscriptions are billed through your App Store / Google Play account and renew until cancelled in your store settings. Premium: 7-day free trial, then $29.99/month. Pro: $9.99/month. Paid plans are ad-free.'
+          : 'Premium: 7-day free trial, then $29.99/month until cancelled. Pro: $9.99/month. Paid plans are ad-free. After checkout, return to the app and open Subscription again to refresh your plan.'}
       </Text>
       <Text style={styles.footerVersion}>App v{appVersion}</Text>
     </ScrollView>

@@ -1,4 +1,7 @@
 import { ADS_NATIVE_MODULE_AVAILABLE } from '../constants';
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
+import { isGoogleTestAdUnit, isProductionAdsEnabled } from '../config/adMobEnv';
 
 type GmaModule = typeof import('react-native-google-mobile-ads');
 
@@ -39,17 +42,37 @@ async function requestTrackingPermissionIfNeeded(): Promise<void> {
 export async function initializeGoogleMobileAds(): Promise<void> {
   const m = loadGoogleMobileAdsModule();
   if (!m) return;
+  const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, unknown>;
+  const appId =
+    Platform.OS === 'ios'
+      ? (extra.adMobAppIdIos as string | undefined)
+      : (extra.adMobAppIdAndroid as string | undefined);
+  // Never init the ad SDK in release with Google's sample publisher id (Info.plist may still list it).
+  if (!__DEV__ && (!appId || isGoogleTestAdUnit(appId))) {
+    console.warn('[AdMob] SDK init skipped: missing or test App ID in release build', {
+      appId: appId ? `${appId.slice(0, 20)}…` : null,
+    });
+    return;
+  }
+  if (isProductionAdsEnabled() && (!appId || isGoogleTestAdUnit(appId))) {
+    console.warn('[AdMob] SDK init skipped: production ads enabled but App ID invalid');
+    return;
+  }
   try {
     await requestTrackingPermissionIfNeeded();
     const mobileAds = m.default();
     await mobileAds.initialize();
+    console.warn('[AdMob] SDK initialized', {
+      production: isProductionAdsEnabled(),
+      platform: Platform.OS,
+    });
     if (__DEV__) {
       await mobileAds.setRequestConfiguration({
         testDeviceIdentifiers: ['EMULATOR'],
       });
     }
-  } catch {
-    // ignore — ads stay disabled / fall back to house promos
+  } catch (e) {
+    console.warn('[AdMob] SDK init failed', e);
   }
 }
 

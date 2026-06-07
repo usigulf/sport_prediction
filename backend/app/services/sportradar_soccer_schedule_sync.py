@@ -102,10 +102,15 @@ def normalize_schedule_row(row: dict[str, Any]) -> dict[str, Any] | None:
     except (TypeError, ValueError):
         aws = 0
 
+    game_status = _map_sportradar_status(ses)
+    now = datetime.now(timezone.utc)
+    if game_status == "scheduled" and start < now:
+        game_status = "finished"
+
     return {
         "sport_event_id": eid.strip(),
         "scheduled_time": start,
-        "game_status": _map_sportradar_status(ses),
+        "game_status": game_status,
         "home_score": hs,
         "away_score": aws,
         "venue": venue_name,

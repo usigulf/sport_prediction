@@ -183,7 +183,13 @@ export const ChallengesScreen: React.FC = () => {
         </View>
       ) : (
         challenges.map((c) => (
-          <View key={c.id} style={styles.card}>
+          <TouchableOpacity
+            key={c.id}
+            style={styles.card}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('ChallengeDetail', { challengeId: c.id })}
+          >
+            <View style={styles.cardMain}>
             <View style={styles.cardHeader}>
               <View style={[styles.badge, c.status === 'completed' ? styles.badgeCompleted : styles.badgeActive]}>
                 <Text style={styles.badgeText}>{c.status === 'completed' ? 'Completed' : 'Active'}</Text>
@@ -200,7 +206,14 @@ export const ChallengesScreen: React.FC = () => {
                 <Text style={styles.cardPending}>Results when all games finish</Text>
               )}
             </View>
-          </View>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={theme.colors.textMuted}
+              style={styles.cardChevron}
+            />
+          </TouchableOpacity>
         ))
       )}
     </ScrollView>
@@ -319,10 +332,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   card: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: theme.colors.backgroundCard,
     borderRadius: theme.radii.md,
     padding: theme.spacing.md,
     marginBottom: theme.spacing.sm,
+  },
+  cardMain: {
+    flex: 1,
+  },
+  cardChevron: {
+    marginLeft: theme.spacing.sm,
   },
   cardHeader: {
     flexDirection: 'row',

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Support — octobetiQ</title>
+  <meta name="description" content="Get help with octobetiQ: contact support, FAQs on predictions, subscriptions, and account questions." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            dark: { DEFAULT: '#0F1117', card: '#1F2937' },
+            neon: { green: '#00FF9D', blue: '#00D4FF' },
+          },
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root {
+      --bg: #0F1117;
+      --card: #1F2937;
+      --neon-green: #00FF9D;
+      --text: #F9FAFB;
+      --text-muted: #9CA3AF;
+      --border: rgba(255,255,255,0.08);
+    }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    .faq-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.75rem 1.5rem;
+      background: var(--neon-green);
+      color: #0F1117;
+      font-weight: 600;
+      border-radius: 9999px;
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-outline {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.5rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 9999px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .btn-outline:hover {
+      color: var(--neon-green);
+      border-color: rgba(0,255,157,0.35);
+    }
+  </style>
+</head>
+<body>
+  <header class="border-b border-[var(--border)] px-4 sm:px-6 py-4">
+    <div class="max-w-3xl mx-auto flex items-center justify-between gap-4">
+      <a href="/" class="text-lg font-bold text-white tracking-tight">octobetiQ</a>
+      <a href="/" class="btn-outline">Back to home</a>
+    </div>
+  </header>
+
+  <main class="px-4 sm:px-6 py-10 sm:py-14">
+    <div class="max-w-3xl mx-auto">
+      <p class="text-sm font-semibold uppercase tracking-wider text-[var(--neon-green)] mb-2">Support</p>
+      <h1 class="text-3xl sm:text-4xl font-bold text-white mb-3">How can we help?</h1>
+      <p class="text-[var(--text-muted)] text-lg leading-relaxed mb-10">
+        octobetiQ provides AI-powered sport predictions for entertainment and research.
+        Answers to common questions are below; for anything else, email our team.
+      </p>
+
+      <section id="contact" class="faq-card p-6 sm:p-8 mb-10 scroll-mt-6">
+        <h2 class="text-xl font-semibold text-white mb-2">Contact us</h2>
+        <p class="text-[var(--text-muted)] mb-5 leading-relaxed">
+          We typically respond within one to two business days. Include your account email
+          and, if relevant, your device (iPhone / iPad) and app version from Profile.
+        </p>
+        <a
+          class="btn-primary"
+          href="mailto:support@sportsprediction.com?subject=octobetiQ%20support"
+        >support@sportsprediction.com</a>
+      </section>
+
+      <section class="mb-10">
+        <h2 class="text-lg font-semibold text-white mb-4">Subscriptions &amp; billing</h2>
+        <div class="faq-card p-6 text-[var(--text-muted)] text-sm leading-relaxed space-y-3">
+          <p>
+            <strong class="text-white">iOS:</strong> Premium is purchased through the App Store.
+            Manage or cancel in <strong class="text-gray-300">Settings → Apple ID → Subscriptions</strong>,
+            or restore purchases from <strong class="text-gray-300">Profile → Subscription</strong> in the app.
+          </p>
+          <p>
+            <strong class="text-white">Refunds:</strong> Apple handles App Store refunds; we cannot issue them directly.
+            Use Apple&apos;s report-a-problem flow for subscription charges.
+          </p>
+          <p>
+            <strong class="text-white">Web checkout:</strong> If you subscribed via Stripe on the web, mention it in your email
+            so we can look up your account.
+          </p>
+        </div>
+      </section>
+
+      <section class="mb-10">
+        <h2 class="text-lg font-semibold text-white mb-4">Account &amp; privacy</h2>
+        <div class="faq-card p-6 text-[var(--text-muted)] text-sm leading-relaxed space-y-3">
+          <p>
+            To sign out, open <strong class="text-gray-300">Profile</strong> and tap Sign out.
+          </p>
+          <p>
+            To request account deletion or export of your data, email
+            <a href="mailto:support@sportsprediction.com?subject=octobetiQ%20account%20deletion" class="text-[var(--neon-green)] hover:underline">support@sportsprediction.com</a>
+            from the address tied to your account. We will confirm before deleting.
+          </p>
+          <p>
+            Privacy practices are described in the app under <strong class="text-gray-300">Profile → Privacy Policy</strong>.
+          </p>
+        </div>
+      </section>
+
+      <section class="mb-10">
+        <h2 class="text-lg font-semibold text-white mb-4">Frequently asked questions</h2>
+        <div class="space-y-3">
+          <article class="faq-card p-5 sm:p-6">
+            <h3 class="font-semibold text-white mb-2">Which sports does octobetiQ cover?</h3>
+            <p class="text-sm text-[var(--text-muted)] leading-relaxed">
+              We cover eight leagues — six soccer competitions (Premier League, Champions League, La Liga, Serie A, Bundesliga, MLS)
+              plus NFL and NBA. Coverage depth varies by competition depending on licensed data and sync jobs.
+            </p>
+          </article>
+          <article class="faq-card p-5 sm:p-6">
+            <h3 class="font-semibold text-white mb-2">How do predictions work?</h3>
+            <p class="text-sm text-[var(--text-muted)] leading-relaxed">
+              Machine learning models trained on historical game data estimate win probabilities.
+              Each game shows home and away win probabilities and a confidence level (low, medium, high).
+              Soccer uses three-way (1X2) style probabilities where applicable.
+            </p>
+          </article>
+          <article class="faq-card p-5 sm:p-6">
+            <h3 class="font-semibold text-white mb-2">What is the daily prediction limit?</h3>
+            <p class="text-sm text-[var(--text-muted)] leading-relaxed">
+              Free accounts can view a limited number of predictions per day.
+              Upgrade to Premium in Profile → Subscription for unlimited predictions and full explanations.
+            </p>
+          </article>
+          <article class="faq-card p-5 sm:p-6">
+            <h3 class="font-semibold text-white mb-2">What do pick strength stars mean?</h3>
+            <p class="text-sm text-[var(--text-muted)] leading-relaxed">
+              Each pick has a 1–5 star strength from model confidence: 5 = high, 3 = medium, 1 = low.
+              Many users focus on 3-star picks and above.
+            </p>
+          </article>
+          <article class="faq-card p-5 sm:p-6">
+            <h3 class="font-semibold text-white mb-2">What are high-confidence picks?</h3>
+            <p class="text-sm text-[var(--text-muted)] leading-relaxed">
+              When the model is very confident, we mark the prediction as high confidence.
+              Enable push notifications under Settings → Push notifications if you want alerts.
+            </p>
+          </article>
+          <article class="faq-card p-5 sm:p-6">
+            <h3 class="font-semibold text-white mb-2">How is model accuracy calculated?</h3>
+            <p class="text-sm text-[var(--text-muted)] leading-relaxed">
+              For finished games we compare the latest stored prediction to the final score.
+              Soccer uses home / draw / away outcomes; other sports use the predicted favorite vs the winner.
+              Open <strong class="text-gray-300">Model accuracy</strong> in the app for methodology, a 30-day rollup, and coverage notes.
+              Numbers are informational, not betting advice.
+            </p>
+          </article>
+          <article class="faq-card p-5 sm:p-6">
+            <h3 class="font-semibold text-white mb-2">How do I add favorite teams?</h3>
+            <p class="text-sm text-[var(--text-muted)] leading-relaxed">
+              Open a game from Home or Games, then tap the star next to a team name.
+              Your Favorites tab shows games for those teams.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="border-t border-[var(--border)] pt-8">
+        <p class="text-xs text-gray-500 leading-relaxed">
+          octobetiQ is for entertainment and informational purposes only. We do not operate a sportsbook
+          and do not accept wagers. Must be 18+ where required. Play responsibly.
+        </p>
+        <p class="text-xs text-gray-600 mt-4">© 2026 octobetiQ. All rights reserved.</p>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

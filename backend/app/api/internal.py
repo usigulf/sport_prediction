@@ -19,6 +19,7 @@ from app.services.model_training import train_and_save
 from app.services.sportradar_nfl_service import fetch_nfl_standings_json
 from app.services.sportradar_soccer_service import soccer_health_probe
 from app.services.soccer_data_provider import configured_soccer_league_codes, use_clearsports_soccer
+from app.services.game_status_reconcile import reconcile_past_scheduled_games
 from app.services.soccer_sync_dispatch import sync_soccer_schedule_for_league, sync_soccer_standings_for_league
 from app.services.clearsports_client import clearsports_health_probe
 from app.services.clearsports_soccer_service import clearsports_soccer_health_probe
@@ -280,7 +281,8 @@ async def soccer_sync_schedules(
                 "errors": list(r_sched.errors) + list(r_std.errors),
             }
         )
-    return {"results": results}
+    reconciled = reconcile_past_scheduled_games(db)
+    return {"results": results, "reconciled_past_scheduled": reconciled}
 
 
 @router.post("/us-sports/sync-schedules")

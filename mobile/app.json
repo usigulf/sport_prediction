@@ -41,15 +41,15 @@
       "eas": {
         "projectId": "1c6a5910-f9f8-43fe-8aea-da17ac3331fb"
       },
-      "adMobAppIdIos": "",
+      "adMobAppIdIos": "ca-app-pub-1914108971892809~4005514565",
       "adMobAppIdAndroid": "",
-      "adMobBannerIos": "",
+      "adMobBannerIos": "ca-app-pub-1914108971892809/8186017901",
       "adMobBannerAndroid": "",
-      "adMobNativeIos": "",
+      "adMobNativeIos": "ca-app-pub-1914108971892809/7349098862",
       "adMobNativeAndroid": "",
-      "adMobRewardedIos": "",
+      "adMobRewardedIos": "ca-app-pub-1914108971892809/8510137296",
       "adMobRewardedAndroid": "",
-      "adMobInterstitialIos": "",
+      "adMobInterstitialIos": "ca-app-pub-1914108971892809/9251687566",
       "adMobInterstitialAndroid": "",
       "revenueCatIosKey": "",
       "revenueCatAndroidKey": "",
@@ -90,6 +90,7 @@
         {
           "androidAppId": "ca-app-pub-3940256099942544~3347511713",
           "iosAppId": "ca-app-pub-3940256099942544~1458002511",
+          "delayAppMeasurementInit": true,
           "skAdNetworkItems": [
             "cstr6suwn9.skadnetwork",
             "4fzdc2evr5.skadnetwork",

@@ -15,6 +15,7 @@ from app.models.user import User
 from app.models.challenge import Challenge
 from app.models.game import Game
 from app.models.prediction import Prediction
+from app.services.trust_metrics_service import prediction_correct_vs_result
 
 router = APIRouter(prefix="/challenges", tags=["challenges"])
 
@@ -54,9 +55,7 @@ def _resolve_challenge(db: Session, c: Challenge) -> None:
         if not pred:
             total -= 1
             continue
-        predicted_home_win = float(pred.home_win_probability) > float(pred.away_win_probability)
-        actual_home_win = (g.home_score or 0) > (g.away_score or 0)
-        if predicted_home_win == actual_home_win:
+        if prediction_correct_vs_result(g, pred):
             correct += 1
     c.correct_count = correct
     c.total_count = total

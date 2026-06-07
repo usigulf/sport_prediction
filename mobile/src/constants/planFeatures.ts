@@ -20,15 +20,15 @@ export const PLAN_MATRIX = {
   premium: [
     'Unlimited predictions & pick history',
     'Full AI explanations and analysis',
-    'Live win-probability updates during games',
-    'Player prop projections',
+    'Pre-game pick refreshes while a match is in progress (not in-play betting odds)',
+    'Player prop previews (sample data until licensed feeds)',
     'Ad-free experience',
-    '7-day free trial on Premium (Stripe web checkout, then $9.99/mo)',
+    '7-day free trial on Premium (Stripe web checkout, then $29.99/mo)',
   ],
   pro: [
     'Everything in Premium (ad-free)',
     'Challenges — multi-game model streaks',
     'Leaderboards & competitive tracking',
-    'Best for power users ($29.99/mo via Stripe)',
+    'Best for power users ($9.99/mo via Stripe)',
   ],
 } as const;

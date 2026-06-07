@@ -121,4 +121,4 @@ export const AUTH_SCREEN_TAGLINE = BETA_SOCCER_ONLY
 
 export const LIVE_HUB_SUBTITLE = BETA_SOCCER_ONLY
   ? "Today's best soccer picks & upcoming matches"
-  : "Today's best picks · Soccer, NFL & NBA";
+  : "Today's top pre-game picks · Soccer has deepest coverage";

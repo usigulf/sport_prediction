@@ -29,6 +29,7 @@ import {
   MY_LEAGUES_ID,
   SOCCER_LEAGUE_IDS,
   GAMES_ALL_SPORTS_SUBTITLE,
+  BETA_SOCCER_ONLY,
 } from '../constants/leagues';
 import { theme } from '../constants/theme';
 import type { PredictionExplanation } from '../types';
@@ -259,11 +260,9 @@ export const GamesScreen: React.FC = () => {
     (async () => {
       try {
         const game = await apiService.getGame(previewGame.id);
-        if (!cancelled) setPreviewHydrated(game as any);
-      } catch {
-        if (!cancelled) setPreviewHydrated(null);
-      }
-      try {
+        if (cancelled) return;
+        setPreviewHydrated(game as any);
+        if (!(game as { prediction?: unknown }).prediction) return;
         const expl = await apiService.getPredictionExplanation(previewGame.id);
         if (!cancelled) setPreviewExplanation(expl as PredictionExplanation);
       } catch (e: unknown) {
@@ -309,7 +308,9 @@ export const GamesScreen: React.FC = () => {
   const subTabs: { key: GamesViewType; label: string }[] = [
     { key: 'model', label: 'Model Picks' },
     { key: 'trending', label: 'Trending Picks' },
-    { key: 'props', label: 'Player Props' },
+    ...(BETA_SOCCER_ONLY
+      ? []
+      : [{ key: 'props' as GamesViewType, label: 'Props (preview)' }]),
   ];
 
   return (
@@ -321,10 +322,10 @@ export const GamesScreen: React.FC = () => {
           <Text style={styles.headerSubtitle}>
             {selectedLeague === 'soccer'
               ? 'Pick a day — all soccer competitions for that date'
-              : selectedLeague === 'nfl'
-                ? 'NFL schedule & model picks'
+                : selectedLeague === 'nfl'
+                ? 'NFL schedule — demo model picks until full data sync'
                 : selectedLeague === 'nba'
-                  ? 'NBA schedule & model picks'
+                  ? 'NBA schedule — demo model picks until full data sync'
                   : selectedLeague == null
                     ? GAMES_ALL_SPORTS_SUBTITLE
                     : 'Pick a sport, then a view'}
@@ -484,7 +485,7 @@ export const GamesScreen: React.FC = () => {
               {gamesView === 'props' ? (
                 <View style={styles.propsTabHint}>
                   <Text style={styles.propsTabHintText}>
-                    Tap a game, then scroll to Player Props on the game screen (Premium or Pro).
+                    Player props on game detail are sample projections (Premium or Pro), not live sportsbook lines.
                   </Text>
                 </View>
               ) : null}

@@ -3,23 +3,32 @@
  */
 import 'react-native-gesture-handler';
 import React, { useEffect, useState } from 'react';
-import { Linking } from 'react-native';
+import { Linking, LogBox } from 'react-native';
+
+if (process.env.EXPO_PUBLIC_HIDE_DEV_UI === 'true') {
+  LogBox.ignoreAllLogs(true);
+}
 import * as SplashScreen from 'expo-splash-screen';
 import * as WebBrowser from 'expo-web-browser';
 import { initializeGoogleMobileAds } from './src/ads/native/loadGma';
 import { Provider } from 'react-redux';
 import { store } from './src/store/store';
 import { AppNavigator } from './src/navigation/AppNavigator';
+import { handleScreenshotDeepLink } from './src/navigation/screenshotNavigation';
 import { LaunchScreen } from './src/components/LaunchScreen';
 import { getStoredAuth } from './src/utils/authStorage';
 import { setAuthToken, setOnUnauthorized, setOnAccessTokenRefreshed } from './src/services/api';
-import { setUser, logout, fetchUserProfile, setSubscriptionTier } from './src/store/slices/authSlice';
+import { setUser, fetchUserProfile, setSubscriptionTier } from './src/store/slices/authSlice';
+import { signOut } from './src/utils/signOut';
 import {
   configurePurchases,
-  logOutPurchases,
   addEntitlementListener,
 } from './src/services/purchases';
 import { registerPushTokenIfPossible } from './src/utils/pushNotifications';
+import {
+  configurePushNotificationPresentation,
+  subscribeToPushNotificationResponses,
+} from './src/utils/pushNotificationHandlers';
 import { getPushNotificationsEnabled } from './src/utils/settingsStorage';
 import { RewardedUnlockProvider } from './src/ads/engine/RewardedUnlockContext';
 import { AdEngineProvider } from './src/ads/engine/AdEngineContext';
@@ -31,12 +40,19 @@ SplashScreen.preventAutoHideAsync().catch(() => {
 /** Close Stripe Checkout auth session cleanly when returning via `octobetiq://payment/*`. */
 WebBrowser.maybeCompleteAuthSession();
 
+configurePushNotificationPresentation();
+
 function AppContent() {
   const [appReady, setAppReady] = useState(false);
 
   useEffect(() => {
+    if (!appReady) return;
+    return subscribeToPushNotificationResponses();
+  }, [appReady]);
+
+  useEffect(() => {
     setOnUnauthorized(() => {
-      store.dispatch(logout());
+      void signOut(store.dispatch);
     });
     setOnAccessTokenRefreshed((p) => {
       store.dispatch(setUser({ email: p.email, token: p.accessToken }));
@@ -51,14 +67,17 @@ function AppContent() {
   useEffect(() => {
     const onUrl = ({ url }: { url: string }) => {
       const u = url.toLowerCase();
-      if (
-        u.includes('payment/success') ||
-        u.includes('checkout/success') ||
-        u.includes('payment/cancel') ||
-        u.includes('checkout/cancel')
-      ) {
-        void store.dispatch(fetchUserProfile());
-      }
+      void handleScreenshotDeepLink(url).then((handled) => {
+        if (handled) return;
+        if (
+          u.includes('payment/success') ||
+          u.includes('checkout/success') ||
+          u.includes('payment/cancel') ||
+          u.includes('checkout/cancel')
+        ) {
+          void store.dispatch(fetchUserProfile());
+        }
+      });
     };
     const sub = Linking.addEventListener('url', onUrl);
     void Linking.getInitialURL().then((initial) => {
@@ -69,6 +88,8 @@ function AppContent() {
 
   useEffect(() => {
     let cancelled = false;
+    let unsubEntitlements = () => {};
+    let unsubStore = () => {};
     (async () => {
       try {
         const auth = await getStoredAuth();
@@ -87,9 +108,30 @@ function AppContent() {
           await SplashScreen.hideAsync().catch(() => {});
         }
       }
+      if (cancelled) return;
+
+      // Defer native SDK init until after first paint — avoids launch-time native crashes.
+      void initializeGoogleMobileAds();
+      let lastUserId = store.getState().auth.user?.id ?? '';
+      await configurePurchases(lastUserId || undefined);
+      unsubEntitlements = addEntitlementListener((tier) => {
+        if (tier !== 'free') store.dispatch(setSubscriptionTier(tier));
+      });
+      unsubStore = store.subscribe(() => {
+        const auth = store.getState().auth;
+        const id = auth.user?.id ?? '';
+        if (id && id !== lastUserId) {
+          lastUserId = id;
+          void configurePurchases(id);
+        } else if (!auth.isAuthenticated && lastUserId) {
+          lastUserId = '';
+        }
+      });
     })();
     return () => {
       cancelled = true;
+      unsubEntitlements();
+      unsubStore();
     };
   }, []);
 
@@ -101,38 +143,6 @@ function AppContent() {
 }
 
 export default function App() {
-  useEffect(() => {
-    void initializeGoogleMobileAds();
-
-    // RevenueCat: configure, associate the signed-in user, and mirror store
-    // entitlements into Redux so a completed purchase unlocks access immediately.
-    let unsubEntitlements = () => {};
-    let lastUserId = store.getState().auth.user?.id ?? '';
-    (async () => {
-      await configurePurchases(lastUserId || undefined);
-      unsubEntitlements = addEntitlementListener((tier) => {
-        if (tier !== 'free') store.dispatch(setSubscriptionTier(tier));
-      });
-    })();
-
-    const unsubStore = store.subscribe(() => {
-      const auth = store.getState().auth;
-      const id = auth.user?.id ?? '';
-      if (id && id !== lastUserId) {
-        lastUserId = id;
-        void configurePurchases(id);
-      } else if (!auth.isAuthenticated && lastUserId) {
-        lastUserId = '';
-        void logOutPurchases();
-      }
-    });
-
-    return () => {
-      unsubEntitlements();
-      unsubStore();
-    };
-  }, []);
-
   return (
     <Provider store={store}>
       <RewardedUnlockProvider>
