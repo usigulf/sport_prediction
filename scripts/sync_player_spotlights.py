@@ -36,6 +36,31 @@ import os
 import sys
 import urllib.error
 import urllib.request
+from pathlib import Path
+
+
+def _read_env_var(key: str, env_file: Path) -> str | None:
+    if not env_file.is_file():
+        return None
+    for line in env_file.read_text(encoding="utf-8").splitlines():
+        if line.startswith(f"{key}="):
+            return line.split("=", 1)[1].strip().strip("\r")
+    return None
+
+
+def _load_repo_env() -> None:
+    """Load PUSH_CRON_SECRET / API_URL without sourcing broken shell .env files."""
+    repo_root = Path(__file__).resolve().parent.parent
+    for name in (".env.production", ".env"):
+        path = repo_root / name
+        for key in ("PUSH_CRON_SECRET", "API_URL", "API_INTERNAL_URL"):
+            if os.environ.get(key):
+                continue
+            val = _read_env_var(key, path)
+            if val:
+                os.environ[key] = val
+    if not os.environ.get("API_URL") and os.environ.get("API_INTERNAL_URL"):
+        os.environ["API_URL"] = os.environ["API_INTERNAL_URL"]
 
 
 def put_spotlights(
@@ -83,7 +108,8 @@ def main() -> int:
         print(f"File not found: {path}", file=sys.stderr)
         return 2
 
-    base = os.environ.get("API_URL", "http://localhost:8000").rstrip("/")
+    _load_repo_env()
+    base = os.environ.get("API_URL", "http://127.0.0.1:8000").rstrip("/")
     secret = os.environ.get("PUSH_CRON_SECRET")
     if not secret and not dry_run:
         print("PUSH_CRON_SECRET is required (unless --dry-run)", file=sys.stderr)
