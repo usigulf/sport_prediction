@@ -26,6 +26,7 @@ from app.models.prediction import Prediction
 from app.models.user import User
 from app.models.user_prediction_view import UserPredictionView
 from app.services.prediction_service import PredictionService
+from app.services.player_props_service import build_game_player_props
 from app.services.explanation_service import get_model_feature_importance
 from app.services.feature_builder import build_game_features
 from app.services.analysis_context_service import enrich_rich_analysis, build_structured_game_analysis
@@ -438,27 +439,21 @@ async def get_game_player_props(
     current_user: User = Depends(get_current_user),
     _: None = Depends(rate_limit_predictions),
 ):
-    """Player prop predictions for a game (stub). Premium only."""
+    """Model-projected player props for a game. Premium only; not sportsbook lines."""
     if current_user.subscription_tier == "free":
         raise HTTPException(
             status_code=403,
             detail="Player props require a premium subscription."
         )
-    # Verify game exists
     game = db.query(Game).options(
         joinedload(Game.home_team),
         joinedload(Game.away_team),
     ).filter(Game.id == game_id).first()
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
-    # Stub: return empty or sample props. Replace with real ML/DB when available.
-    home_name = (game.home_team and game.home_team.name) or "Home"
-    away_name = (game.away_team and game.away_team.name) or "Away"
-    props = [
-        {"player_name": f"Player (Home)", "team": home_name, "prop_type": "points", "predicted_value": 18.5, "line": 17.5, "unit": "pts"},
-        {"player_name": f"Player (Away)", "team": away_name, "prop_type": "points", "predicted_value": 16.2, "line": 15.0, "unit": "pts"},
-    ]
-    return {"game_id": game_id, "props": props}
+
+    prediction = PredictionService(db).get_latest_prediction(game_id)
+    return build_game_player_props(db, game, prediction)
 
 
 @router.get("/{game_id}/live-predictions")

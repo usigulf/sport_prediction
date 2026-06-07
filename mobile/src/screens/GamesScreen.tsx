@@ -485,7 +485,7 @@ export const GamesScreen: React.FC = () => {
               {gamesView === 'props' ? (
                 <View style={styles.propsTabHint}>
                   <Text style={styles.propsTabHintText}>
-                    Player props on game detail are sample projections (Premium or Pro), not live sportsbook lines.
+                    Model-projected props on game detail (Premium). Named players when spotlights are synced; otherwise team estimates — not sportsbook lines.
                   </Text>
                 </View>
               ) : null}

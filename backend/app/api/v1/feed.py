@@ -8,7 +8,7 @@ from typing import Callable, Optional, Set, Tuple
 
 from app.database import get_db
 from app.utils.calendar_window import utc_bounds_for_calendar_day
-from app.api.deps import get_current_user_optional
+from app.api.deps import get_current_user, get_current_user_optional
 from app.constants.leagues import ALLOWED_LEAGUE_CODES
 from app.models.game import Game
 from app.models.user import User
@@ -16,6 +16,7 @@ from app.models.user_favorite import UserFavorite
 from app.utils.team_logo_urls import team_to_api_dict
 from app.schemas.common import datetime_to_iso
 from app.services.prediction_service import PredictionService
+from app.services.player_props_service import PROPS_DISCLAIMER, build_game_player_props
 from app.services.data_quality_service import compute_prediction_quality
 from app.config import get_settings
 
@@ -284,3 +285,63 @@ async def get_for_you_feed(
 
     picks = _build_picks(db, games=games, current_user=current_user, limit=limit, sort_key=sort_key)
     return {"picks": picks, "count": len(picks), "personalized": personalized}
+
+
+def _premium_required(user: User) -> None:
+    if user.subscription_tier == "free":
+        raise HTTPException(
+            status_code=403,
+            detail="Player props require a premium subscription.",
+        )
+
+
+@router.get("/player-props")
+async def get_player_props_feed(
+    league: Optional[str] = Query(None, description="Filter by single league (alias for leagues=)"),
+    leagues: Optional[str] = Query(None, description="Filter by leagues (comma-separated)"),
+    limit: int = Query(20, ge=1, le=50),
+    date: Optional[str] = Query(None, description="Calendar day (YYYY-MM-DD)"),
+    time_zone: Optional[str] = Query(None, description="IANA timezone"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Games with model-projected player props (Premium). For Games tab Props view.
+    """
+    _premium_required(current_user)
+    league_list = _parse_league_filter(league, leagues)
+    games = _games_query(
+        db,
+        date=date,
+        time_zone=time_zone,
+        league_list=league_list,
+        fetch_limit=limit * 3,
+    )
+    prediction_service = PredictionService(db)
+    items = []
+    for game in games:
+        pred = prediction_service.get_latest_prediction(str(game.id))
+        if not pred:
+            continue
+        payload = build_game_player_props(db, game, pred)
+        if not payload["props"]:
+            continue
+        items.append(
+            {
+                "game": {
+                    "id": str(game.id),
+                    "league": game.league,
+                    "home_team": _team_to_response(game.home_team),
+                    "away_team": _team_to_response(game.away_team),
+                    "scheduled_time": datetime_to_iso(game.scheduled_time),
+                    "status": game.status,
+                },
+                "props": payload["props"][:3],
+                "prop_count": payload["count"],
+                "has_named_players": payload["has_named_players"],
+            }
+        )
+        if len(items) >= limit:
+            break
+
+    return {"items": items, "count": len(items), "disclaimer": PROPS_DISCLAIMER}

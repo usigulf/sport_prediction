@@ -54,6 +54,8 @@ export interface PlayerPropItem {
   predicted_value: number;
   line: number;
   unit: string;
+  confidence_level?: string;
+  source?: 'spotlight' | 'team_estimate';
 }
 
 export const GameDetailScreen: React.FC = () => {
@@ -78,6 +80,8 @@ export const GameDetailScreen: React.FC = () => {
   const [playerProps, setPlayerProps] = useState<PlayerPropItem[]>([]);
   const [playerPropsLoading, setPlayerPropsLoading] = useState(false);
   const [playerPropsError, setPlayerPropsError] = useState<string | null>(null);
+  const [playerPropsDisclaimer, setPlayerPropsDisclaimer] = useState<string | null>(null);
+  const [playerPropsNamed, setPlayerPropsNamed] = useState(false);
 
   const isPremium = hasPremiumAccess(subscriptionTier);
   const unlockedByAd = rewardedUnlock.isUnlockedForGame(gameId);
@@ -127,8 +131,16 @@ export const GameDetailScreen: React.FC = () => {
     setPlayerPropsLoading(true);
     (async () => {
       try {
-        const res = await apiService.getGamePlayerProps(gameId) as { props?: PlayerPropItem[] };
-        if (!cancelled && res?.props) setPlayerProps(res.props);
+        const res = await apiService.getGamePlayerProps(gameId) as {
+          props?: PlayerPropItem[];
+          disclaimer?: string;
+          has_named_players?: boolean;
+        };
+        if (!cancelled) {
+          setPlayerProps(res?.props ?? []);
+          setPlayerPropsDisclaimer(res?.disclaimer ?? null);
+          setPlayerPropsNamed(Boolean(res?.has_named_players));
+        }
       } catch (e: any) {
         if (!cancelled) setPlayerPropsError(getUserFriendlyMessage(e));
       } finally {
@@ -473,11 +485,14 @@ export const GameDetailScreen: React.FC = () => {
 
       {/* Player Props */}
       <View style={styles.infoSection}>
-        <Text style={styles.sectionTitle}>Player props (preview)</Text>
+        <Text style={styles.sectionTitle}>
+          {playerPropsNamed ? 'Player props' : 'Player props (model est.)'}
+        </Text>
         {isPremium ? (
           <>
             <Text style={styles.mutedText}>
-              Sample projections for layout preview — not licensed sportsbook lines.
+              {playerPropsDisclaimer ??
+                'Model projections from team scores and spotlight players — not sportsbook lines.'}
             </Text>
             {playerPropsLoading ? (
               <ActivityIndicator size="small" color={theme.colors.accent} style={styles.playerPropsLoader} />
@@ -490,10 +505,11 @@ export const GameDetailScreen: React.FC = () => {
                 <View key={i} style={styles.propRow}>
                   <Text style={styles.propPlayer}>{prop.player_name}</Text>
                   <Text style={styles.propMeta}>
-                    {prop.prop_type} — line {prop.line} {prop.unit}
+                    {prop.prop_type} — model line {prop.line} {prop.unit}
+                    {prop.confidence_level ? ` · ${prop.confidence_level}` : ''}
                   </Text>
                   <Text style={styles.propPredicted}>
-                    Predicted: {prop.predicted_value} {prop.unit}
+                    Projected: {prop.predicted_value} {prop.unit}
                   </Text>
                 </View>
               ))

@@ -7,8 +7,8 @@ Work in this order. **Do not start the next item until you’ve completed the �
 | **1** | [Production billing](#1-production-billing) | ✅ You confirmed done | — |
 | **2** | [AdMob production](#2-admob-production) | ✅ You confirmed done | — |
 | **3** | [Push notifications](#3-push-notifications) | ✅ You confirmed done | — |
-| **4** | [For You feed](#4-for-you-feed) | API + Home wired | **You** (deploy API + optional build) |
-| **5** | [Player props](#5-player-props) | Sample data | **Us** (needs data license) |
+| **4** | [For You feed](#4-for-you-feed) | ✅ Shipped | — |
+| **5** | [Player props](#5-player-props) | Model projections wired | **You** (deploy API + spotlights optional) |
 | **6** | [NFL/NBA real ML](#6-nflnba-real-ml) | Synthetic/demo | **Us** (sync + training) |
 | **7** | [Post-register auto login](#7-post-register-auto-login) | Manual login today | **Us** (small) |
 | **8** | [Landing fallback picks](#8-landing-fallback-picks) | Fake Lakers/Chiefs teasers | **Us** (small) |
@@ -161,7 +161,9 @@ curl -fsS -X POST \
 
 ---
 
-## 4. For You feed ← **current**
+## 4. For You feed ✅
+
+---
 
 **Goal:** Home “Best Picks for You” uses a personalized feed (favorite teams → favorite leagues → top confidence).
 
@@ -190,6 +192,49 @@ No new mobile build required (API-only change). Rebuild only if you want to ship
 
 ---
 
-## 5–9
+## 5. Player props ← **current**
+
+**Goal:** Premium users see **honest model-projected** props (not fake sportsbook lines).
+
+### In the repo (done)
+
+- `GET /api/v1/games/{id}/player-props` — projections from game ML + optional `game_player_spotlights` names
+- `GET /api/v1/feed/player-props` — Games tab feed (Premium)
+- Fallback: team-level estimates (`KC featured scorer (model est.)`) when no spotlights
+- Game detail + Games copy updated
+
+### Not included (needs licensed feed later)
+
+- Real sportsbook lines, injury-adjusted minutes, or player stat history ML
+
+### Your actions (required before #6)
+
+#### A. Deploy API
+
+```bash
+ssh root@198.211.109.76
+cd ~/sport_prediction && git pull && scripts/deploy_api.sh
+```
+
+#### B. (Optional) Sync named players for a game
+
+```bash
+# On server or laptop with PUSH_CRON_SECRET
+python3 scripts/sync_player_spotlights.py path/to/spotlights.json
+```
+
+JSON shape: `{ "game-uuid": [{ "player_name", "team_name", "role", "summary", "sort_order" }] }`
+
+#### C. Smoke test (Premium account)
+
+1. Open any NFL/NBA game with a prediction → **Player props** section shows projections
+2. Games → **Props (preview)** tab (hidden during soccer-only beta)
+3. Free tier → 403 / paywall CTA
+
+**Reply when done:** `done with #5`
+
+---
+
+## 6–9
 
 See table above; we’ll expand each section when you reach that number.

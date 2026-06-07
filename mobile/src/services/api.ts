@@ -482,7 +482,22 @@ class ApiService {
   }
 
   async getGamePlayerProps(gameId: string) {
-    return this.request(`/games/${gameId}/player-props`, {
+    return this.request<{
+      game_id: string;
+      props: Array<{
+        player_name: string;
+        team: string;
+        prop_type: string;
+        predicted_value: number;
+        line: number;
+        unit: string;
+        confidence_level?: string;
+        source?: string;
+      }>;
+      count: number;
+      has_named_players: boolean;
+      disclaimer: string;
+    }>(`/games/${gameId}/player-props`, {
       requireAuth: true,
     });
   }
@@ -615,6 +630,35 @@ class ApiService {
       `/feed/for-you${query ? `?${query}` : ''}`,
       { sendAuthIfPresent: true }
     );
+  }
+
+  async getPlayerPropsFeed(params?: {
+    league?: string;
+    leagues?: string;
+    limit?: number;
+    date?: string;
+    time_zone?: string;
+  }) {
+    const query = this.feedQueryParams(params);
+    return this.request<{
+      items: Array<{
+        game: Game;
+        props: Array<{
+          player_name: string;
+          team: string;
+          prop_type: string;
+          predicted_value: number;
+          line: number;
+          unit: string;
+          confidence_level?: string;
+          source?: string;
+        }>;
+        prop_count: number;
+        has_named_players: boolean;
+      }>;
+      count: number;
+      disclaimer: string;
+    }>(`/feed/player-props${query ? `?${query}` : ''}`, { requireAuth: true });
   }
 
   // Leaderboards
