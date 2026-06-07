@@ -323,9 +323,9 @@ export const GamesScreen: React.FC = () => {
             {selectedLeague === 'soccer'
               ? 'Pick a day — all soccer competitions for that date'
                 : selectedLeague === 'nfl'
-                ? 'NFL schedule — demo model picks until full data sync'
+                ? 'NFL schedule from ClearSports · picks from trained model + recent results'
                 : selectedLeague === 'nba'
-                  ? 'NBA schedule — demo model picks until full data sync'
+                  ? 'NBA schedule from ClearSports · picks from trained model + recent results'
                   : selectedLeague == null
                     ? GAMES_ALL_SPORTS_SUBTITLE
                     : 'Pick a sport, then a view'}

@@ -344,6 +344,11 @@ def build_metric_comparison_rows(
         "soccer_db_standings",
         "soccer_sportradar_api",
     )
+    us_real = feature_source in (
+        "us_pit_standings",
+        "us_db_standings",
+        "us_recent_form",
+    )
     if soccer_table:
         season_label = "Season strength (table)"
         if feature_source == "soccer_pit_standings":
@@ -358,13 +363,34 @@ def build_metric_comparison_rows(
         off_fn = "Goals scored ÷ matches played in the standings snapshot."
         rest_fn = "Days since each side's previous league match in our DB (capped 1–14)."
         adv_fn = "Home edge scaled slightly by table rank gap."
+    elif us_real:
+        season_label = "Season record (W–L)"
+        season_fn = "Win rate from synced standings or recent finished games in our database."
+        recent_label = "Recent form (last games)"
+        recent_fn = (
+            f"{momentum} Form index from points in recent finished "
+            f"{(game.league or 'league').upper()} games before kickoff."
+        )
+        off_label = "Points per game (recent)"
+        off_fn = "Average points scored in recent finished games (NFL/NBA scale)."
+        rest_fn = "Days since each side's previous league game in our DB (capped 1–14)."
+        adv_fn = "Home edge scaled slightly by record / rank gap when standings exist."
+    elif feature_source == "neutral_baseline":
+        season_label = "Baseline prior"
+        season_fn = "Even matchup prior until enough finished games sync for this league."
+        recent_label = "Form index (baseline)"
+        recent_fn = f"{momentum} Neutral form prior — refreshes once results land."
+        off_label = "Scoring prior (baseline)"
+        off_fn = "League-average scoring baseline until team results are available."
+        rest_fn = "Default rest spacing until schedule history is populated."
+        adv_fn = "Small fixed home-field bump."
     else:
         season_label = "Season win-rate prior (demo)"
         season_fn = "Synthetic prior until real standings and results are connected for this league."
         recent_label = "Recent-form index (demo)"
         recent_fn = f"{momentum} Synthetic roll-up (not tied to a fixed last-N window)."
         off_label = "Offensive input (demo)"
-        off_fn = "Synthetic scoring prior — becomes table goals/match when soccer standings sync."
+        off_fn = "Synthetic scoring prior — becomes real when season data syncs."
         rest_fn = "Synthetic rest spacing for demo."
         adv_fn = "Synthetic home-field tilt."
     return [

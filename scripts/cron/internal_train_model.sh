@@ -4,18 +4,9 @@
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$REPO_ROOT"
-if [[ -f .env ]]; then
-  set -a
-  # shellcheck source=/dev/null
-  source .env
-  set +a
-fi
-if [[ -f .env.production ]]; then
-  set -a
-  # shellcheck source=/dev/null
-  source .env.production
-  set +a
-fi
+# shellcheck source=scripts/cron/_load_cron_env.sh
+source "${REPO_ROOT}/scripts/cron/_load_cron_env.sh"
+load_cron_env "$REPO_ROOT"
 BASE="${API_INTERNAL_URL:-http://127.0.0.1:8000}"
 MIN_GAMES="${MODEL_TRAIN_MIN_GAMES:-60}"
 FORCE="${MODEL_TRAIN_FORCE:-false}"

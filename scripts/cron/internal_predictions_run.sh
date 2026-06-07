@@ -3,21 +3,11 @@
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$REPO_ROOT"
-if [[ -f .env ]]; then
-  set -a
-  # shellcheck source=/dev/null
-  source .env
-  set +a
-fi
-if [[ -f .env.production ]]; then
-  set -a
-  # shellcheck source=/dev/null
-  source .env.production
-  set +a
-fi
-: "${PUSH_CRON_SECRET:?PUSH_CRON_SECRET is not set (add to .env)}"
+# shellcheck source=scripts/cron/_load_cron_env.sh
+source "${REPO_ROOT}/scripts/cron/_load_cron_env.sh"
+load_cron_env "$REPO_ROOT"
+: "${PUSH_CRON_SECRET:?PUSH_CRON_SECRET is not set (add to .env.production)}"
 BASE="${API_INTERNAL_URL:-http://127.0.0.1:8000}"
-# Optional in .env: PREDICTION_INCLUDE_FINISHED_DAYS=14, PREDICTION_LEAGUES=premier_league
 export PREDICTION_INCLUDE_FINISHED_DAYS="${PREDICTION_INCLUDE_FINISHED_DAYS:-0}"
 export PREDICTION_LEAGUES="${PREDICTION_LEAGUES:-}"
 BODY=$(python3 <<'PY'

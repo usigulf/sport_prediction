@@ -8,8 +8,8 @@ Work in this order. **Do not start the next item until you’ve completed the �
 | **2** | [AdMob production](#2-admob-production) | ✅ You confirmed done | — |
 | **3** | [Push notifications](#3-push-notifications) | ✅ You confirmed done | — |
 | **4** | [For You feed](#4-for-you-feed) | ✅ Shipped | — |
-| **5** | [Player props](#5-player-props) | Model projections wired | **You** (deploy API + spotlights optional) |
-| **6** | [NFL/NBA real ML](#6-nflnba-real-ml) | Synthetic/demo | **Us** (sync + training) |
+| **5** | [Player props](#5-player-props) | ✅ Shipped | — |
+| **6** | [NFL/NBA real ML](#6-nflnba-real-ml) | ClearSports + sklearn | **You** (deploy + smoke test) |
 | **7** | [Post-register auto login](#7-post-register-auto-login) | Manual login today | **Us** (small) |
 | **8** | [Landing fallback picks](#8-landing-fallback-picks) | Fake Lakers/Chiefs teasers | **Us** (small) |
 | **9** | [Live in-play ML](#9-live-in-play-ml) | Pre-game poll only | **Us** (large; defer) |
@@ -192,7 +192,9 @@ No new mobile build required (API-only change). Rebuild only if you want to ship
 
 ---
 
-## 5. Player props ← **current**
+## 5. Player props ✅
+
+---
 
 **Goal:** Premium users see **honest model-projected** props (not fake sportsbook lines).
 
@@ -235,6 +237,52 @@ JSON shape: `{ "game-uuid": [{ "player_name", "team_name", "role", "summary", "s
 
 ---
 
-## 6–9
+## 6. NFL/NBA real ML ← **current**
+
+**Goal:** NFL/NBA use **ClearSports schedules** + **trained sklearn model** on finished games (not demo/synthetic labels).
+
+### In the repo (done)
+
+- ClearSports NFL/NBA sync (`POST /internal/us-sports/sync-schedules`)
+- Features from recent finished games (`us_recent_form`) / standings when present
+- Weekly train cron + `sklearn_simple` model (NFL + NBA in training set)
+- Mobile: removed “demo model picks” copy; demo banner only for `_synthetic` model versions
+- Cron scripts: safe env load (`_load_cron_env.sh`) — no broken `.env` `source`
+
+### Already on VPS (from this session)
+
+- **NFL:** 300 finished + 16 scheduled games synced
+- **NBA:** 1,369 finished + 26 scheduled
+- Model metrics: **294 NFL + 1,252 NBA** training games
+- Predictions: `model_version=sklearn_simple`
+
+### Your actions (required before #7)
+
+#### A. Deploy latest code
+
+```bash
+ssh root@198.211.109.76
+cd ~/sport_prediction && git pull && scripts/deploy_api.sh
+```
+
+#### B. Install NFL/NBA sync cron (if missing)
+
+```bash
+crontab -l | grep us_sports || echo '45 6,14,22 * * * /root/sport_prediction/scripts/cron/internal_us_sports_sync_schedules.sh >> /tmp/sport-prediction-cron.log 2>&1' | crontab -
+```
+
+#### C. Smoke test (app)
+
+1. **Games → NFL** — real 2025 schedule, picks without yellow “demo” banner
+2. **Games → NBA** — same
+3. Open a game → explanation metrics mention **recent form**, not “demo”
+
+Optional new mobile build to ship updated Games copy (`predictionTrust.ts`).
+
+**Reply when done:** `done with #6`
+
+---
+
+## 7–9
 
 See table above; we’ll expand each section when you reach that number.

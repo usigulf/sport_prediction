@@ -710,6 +710,9 @@ def build_rich_analysis_dict(
         "soccer_pit_standings",
         "soccer_db_standings",
         "soccer_sportradar_api",
+        "us_pit_standings",
+        "us_db_standings",
+        "us_recent_form",
     )
     from_sportradar_fetch = feature_source == "soccer_sportradar_api"
     from_pit = feature_source == "soccer_pit_standings"
@@ -736,7 +739,12 @@ def build_rich_analysis_dict(
         )
 
     if table_backed:
-        if from_pit:
+        if feature_source in ("us_pit_standings", "us_db_standings", "us_recent_form"):
+            src_line = (
+                "ClearSports schedules plus finished-game results in our database "
+                "(recent form and points; standings when synced)."
+            )
+        elif from_pit:
             src_line = (
                 "Season rates rebuilt from finished league fixtures strictly before this kickoff "
                 "(point-in-time table — no future results)."

@@ -35,7 +35,7 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # Soccer fixtures (ClearSports or Sportradar) ~3x daily (UTC)
 30 6,14,22 * * * /root/sport_prediction/scripts/cron/internal_soccer_sync_schedules.sh >> /tmp/sport-prediction-cron.log 2>&1
 
-# NFL + NBA schedules (Sportradar; requires SPORTRADAR_API_KEY) ~3x daily (UTC)
+# NFL + NBA schedules (ClearSports; requires CLEARSPORTS_API_KEY) ~3x daily (UTC)
 45 6,14,22 * * * /root/sport_prediction/scripts/cron/internal_us_sports_sync_schedules.sh >> /tmp/sport-prediction-cron.log 2>&1
 
 # Retrain win-probability model weekly (Sunday 05:15 UTC) after weekend results land.
