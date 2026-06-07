@@ -10,8 +10,8 @@ Work in this order. **Do not start the next item until you’ve completed the �
 | **4** | [For You feed](#4-for-you-feed) | ✅ Shipped | — |
 | **5** | [Player props](#5-player-props) | ✅ Shipped | — |
 | **6** | [NFL/NBA real ML](#6-nflnba-real-ml) | ✅ Shipped | — |
-| **7** | [Post-register auto login](#7-post-register-auto-login) | ✅ Shipped | **You** (mobile build) |
-| **8** | [Landing fallback picks](#8-landing-fallback-picks) | ✅ Shipped | **You** (mobile build) |
+| **7** | [Post-register auto login](#7-post-register-auto-login) | ✅ You confirmed done (build 23) | — |
+| **8** | [Landing fallback picks](#8-landing-fallback-picks) | ✅ You confirmed done (build 23) | — |
 | **9** | [Live in-play ML](#9-live-in-play-ml) | Pre-game poll only | **Us** (large; defer) |
 
 Already shipped in repo (no longer on this list): guest Privacy/Terms, challenge detail + draw scoring, stub labels, soccer beta fetch all leagues, Stripe subscription webhooks in code.
@@ -287,39 +287,22 @@ Optional new mobile build to ship updated Games copy (`predictionTrust.ts`).
 
 ## 7. Post-register auto login ✅
 
-*(Code shipped — commit `dbe6cdb`. Needs new mobile build to reach TestFlight.)*
+*(Build 23 / TestFlight — commit `dbe6cdb`.)*
 
 ---
 
 ## 8. Landing fallback picks ✅
 
-**Goal:** Guest landing shows **real today’s picks** from the API, or an **honest empty state** — no fake Lakers/Chiefs cards.
-
-### In the repo (done)
-
-- `soccerBetaFetchParams()` always sends local `date` + `time_zone` (fixes empty `/feed/top-picks` without a day window)
-- `LandingScreen` maps API game + `prediction` shape correctly
-- Removed hardcoded `FALLBACK_TEASER_PICKS`; loading skeleton + empty state when no picks
-
-### Your actions (required before #9)
-
-#### A. New mobile build (ships #7 + #8)
-
-```bash
-cd mobile
-npm run eas:build:ios
-npm run eas:submit:ios
-```
-
-#### B. Smoke test (logged out)
-
-1. Open app → **Landing** → picks carousel shows **real matchups** (e.g. today’s games) or **“No picks on the board”** — never Lakers/Chiefs placeholders
-2. Sign up → lands on onboarding/Home without manual login (#7)
-
-**Reply when done:** `done with #8`
+*(Build 23 / TestFlight — commit `a9f5d97`.)*
 
 ---
 
 ## 9. Live in-play ML ← **next (deferred)**
 
-Pre-game poll only today; large scope — expand when you’re ready.
+**Goal:** In-game win-probability updates (not just pre-game predictions).
+
+**Today:** Live tab polls game status; ML predictions are pre-kickoff only.
+
+**Scope (when you want it):** live feature pipeline, in-play model or heuristic layer, WebSocket/push for score-state changes, mobile Live Hub UX.
+
+Reply **`start #9`** when you want to tackle this, or name another priority (App Store submit, soccer season sync, etc.).
