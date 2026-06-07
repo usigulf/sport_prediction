@@ -34,6 +34,9 @@ import {
 import { formatLeagueLabel } from '../utils/leagueDisplay';
 import { theme } from '../constants/theme';
 import { soccerBetaFetchParams } from '../utils/soccerBetaFetch';
+import { useIntervalWhen } from '../hooks/useIntervalWhen';
+
+const LIVE_GAMES_POLL_MS = 60_000;
 import { hasProAccess } from '../utils/subscription';
 import { SoccerBetaNotice } from '../components/SoccerBetaNotice';
 import { useAdEngine } from '../ads/engine/AdEngineContext';
@@ -263,6 +266,7 @@ export const HomeScreen: React.FC = () => {
 
   // Live games
   const liveGames = upcomingGames.filter((g) => g.status === 'live');
+  useIntervalWhen(liveGames.length > 0, LIVE_GAMES_POLL_MS, loadGames);
 
   const bestPicksFade = useRef(new Animated.Value(0)).current;
   useEffect(() => {

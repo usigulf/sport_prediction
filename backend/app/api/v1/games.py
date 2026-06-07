@@ -463,21 +463,21 @@ async def get_live_predictions(
     current_user: User = Depends(get_current_user),
     _: None = Depends(rate_limit_predictions),
 ):
-    """Live in-play prediction (stub: returns latest pre-game until live pipeline exists). Premium only."""
+    """Live win-probability for premium users. In-play v0 when game is live and model was refreshed after kickoff."""
     if current_user.subscription_tier == "free":
         raise HTTPException(
             status_code=403,
             detail="Live predictions require a premium subscription."
         )
+    game = db.query(Game).filter(Game.id == game_id).first()
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
     prediction = PredictionService(db).get_latest_prediction(game_id, use_cache=False)
     if not prediction:
         raise HTTPException(status_code=404, detail="Prediction not found")
-    return {
-        "home_win_probability": float(prediction.home_win_probability),
-        "away_win_probability": float(prediction.away_win_probability),
-        "confidence_level": prediction.confidence_level,
-        "model_version": prediction.model_version,
-    }
+    from app.services.live_prediction_service import build_live_prediction_payload
+
+    return build_live_prediction_payload(game, prediction)
 
 
 @router.get("/{game_id}/predictions", response_model=PredictionResponse)

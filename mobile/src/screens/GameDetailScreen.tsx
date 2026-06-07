@@ -456,9 +456,15 @@ export const GameDetailScreen: React.FC = () => {
       {/* Live updates (WebSocket, premium) */}
       {isPremium && (
         <View style={styles.infoSection}>
-          <Text style={styles.sectionTitle}>Pre-game updates</Text>
+          <Text style={styles.sectionTitle}>
+            {lastUpdate?.is_in_play || currentGame?.status === 'live'
+              ? 'In-play updates'
+              : 'Live updates'}
+          </Text>
           <Text style={styles.mutedText}>
-            Refreshes the latest pre-game model while the match is on — not in-play betting odds.
+            {lastUpdate?.is_in_play
+              ? 'Win probability adjusts with the score — informational only, not betting odds.'
+              : 'Connects when the match is on; probabilities refresh as the model updates.'}
           </Text>
           {liveError ? (
             <Text style={styles.playerPropsError}>{liveError}</Text>

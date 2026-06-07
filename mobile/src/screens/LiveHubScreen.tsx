@@ -1,7 +1,7 @@
 /**
  * Live Hub: today's games and top picks in one place. Uses /feed/top-picks and shows countdown.
  */
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { GameCard } from '../components/GameCard';
@@ -29,6 +29,9 @@ import {
 } from '../ads/hooks/mergeListWithNativeAds';
 import { LIVE_HUB_SUBTITLE } from '../constants/leagues';
 import { soccerBetaFetchParams } from '../utils/soccerBetaFetch';
+import { useIntervalWhen } from '../hooks/useIntervalWhen';
+
+const LIVE_POLL_MS = 60_000;
 
 type LiveHubNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -70,11 +73,17 @@ export const LiveHubScreen: React.FC = () => {
     [picks, spacing],
   );
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       setError(null);
       const res = await apiService.getTopPicks({ limit: 30, ...soccerBetaFetchParams() });
-      setPicks(res.picks ?? []);
+      const sorted = [...(res.picks ?? [])].sort((a, b) => {
+        const aLive = a.status === 'live' ? 0 : 1;
+        const bLive = b.status === 'live' ? 0 : 1;
+        if (aLive !== bLive) return aLive - bLive;
+        return 0;
+      });
+      setPicks(sorted);
     } catch (e) {
       setError(getUserFriendlyMessage(e));
       setPicks([]);
@@ -82,11 +91,16 @@ export const LiveHubScreen: React.FC = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  };
-
-  useEffect(() => {
-    load();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
+
+  const hasLive = picks.some((g) => g.status === 'live');
+  useIntervalWhen(hasLive, LIVE_POLL_MS, load);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -109,8 +123,12 @@ export const LiveHubScreen: React.FC = () => {
     return (
       <TouchableOpacity onPress={() => handleGamePress(g.id)}>
         <View style={styles.cardWrap}>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{formatStartsIn(g.scheduled_time)}</Text>
+          <View style={[styles.badge, g.status === 'live' && styles.badgeLive]}>
+            <Text style={[styles.badgeText, g.status === 'live' && styles.badgeTextLive]}>
+              {g.status === 'live'
+                ? `Live ${g.home_score ?? 0}–${g.away_score ?? 0}`
+                : formatStartsIn(g.scheduled_time)}
+            </Text>
           </View>
           <GameCard game={g} />
         </View>
@@ -205,10 +223,16 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: theme.radii.sm,
   },
+  badgeLive: {
+    backgroundColor: theme.colors.secondary,
+  },
   badgeText: {
     fontSize: 12,
     fontWeight: '700',
     color: theme.colors.background,
+  },
+  badgeTextLive: {
+    color: theme.colors.text,
   },
   centered: {
     flex: 1,

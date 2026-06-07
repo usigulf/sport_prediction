@@ -9,6 +9,20 @@ from app.config import Settings
 from app.services.clearsports_us_service import use_clearsports_us
 
 
+def sync_us_schedule_for_league(db: Session, league: str, settings: Settings) -> Any:
+    """Sync a single US league (nfl or nba) via ClearSports or Sportradar."""
+    lg = (league or "").strip().lower()
+    if lg not in ("nfl", "nba"):
+        raise ValueError(f"unsupported US league: {league}")
+    if use_clearsports_us(settings):
+        from app.services.clearsports_us_schedule_sync import sync_clearsports_us_schedule_for_league
+
+        return sync_clearsports_us_schedule_for_league(db, lg, settings)
+    from app.services.sportradar_us_schedule_sync import sync_us_schedule
+
+    return sync_us_schedule(db, lg, settings)
+
+
 def sync_all_us_schedules(db: Session, settings: Settings) -> list[Any]:
     if use_clearsports_us(settings):
         from app.services.clearsports_us_schedule_sync import sync_all_clearsports_us_schedules

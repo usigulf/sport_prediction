@@ -19,6 +19,9 @@ export interface LiveUpdateMessage {
   confidence_level: string | null;
   /** ISO timestamp of latest prediction row when server sends it */
   prediction_updated_at?: string | null;
+  game_status?: string | null;
+  is_in_play?: boolean;
+  prediction_source?: string | null;
 }
 
 export function useLiveUpdates(
@@ -94,6 +97,9 @@ export function useLiveUpdates(
             away_win_probability: data.away_win_probability ?? 0.5,
             confidence_level: data.confidence_level ?? null,
             prediction_updated_at: data.prediction_updated_at ?? null,
+            game_status: data.game_status ?? null,
+            is_in_play: Boolean(data.is_in_play),
+            prediction_source: data.prediction_source ?? null,
           });
           setError(null);
         }

@@ -120,5 +120,5 @@ export const AUTH_SCREEN_TAGLINE = BETA_SOCCER_ONLY
   : 'AI-Powered Predictions · Soccer, NFL & NBA';
 
 export const LIVE_HUB_SUBTITLE = BETA_SOCCER_ONLY
-  ? "Today's best soccer picks & upcoming matches"
-  : "Today's top pre-game picks · Soccer has deepest coverage";
+  ? "Live scores & in-play win probabilities refresh every minute"
+  : "Live in-play picks plus today's top pre-game plays";

@@ -202,18 +202,32 @@ async def websocket_live_updates(
                 await websocket.send_json({"error": "Game not found"})
                 break
             prediction = PredictionService(db).get_latest_prediction(str(game_uuid), use_cache=False)
-            out = {
-                "type": "update",
-                "game_id": str(game_uuid),
-                "home_score": game.home_score or 0,
-                "away_score": game.away_score or 0,
-                "home_win_probability": float(prediction.home_win_probability) if prediction else 0.5,
-                "away_win_probability": float(prediction.away_win_probability) if prediction else 0.5,
-                "confidence_level": prediction.confidence_level if prediction else None,
-                "prediction_updated_at": prediction.created_at.isoformat()
-                if prediction and prediction.created_at
-                else None,
-            }
+            from app.services.live_prediction_service import (
+                build_live_prediction_payload,
+                prediction_source_label,
+            )
+
+            if prediction:
+                payload = build_live_prediction_payload(game, prediction)
+                out = {
+                    "type": "update",
+                    "game_id": str(game_uuid),
+                    **payload,
+                }
+            else:
+                out = {
+                    "type": "update",
+                    "game_id": str(game_uuid),
+                    "home_score": game.home_score or 0,
+                    "away_score": game.away_score or 0,
+                    "home_win_probability": 0.5,
+                    "away_win_probability": 0.5,
+                    "confidence_level": None,
+                    "prediction_updated_at": None,
+                    "game_status": game.status,
+                    "is_in_play": False,
+                    "prediction_source": prediction_source_label(game, None),
+                }
             await websocket.send_json(out)
             await asyncio.sleep(12 if game.status == "live" else 45)
     except WebSocketDisconnect:

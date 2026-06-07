@@ -12,7 +12,7 @@ Work in this order. **Do not start the next item until you’ve completed the �
 | **6** | [NFL/NBA real ML](#6-nflnba-real-ml) | ✅ Shipped | — |
 | **7** | [Post-register auto login](#7-post-register-auto-login) | ✅ You confirmed done (build 23) | — |
 | **8** | [Landing fallback picks](#8-landing-fallback-picks) | ✅ You confirmed done (build 23) | — |
-| **9** | [Live in-play ML](#9-live-in-play-ml) | Pre-game poll only | **Us** (large; defer) |
+| **9** | [Live in-play ML](#9-live-in-play-ml) | v0 shipped (cron + inplay_v0 + mobile) | **You** (VPS cron + build) |
 
 Already shipped in repo (no longer on this list): guest Privacy/Terms, challenge detail + draw scoring, stub labels, soccer beta fetch all leagues, Stripe subscription webhooks in code.
 
@@ -297,12 +297,46 @@ Optional new mobile build to ship updated Games copy (`predictionTrust.ts`).
 
 ---
 
-## 9. Live in-play ML ← **next (deferred)**
+## 9. Live in-play ML ← **current (v0)**
 
 **Goal:** In-game win-probability updates (not just pre-game predictions).
 
-**Today:** Live tab polls game status; ML predictions are pre-kickoff only.
+### In the repo (v0 — done)
 
-**Scope (when you want it):** live feature pipeline, in-play model or heuristic layer, WebSocket/push for score-state changes, mobile Live Hub UX.
+- `POST /internal/live/sync-run` — when games are `live`: sync provider scores for active leagues, re-run ML with `inplay_v0` model tag (1 min cooldown)
+- Cron: `scripts/cron/internal_live_sync_run.sh` every **2 min** (`deploy/crontab.example`)
+- `GET /games/{id}/live-predictions` + `WS /ws/live/{id}` return `is_in_play`, `prediction_source`, scores
+- Mobile: Live Hub + Home poll every 60s when live games exist; Game Detail shows **In-play updates**
 
-Reply **`start #9`** when you want to tackle this, or name another priority (App Store submit, soccer season sync, etc.).
+**v0 honesty:** Score-adjusted re-runs of the pre-game model (feature bumps), not a separate LSTM in-play model.
+
+### Your actions
+
+#### A. Deploy API + install live cron on VPS
+
+```bash
+ssh root@198.211.109.76
+cd ~/sport_prediction && git pull && scripts/deploy_api.sh
+chmod +x scripts/cron/internal_live_sync_run.sh
+# Add to crontab (every 2 min):
+*/2 * * * * /root/sport_prediction/scripts/cron/internal_live_sync_run.sh >> /tmp/sport-prediction-cron.log 2>&1
+```
+
+#### B. Mobile build (premium smoke test)
+
+```bash
+cd mobile && npm run eas:build:ios && npm run eas:submit:ios
+```
+
+#### C. Smoke test (Premium, during a live game)
+
+1. Home **IN-PLAY** section updates scores within ~1–2 min
+2. Trending / Live Hub → live badge shows score
+3. Game detail → **In-play updates** + win prob changes after a goal (may take 1–2 min)
+
+**Reply when done:** `done with #9`
+
+### Later (full #9)
+
+- Dedicated in-play model + `live_predictions` time series
+- Push alerts on large probability swings mid-game

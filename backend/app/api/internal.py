@@ -23,6 +23,7 @@ from app.services.game_status_reconcile import reconcile_past_scheduled_games
 from app.services.soccer_sync_dispatch import sync_soccer_schedule_for_league, sync_soccer_standings_for_league
 from app.services.clearsports_client import clearsports_health_probe
 from app.services.clearsports_soccer_service import clearsports_soccer_health_probe
+from app.services.live_sync_service import run_live_sync_pipeline
 from app.services.us_sports_sync_dispatch import sync_all_us_schedules, us_sync_result_payload
 from app.services.clearsports_us_service import clearsports_us_health_probe
 
@@ -130,6 +131,32 @@ async def run_push_triggers(
     n_reminders = send_game_starting_reminders(db)
     n_picks = send_high_confidence_picks(db)
     return {"game_reminders_sent": n_reminders, "high_confidence_picks_sent": n_picks}
+
+
+class LiveSyncBody(BaseModel):
+    min_minutes_live: int = Field(1, ge=1, le=10)
+
+
+@router.post("/live/sync-run")
+async def run_live_sync_cron(
+    db: Session = Depends(get_db),
+    _: None = Depends(_require_cron_secret),
+    body: LiveSyncBody = Body(default_factory=LiveSyncBody),
+):
+    """
+    High-frequency pipeline when games are live: refresh provider scores for active leagues,
+    then re-run ML with inplay_v0 tagging (cooldown min_minutes_live). No-op when nothing is live.
+    Schedule every 1–2 minutes via scripts/cron/internal_live_sync_run.sh.
+    """
+    result = run_live_sync_pipeline(db, min_minutes_live=body.min_minutes_live)
+    return {
+        "live_games": result.live_games,
+        "leagues_synced": result.leagues_synced,
+        "schedule_sync": result.schedule_sync,
+        "predictions_written": result.predictions_written,
+        "skipped_cooldown": result.skipped_cooldown,
+        "prediction_errors": result.prediction_errors,
+    }
 
 
 @router.post("/predictions/run")

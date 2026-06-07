@@ -29,6 +29,7 @@ from app.services.ml_artifacts import (
     predict_from_artifacts,
     soccer_three_way_from_home_edge,
 )
+from app.services.live_prediction_service import tag_inplay_model_version
 from app.services.prediction_service import PredictionService
 
 logger = logging.getLogger(__name__)
@@ -182,6 +183,8 @@ def run_prediction_job(
                 result.skipped_cooldown += 1
                 continue
             payload, feat, feat_src = _predict_for_game(game, db)
+            if (game.status or "").lower() == "live":
+                payload["model_version"] = tag_inplay_model_version(str(payload["model_version"]))
             if feat_src == "synthetic" and "_synthetic" not in str(payload["model_version"]):
                 payload["model_version"] = f"{payload['model_version']}_synthetic"[:50]
             rich = build_rich_analysis_dict(game, feat, db=db, feature_source=feat_src)

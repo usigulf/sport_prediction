@@ -26,6 +26,9 @@
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
+# Live in-play pipeline: scores + inplay_v0 ML when any game is live (no-op otherwise)
+*/2 * * * * /root/sport_prediction/scripts/cron/internal_live_sync_run.sh >> /tmp/sport-prediction-cron.log 2>&1
+
 # Predictions refresh every 20 minutes (pick 15–60 to taste)
 */20 * * * * /root/sport_prediction/scripts/cron/internal_predictions_run.sh >> /tmp/sport-prediction-cron.log 2>&1
 
