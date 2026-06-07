@@ -12,14 +12,10 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { apiService, setAuthToken } from '../services/api';
-import { setStoredAuth } from '../utils/authStorage';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useAppDispatch } from '../store/hooks';
-import { setUser, fetchUserProfile } from '../store/slices/authSlice';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
-import { registerPushTokenIfPossible } from '../utils/pushNotifications';
-import { getPushNotificationsEnabled } from '../utils/settingsStorage';
+import { completeSignIn } from '../utils/signIn';
 import { theme } from '../constants/theme';
 import { AUTH_SCREEN_TAGLINE } from '../constants/leagues';
 import { OctobetiQWordmark } from '../components/OctobetiQWordmark';
@@ -42,27 +38,7 @@ export const LoginScreen: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await apiService.login(email, password);
-      setAuthToken(response.access_token);
-      dispatch(setUser({ email, token: response.access_token }));
-      // Persistence/profile/push failures should not invalidate a successful sign-in.
-      try {
-        await setStoredAuth({
-          accessToken: response.access_token,
-          refreshToken: response.refresh_token,
-          email,
-        });
-      } catch {
-        /* non-blocking */
-      }
-      await dispatch(fetchUserProfile()).unwrap().catch(() => {});
-      try {
-        const pushEnabled = await getPushNotificationsEnabled();
-        if (pushEnabled) registerPushTokenIfPossible();
-      } catch {
-        /* non-blocking */
-      }
-      // Auth state update causes AppNavigator to show the authenticated stack (MainTabs)
+      await completeSignIn(dispatch, email, password);
     } catch (error: any) {
       const msg = getUserFriendlyMessage(error);
       const hint = msg.includes('reach') || msg.includes('timed out')

@@ -15,7 +15,9 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { apiService } from '../services/api';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { useAppDispatch } from '../store/hooks';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
+import { completeSignIn } from '../utils/signIn';
 import { theme } from '../constants/theme';
 import { AUTH_SCREEN_TAGLINE } from '../constants/leagues';
 import { AuthTrustLinks } from '../components/AuthTrustLinks';
@@ -24,6 +26,7 @@ type RegisterScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 export const RegisterScreen: React.FC = () => {
   const navigation = useNavigation<RegisterScreenNavigationProp>();
+  const dispatch = useAppDispatch();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -48,12 +51,7 @@ export const RegisterScreen: React.FC = () => {
     setLoading(true);
     try {
       await apiService.register(email, password);
-      Alert.alert('Success', 'Account created! Please login.', [
-        {
-          text: 'OK',
-          onPress: () => navigation.goBack(),
-        },
-      ]);
+      await completeSignIn(dispatch, email, password);
     } catch (error: any) {
       Alert.alert('Registration Failed', getUserFriendlyMessage(error));
     } finally {

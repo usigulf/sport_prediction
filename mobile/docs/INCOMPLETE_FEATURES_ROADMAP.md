@@ -9,8 +9,8 @@ Work in this order. **Do not start the next item until you’ve completed the �
 | **3** | [Push notifications](#3-push-notifications) | ✅ You confirmed done | — |
 | **4** | [For You feed](#4-for-you-feed) | ✅ Shipped | — |
 | **5** | [Player props](#5-player-props) | ✅ Shipped | — |
-| **6** | [NFL/NBA real ML](#6-nflnba-real-ml) | ClearSports + sklearn | **You** (deploy + smoke test) |
-| **7** | [Post-register auto login](#7-post-register-auto-login) | Manual login today | **Us** (small) |
+| **6** | [NFL/NBA real ML](#6-nflnba-real-ml) | ✅ Shipped | — |
+| **7** | [Post-register auto login](#7-post-register-auto-login) | Wired | **You** (mobile build) |
 | **8** | [Landing fallback picks](#8-landing-fallback-picks) | Fake Lakers/Chiefs teasers | **Us** (small) |
 | **9** | [Live in-play ML](#9-live-in-play-ml) | Pre-game poll only | **Us** (large; defer) |
 
@@ -237,7 +237,9 @@ JSON shape: `{ "game-uuid": [{ "player_name", "team_name", "role", "summary", "s
 
 ---
 
-## 6. NFL/NBA real ML ← **current**
+## 6. NFL/NBA real ML ✅
+
+---
 
 **Goal:** NFL/NBA use **ClearSports schedules** + **trained sklearn model** on finished games (not demo/synthetic labels).
 
@@ -283,6 +285,34 @@ Optional new mobile build to ship updated Games copy (`predictionTrust.ts`).
 
 ---
 
-## 7–9
+## 7. Post-register auto login ← **current**
+
+**Goal:** After **Create Account**, user is signed in immediately (no extra login step).
+
+### In the repo (done)
+
+- `completeSignIn()` shared by Login + Register
+- Register → `POST /auth/register` then auto `login` → onboarding / main app
+
+### Your actions (required before #8)
+
+#### A. New mobile build (JS-only change)
+
+```bash
+cd mobile
+npm run eas:build:ios
+npm run eas:submit:ios
+```
+
+#### B. Smoke test
+
+1. Sign out → **Sign Up** with a new email
+2. After submit → should land on **onboarding** or **Home** (not “Please login” alert)
+
+**Reply when done:** `done with #7`
+
+---
+
+## 8–9
 
 See table above; we’ll expand each section when you reach that number.
