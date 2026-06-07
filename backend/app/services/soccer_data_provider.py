@@ -11,11 +11,8 @@ from app.services.clearsports_soccer_service import (
 
 
 def use_clearsports_soccer(settings: Settings) -> bool:
-    cs = (settings.clearsports_api_key or "").strip()
-    if not cs:
-        return False
-    sr = (settings.sportradar_api_key or "").strip()
-    return not sr
+    """ClearSports is primary for soccer when configured (same as NFL/NBA)."""
+    return bool((settings.clearsports_api_key or "").strip())
 
 
 def _league_allowlist(settings: Settings) -> frozenset[str] | None:

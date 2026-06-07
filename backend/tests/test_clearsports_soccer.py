@@ -91,6 +91,6 @@ def test_normalize_past_scheduled_becomes_finished():
     assert fx["game_status"] == "finished"
 
 
-def test_use_sportradar_when_both_keys():
+def test_prefers_clearsports_when_both_keys():
     s = Settings(clearsports_api_key="k", sportradar_api_key="sr")
-    assert use_clearsports_soccer(s) is False
+    assert use_clearsports_soccer(s) is True
