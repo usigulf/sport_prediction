@@ -1,6 +1,113 @@
 # App Store submit checklist (octobetiQ)
 
-Use this when App Store Connect shows **Unable to Add for Review**.
+## Build 24 — submit for review (current)
+
+**Binary:** iOS **1.0.0 (24)** — already uploaded via EAS Submit (6/8/2026).  
+**App Store Connect:** [TestFlight / builds](https://appstoreconnect.apple.com/apps/6762173223/testflight/ios) → select build **24** on the version page.
+
+### Do this in order (~30–45 min)
+
+| # | Where | Action |
+|---|--------|--------|
+| 1 | [App → Distribution → iOS App → 1.0.0](https://appstoreconnect.apple.com/apps/6762173223/distribution/ios/version/inflight) | **Build** → **+** → select **1.0.0 (24)** |
+| 2 | Same page → **What's New** | Paste [release notes](#whats-new-100-build-24) below |
+| 3 | Same page → **Copyright** | `© 2026 octobetiQ. All rights reserved.` |
+| 4 | Same page → **Screenshots** | Upload `mobile/app-store-screenshots/6.5-inch/*.png` (10) and `ipad-13-inch/*.png` (10) |
+| 5 | **App Information** | Support URL `https://octobetiq.com/support` · Privacy `https://octobetiq.com/privacy` · [Content Rights](#2-content-rights-information) |
+| 6 | [App Privacy](https://appstoreconnect.apple.com/apps/6762173223/distribution/privacy) | Complete per `APP_PRIVACY_FORM_ANSWERS.md` → **Publish** |
+| 7 | **Pricing and Availability** | Free app · territories as desired |
+| 8 | **App Review Information** | Demo account below · notes optional |
+| 9 | Version page | **Add for Review** → **Submit to App Review** |
+
+### Listing copy (paste into App Store Connect)
+
+**Subtitle** (30 chars max):
+
+```
+AI picks: soccer, NFL & NBA
+```
+
+**Promotional text** (optional, 170 chars):
+
+```
+Informational AI win-probability picks across 8 leagues. Tracked accuracy, favorites, challenges, and optional Premium for unlimited picks and in-play updates.
+```
+
+**Description:**
+
+```
+octobetiQ delivers informational AI sports picks — not betting advice.
+
+LEAGUES
+• Soccer: Premier League, Champions League, La Liga, Serie A, Bundesliga, MLS
+• US sports: NFL and NBA
+
+FEATURES
+• Daily model picks ranked by confidence
+• Personalized “For You” feed from your favorite teams and leagues
+• Game detail with win probability, explanations, and player prop projections (Premium)
+• In-play score and probability updates while matches are on (Premium)
+• Push alerts for high-confidence plays and game reminders
+• Challenges and leaderboards (Pro)
+• Free tier with limited daily picks; Premium and Pro subscriptions
+
+TRANSPARENCY
+We publish tracked model accuracy in the app. Picks are for entertainment and research — not financial or gambling advice.
+
+SUBSCRIPTIONS
+Premium and Pro are optional auto-renewing subscriptions (7-day free trial on Premium where offered). Manage or cancel in iOS Settings → Apple ID → Subscriptions.
+
+Support: https://octobetiq.com/support
+Privacy: https://octobetiq.com/privacy
+```
+
+**Keywords** (100 chars, comma-separated, no spaces after commas):
+
+```
+soccer,NFL,NBA,predictions,sports,premier league,AI picks,football,basketball,odds
+```
+
+### What's New (1.0.0, build 24)
+
+```
+Initial App Store release.
+
+• AI predictions across 8 leagues (soccer, NFL, NBA)
+• Personalized For You feed, Trending picks, and game detail analysis
+• In-play win-probability updates for live games (Premium)
+• Push notifications, favorites, challenges, and leaderboards
+• Premium & Pro subscriptions with 7-day free trial
+```
+
+### App Review demo account
+
+| Field | Value |
+|-------|--------|
+| Username | `appstore-review@octobetiq.com` |
+| Password | `AppReview2026!` |
+
+**Notes to reviewer** (optional):
+
+```
+Premium features (unlimited picks, explanations, in-play updates, player props) require 
+subscription — use demo account or sandbox Apple ID. Free tier shows limited daily picks 
+and ads. ATT prompt appears for optional ad tracking on iOS. Account deletion: Profile → 
+Delete account. Not a gambling or real-money betting app.
+```
+
+### Before you click Submit
+
+- [ ] Build **24** selected on version **1.0.0**
+- [ ] iPhone 6.5" + iPad 13" screenshots uploaded
+- [ ] App Privacy **Published** (not draft)
+- [ ] In-app purchases / subscriptions show **Ready to Submit** in ASC (RevenueCat products linked)
+- [ ] `https://octobetiq.com/support` and `/privacy` return **200** (verified)
+
+Reply **`submitted`** when Apple shows **Waiting for Review**.
+
+---
+
+Use the sections below when App Store Connect shows **Unable to Add for Review**.
 
 ## 1. Copyright (required on version page)
 

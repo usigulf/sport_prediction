@@ -162,9 +162,9 @@ In-app policy text alone is **not** enough — Apple requires this URL.
 
 ---
 
-## Mismatch warning (fix later)
+## In-app policy alignment
 
-In-app `PrivacyPolicyScreen.tsx` says *"We do not use your data for advertising"*, but the app shows **ads** and requests **ATT**. The **App Store form must follow the binary** (tracking = Yes). Update in-app privacy text before public launch to mention AdMob and optional tracking consent.
+`PrivacyPolicyScreen.tsx` documents AdMob, ATT, RevenueCat, and Stripe — keep App Privacy answers consistent with that screen.
 
 ---
 
