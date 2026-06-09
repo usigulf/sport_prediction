@@ -29,6 +29,7 @@ import {
   restorePurchases,
   type OfferingPackage,
 } from '../services/purchases';
+import { SubscriptionLegalFooter } from '../components/SubscriptionLegalFooter';
 
 const CHECKOUT_TIMEOUT_MS = 20000;
 
@@ -235,6 +236,9 @@ export const PaywallScreen: React.FC = () => {
   const appVersion =
     Constants.expoConfig?.version ?? (Constants as { nativeAppVersion?: string }).nativeAppVersion ?? '—';
 
+  const premiumStorePrice = packages.find((p) => p.tier === 'premium')?.priceString;
+  const proStorePrice = packages.find((p) => p.tier === 'premium_plus')?.priceString;
+
   return (
     <ScrollView
       style={styles.container}
@@ -371,11 +375,27 @@ export const PaywallScreen: React.FC = () => {
         </TouchableOpacity>
       ) : null}
 
-      <Text style={styles.footer}>
-        {storeBillingReady
-          ? 'Subscriptions are billed through your App Store / Google Play account and renew until cancelled in your store settings. Premium: 7-day free trial, then $29.99/month. Pro: $9.99/month. Paid plans are ad-free.'
-          : 'Premium: 7-day free trial, then $29.99/month until cancelled. Pro: $9.99/month. Paid plans are ad-free. After checkout, return to the app and open Subscription again to refresh your plan.'}
-      </Text>
+      <SubscriptionLegalFooter
+        plans={[
+          {
+            title: 'Premium',
+            lengthLabel: '1 month',
+            priceLabel: premiumStorePrice ? `${premiumStorePrice}/month` : '$29.99/month',
+            trialNote: '7-day free trial for eligible new subscribers, then auto-renews',
+          },
+          {
+            title: 'Pro',
+            lengthLabel: '1 month',
+            priceLabel: proStorePrice ? `${proStorePrice}/month` : '$9.99/month',
+          },
+        ]}
+      />
+      {!storeBillingReady ? (
+        <Text style={styles.footer}>
+          Web checkout uses Stripe when in-app purchase is unavailable. Return to Subscription after
+          payment to refresh your plan.
+        </Text>
+      ) : null}
       <Text style={styles.footerVersion}>App v{appVersion}</Text>
     </ScrollView>
   );

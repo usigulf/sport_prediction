@@ -1,6 +1,33 @@
 # App Store submit checklist (octobetiQ)
 
-## Build 24 — submit for review (current)
+## Rejection fix (June 9, 2026 — build 20)
+
+Apple rejected **3.1.2(c)** (subscription legal info) and **2.1(b)** (IAPs not submitted with version).
+
+### Code fix (build 25+)
+
+- Paywall shows subscription **title, length, price** + **Privacy** / **Terms** links (`SubscriptionLegalFooter`)
+- Public EULA: `https://octobetiq.com/terms` (`web/terms.html` + `scripts/deploy_web_legal.sh`)
+
+### App Store Connect (required)
+
+1. **Description** — add at the end:
+   ```
+   Terms of Use (EULA): https://octobetiq.com/terms
+   Privacy Policy: https://octobetiq.com/privacy
+   ```
+2. **App Privacy** → Privacy Policy URL: `https://octobetiq.com/privacy`
+3. **Subscriptions** → both **Ready to Submit** (price, localization, **review screenshot** on each)
+4. **Version 1.0.0** → build **25** (not 20) → **In-App Purchases and Subscriptions** → add Premium + Pro
+5. **Resubmit to App Review**
+
+### Reply to Apple (optional)
+
+Confirm paywall shows subscription details and links; IAPs attached to version; Terms URL in description.
+
+---
+
+## Build 24 — submit for review
 
 **Binary:** iOS **1.0.0 (24)** — already uploaded via EAS Submit (6/8/2026).  
 **App Store Connect:** [TestFlight / builds](https://appstoreconnect.apple.com/apps/6762173223/testflight/ios) → select build **24** on the version page.
@@ -59,6 +86,7 @@ Premium and Pro are optional auto-renewing subscriptions (7-day free trial on Pr
 
 Support: https://octobetiq.com/support
 Privacy: https://octobetiq.com/privacy
+Terms of Use (EULA): https://octobetiq.com/terms
 ```
 
 **Keywords** (100 chars, comma-separated, no spaces after commas):

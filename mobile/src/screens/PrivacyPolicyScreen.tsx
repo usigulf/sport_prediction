@@ -3,15 +3,15 @@ import { View, Text, StyleSheet, ScrollView, Linking } from 'react-native';
 import { theme } from '../constants/theme';
 
 const SUPPORT_EMAIL = 'support@sportsprediction.com';
-const PRIVACY_URL = 'https://octobetiq.com/privacy';
+import { PRIVACY_POLICY_URL } from '../constants/legalUrls';
 
 export const PrivacyPolicyScreen: React.FC = () => {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Privacy Policy</Text>
       <Text style={styles.updated}>Last updated: June 2026</Text>
-      <Text style={styles.link} onPress={() => Linking.openURL(PRIVACY_URL).catch(() => {})}>
-        Full policy: {PRIVACY_URL}
+      <Text style={styles.link} onPress={() => Linking.openURL(PRIVACY_POLICY_URL).catch(() => {})}>
+        Full policy: {PRIVACY_POLICY_URL}
       </Text>
 
       <View style={styles.section}>

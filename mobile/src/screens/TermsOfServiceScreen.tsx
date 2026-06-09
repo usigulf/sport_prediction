@@ -1,12 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Linking } from 'react-native';
 import { theme } from '../constants/theme';
+import { TERMS_OF_USE_URL } from '../constants/legalUrls';
 
 export const TermsOfServiceScreen: React.FC = () => {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Terms of Service</Text>
-      <Text style={styles.updated}>Last updated: February 2025</Text>
+      <Text style={styles.updated}>Last updated: June 2026</Text>
+      <Text style={styles.link} onPress={() => Linking.openURL(TERMS_OF_USE_URL).catch(() => {})}>
+        Full terms: {TERMS_OF_USE_URL}
+      </Text>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>1. Acceptance</Text>
@@ -46,10 +50,11 @@ export const TermsOfServiceScreen: React.FC = () => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>5. Subscriptions and payments</Text>
         <Text style={styles.body}>
-          Paid tiers (Premium, Pro) are subject to the pricing and terms shown in the app at the
-          time of purchase. Refunds are handled according to the platform (App Store / Google Play)
-          or our stated policy. We may change pricing with notice; continued use after changes
-          constitutes acceptance.
+          Premium and Pro are auto-renewing monthly subscriptions billed through the App Store or
+          Google Play. Premium may include a 7-day free trial for eligible new subscribers; payment
+          begins when the trial ends unless cancelled at least 24 hours before. Subscriptions renew
+          automatically until cancelled in your device account settings. Refunds follow platform
+          policies. Pricing shown in the app at purchase applies.
         </Text>
       </View>
 
@@ -108,6 +113,12 @@ const styles = StyleSheet.create({
   updated: {
     fontSize: 12,
     color: theme.colors.textMuted,
+    marginBottom: 8,
+  },
+  link: {
+    fontSize: 13,
+    color: theme.colors.accent,
+    textDecorationLine: 'underline',
     marginBottom: 20,
   },
   section: {
