@@ -251,22 +251,11 @@ export const LandingScreen: React.FC = () => {
             <View style={[styles.pricingCard, styles.pricingCardHighlight]}>
               <Text style={styles.pricingName}>Premium</Text>
               <Text style={styles.pricingPrice}>$29.99/mo</Text>
-              <Text style={styles.pricingDesc}>Unlimited AI, ad-free, priority props, custom alerts</Text>
+              <Text style={styles.pricingDesc}>
+                Unlimited AI picks, challenges, leaderboards, in-play updates, player props, ad-free
+              </Text>
               <Text style={styles.pricingTrial}>7-Day Free Trial • Cancel anytime</Text>
             </View>
-          </View>
-          <View style={styles.pricingCardPro}>
-            <View style={styles.proAvailableRow}>
-              <Text style={styles.proAvailablePill}>Available now</Text>
-            </View>
-            <Text style={styles.pricingName}>Pro</Text>
-            <Text style={styles.pricingPrice}>$9.99/mo</Text>
-            <Text style={styles.pricingDesc}>
-              Everything in Premium, plus challenges, leaderboards, and the full player-props experience.
-            </Text>
-            <TouchableOpacity style={styles.proCtaOutline} onPress={handleStartTrial} activeOpacity={0.85}>
-              <Text style={styles.proCtaOutlineText}>Get Pro in the app</Text>
-            </TouchableOpacity>
           </View>
           <TouchableOpacity style={styles.trialButton} onPress={handleStartTrial}>
             <Text style={styles.trialButtonText}>Start 7-Day Free Trial</Text>

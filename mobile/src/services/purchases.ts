@@ -6,7 +6,7 @@
  *
  * Entitlement identifiers (configurable via app config `extra`):
  *   - premium  → app tier `premium`
- *   - pro      → app tier `premium_plus`
+ *   - pro (legacy) → app tier `premium`
  */
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
@@ -98,8 +98,8 @@ export async function logOutPurchases(): Promise<void> {
 export function tierFromCustomerInfo(info: CustomerInfo | null | undefined): NormalizedTier {
   if (!info) return 'free';
   const active = info.entitlements?.active ?? {};
-  if (active[entPro()]) return 'premium_plus';
   if (active[entPremium()]) return 'premium';
+  if (active[entPro()]) return 'premium';
   return 'free';
 }
 
@@ -124,7 +124,6 @@ export interface OfferingPackage {
 
 function tierForPackage(pkg: PurchasesPackage): NormalizedTier {
   const hay = `${pkg.identifier} ${pkg.product?.identifier ?? ''}`.toLowerCase();
-  if (hay.includes('pro') || hay.includes('plus')) return 'premium_plus';
   return 'premium';
 }
 

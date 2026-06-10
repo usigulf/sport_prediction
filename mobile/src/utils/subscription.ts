@@ -20,7 +20,7 @@ export function hasPremiumAccess(raw: string | undefined): boolean {
   return t === 'premium' || t === 'premium_plus';
 }
 
-/** Pro tier only — challenges & Pro-positioned features in the app. */
+/** Challenges & leaderboards — included in Premium (legacy premium_plus still works). */
 export function hasProAccess(raw: string | undefined): boolean {
-  return normalizeSubscriptionTier(raw) === 'premium_plus';
+  return hasPremiumAccess(raw);
 }

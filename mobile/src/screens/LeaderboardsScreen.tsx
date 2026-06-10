@@ -1,5 +1,5 @@
 /**
- * Leaderboards: rank by prediction-view accuracy (weekly / monthly / all). Pro tier required.
+ * Leaderboards: rank by prediction-view accuracy (weekly / monthly / all). Premium required.
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -77,14 +77,14 @@ export const LeaderboardsScreen: React.FC = () => {
         <View style={styles.gate}>
           <Text style={styles.title}>Leaderboard</Text>
           <Text style={styles.subtitle}>
-            Pro feature — compare accuracy across users who viewed finished games.
+            Premium feature — compare accuracy across users who viewed finished games.
           </Text>
           <TouchableOpacity
             style={styles.upgradeBtn}
             onPress={() =>
               navigation.navigate('Paywall', {
-                emphasizeTier: 'premium_plus',
-                contextMessage: 'Upgrade to Pro for leaderboards and challenges.',
+                emphasizeTier: 'premium',
+                contextMessage: 'Premium unlocks leaderboards and challenges.',
               })
             }
           >

@@ -1,0 +1,11 @@
+{
+  "YOUR-GAME-UUID-HERE": [
+    {
+      "player_name": "Patrick Mahomes",
+      "team_name": "Kansas City Chiefs",
+      "role": "Quarterback",
+      "summary": "Primary passer; high usage expected.",
+      "sort_order": 0
+    }
+  ]
+}

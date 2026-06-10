@@ -95,20 +95,20 @@ export const ChallengesScreen: React.FC = () => {
       <View style={styles.container}>
         <View style={styles.proGate}>
           <Ionicons name="trophy-outline" size={56} color={theme.colors.accent} />
-          <Text style={styles.proGateTitle}>Challenges are a Pro feature</Text>
+          <Text style={styles.proGateTitle}>Challenges are a Premium feature</Text>
           <Text style={styles.proGateText}>
-            Upgrade to Pro to create multi-game challenges and track how the model performs on your picks.
+            Upgrade to Premium to create multi-game challenges and track how the model performs on your picks.
           </Text>
           <TouchableOpacity
             style={styles.proGateButton}
             onPress={() =>
               navigation.navigate('Paywall', {
-                emphasizeTier: 'premium_plus',
-                contextMessage: 'Pro includes Challenges, leaderboards, and everything in Premium.',
+                emphasizeTier: 'premium',
+                contextMessage: 'Premium includes challenges, leaderboards, and unlimited picks.',
               })
             }
           >
-            <Text style={styles.proGateButtonText}>View Pro</Text>
+            <Text style={styles.proGateButtonText}>View Premium</Text>
           </TouchableOpacity>
         </View>
       </View>

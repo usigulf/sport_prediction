@@ -32,7 +32,7 @@ function subscriptionTierLabel(tier: string | undefined): string {
   switch (tier) {
     case 'premium_plus':
     case 'pro':
-      return 'Pro';
+      return 'Premium';
     case 'premium':
       return 'Premium';
     default:
@@ -42,8 +42,8 @@ function subscriptionTierLabel(tier: string | undefined): string {
 
 function subscriptionMenuSubtext(tier: string | undefined): string {
   if (!tier || tier === 'free') return 'Upgrade to Premium';
-  if (tier === 'premium') return 'Upgrade to Pro';
-  return 'Manage';
+  if (tier === 'premium' || tier === 'premium_plus' || tier === 'pro') return 'Manage';
+  return 'Upgrade to Premium';
 }
 
 export const ProfileScreen: React.FC = () => {
@@ -158,14 +158,10 @@ export const ProfileScreen: React.FC = () => {
         <TouchableOpacity
           style={styles.menuItem}
           onPress={() => {
-            const t = tier;
-            if (t === 'free') {
-              navigation.navigate('Paywall', { emphasizeTier: 'premium' });
-            } else if (t === 'premium') {
-              navigation.navigate('Paywall', { emphasizeTier: 'premium_plus' });
-            } else {
-              navigation.navigate('Paywall');
-            }
+            navigation.navigate(
+              'Paywall',
+              tier === 'free' ? { emphasizeTier: 'premium' } : undefined,
+            );
           }}
         >
           <Text style={styles.menuText}>Subscription</Text>

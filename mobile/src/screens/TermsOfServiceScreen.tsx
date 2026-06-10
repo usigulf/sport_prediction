@@ -50,7 +50,7 @@ export const TermsOfServiceScreen: React.FC = () => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>5. Subscriptions and payments</Text>
         <Text style={styles.body}>
-          Premium and Pro are auto-renewing monthly subscriptions billed through the App Store or
+          Premium is an auto-renewing monthly subscription billed through the App Store or
           Google Play. Premium may include a 7-day free trial for eligible new subscribers; payment
           begins when the trial ends unless cancelled at least 24 hours before. Subscriptions renew
           automatically until cancelled in your device account settings. Refunds follow platform

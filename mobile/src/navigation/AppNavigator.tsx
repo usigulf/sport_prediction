@@ -46,7 +46,7 @@ export type RootStackParamList = {
   GameDetail: { gameId: string };
   PredictionHistory: undefined;
   /** Params optional — can navigate('Paywall') or pass emphasis/context. */
-  Paywall: { emphasizeTier?: 'premium' | 'premium_plus'; contextMessage?: string } | undefined;
+  Paywall: { emphasizeTier?: 'premium'; contextMessage?: string } | undefined;
   Accuracy: undefined;
   Leaderboards: undefined;
   Challenges: undefined;

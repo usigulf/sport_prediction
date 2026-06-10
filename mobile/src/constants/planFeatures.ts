@@ -1,7 +1,5 @@
 /**
  * Plan capability matrix (product + backend). Used for copy and upgrade routing.
- *
- * Backend enforces Pro tier on /challenges and /leaderboards.
  */
 import { BETA_SOCCER_ONLY } from './leagues';
 
@@ -14,21 +12,16 @@ export const PLAN_MATRIX = {
     FREE_LEAGUES_LINE,
     'Limited model picks per day (daily cap)',
     'Favorites and basic home feed',
-    'Includes ads (removed on Premium and Pro)',
-    'See upgrade prompts when a feature needs Premium or Pro',
+    'Includes ads (removed on Premium)',
+    'See upgrade prompts when a feature needs Premium',
   ],
   premium: [
     'Unlimited predictions & pick history',
     'Full AI explanations and analysis',
     'In-play win-probability updates while a match is on (informational — not betting odds)',
-    'Player prop previews (sample data until licensed feeds)',
+    'Player props and game spotlights',
+    'Challenges and leaderboards',
     'Ad-free experience',
-    '7-day free trial on Premium (Stripe web checkout, then $29.99/mo)',
-  ],
-  pro: [
-    'Everything in Premium (ad-free)',
-    'Challenges — multi-game model streaks',
-    'Leaderboards & competitive tracking',
-    'Best for power users ($9.99/mo via Stripe)',
+    '7-day free trial, then $29.99/mo',
   ],
 } as const;

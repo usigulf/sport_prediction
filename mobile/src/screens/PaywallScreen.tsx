@@ -58,17 +58,10 @@ const TIERS = [
     period: '/month',
     features: [...PLAN_MATRIX.premium],
   },
-  {
-    id: 'premium_plus',
-    name: 'Pro',
-    price: '$9.99',
-    period: '/month',
-    features: [...PLAN_MATRIX.pro],
-  },
 ];
 
 type PaywallRoute = RouteProp<
-  { Paywall: { emphasizeTier?: 'premium' | 'premium_plus'; contextMessage?: string } },
+  { Paywall: { emphasizeTier?: 'premium'; contextMessage?: string } },
   'Paywall'
 >;
 
@@ -78,11 +71,9 @@ export const PaywallScreen: React.FC = () => {
   const contextMessage = route.params?.contextMessage;
   const contextBannerText =
     contextMessage ??
-    (emphasizeTier === 'premium_plus'
-      ? 'Pro unlocks challenges, leaderboards, and everything in Premium.'
-      : emphasizeTier === 'premium'
-        ? 'Premium unlocks unlimited picks, full analysis, live updates, and player props.'
-        : undefined);
+    (emphasizeTier === 'premium'
+      ? 'Premium unlocks unlimited picks, analysis, challenges, leaderboards, and in-play updates.'
+      : undefined);
 
   const dispatch = useAppDispatch();
   const reduxTier = useAppSelector((s) => s.auth.user?.subscriptionTier ?? 'free');
@@ -104,7 +95,7 @@ export const PaywallScreen: React.FC = () => {
     let active = true;
     void getOfferingPackages()
       .then((pkgs) => {
-        if (active) setPackages(pkgs);
+        if (active) setPackages(pkgs.filter((p) => p.tier === 'premium'));
       })
       .catch(() => {});
     return () => {
@@ -156,10 +147,8 @@ export const PaywallScreen: React.FC = () => {
   }, [loadTier]);
 
   const purchaseViaStore = useCallback(
-    async (tierId: 'premium' | 'premium_plus'): Promise<boolean> => {
-      const pkg =
-        packages.find((p) => p.tier === tierId) ??
-        (tierId === 'premium' ? packages.find((p) => p.tier === 'premium') : undefined);
+    async (tierId: 'premium'): Promise<boolean> => {
+      const pkg = packages.find((p) => p.tier === 'premium');
       if (!pkg) return false;
       const res = await purchasePackage(pkg.raw);
       if (res.cancelled) return true;
@@ -178,7 +167,7 @@ export const PaywallScreen: React.FC = () => {
 
   const handleSubscribe = useCallback(
     async (tierId: string) => {
-      if (tierId !== 'premium' && tierId !== 'premium_plus') return;
+      if (tierId !== 'premium') return;
       setCheckoutLoadingTier(tierId);
       try {
         // Preferred: in-app purchase via the store (App Store / Play Billing).
@@ -237,7 +226,6 @@ export const PaywallScreen: React.FC = () => {
     Constants.expoConfig?.version ?? (Constants as { nativeAppVersion?: string }).nativeAppVersion ?? '—';
 
   const premiumStorePrice = packages.find((p) => p.tier === 'premium')?.priceString;
-  const proStorePrice = packages.find((p) => p.tier === 'premium_plus')?.priceString;
 
   return (
     <ScrollView
@@ -269,7 +257,9 @@ export const PaywallScreen: React.FC = () => {
       </Text>
 
       {TIERS.map((tier) => {
-        const isCurrent = currentTier === tier.id;
+        const isCurrent =
+          currentTier === tier.id ||
+          (tier.id === 'premium' && currentTier === 'premium_plus');
         const isPaid = tier.id !== 'free';
         const loadingThis = checkoutLoadingTier === tier.id;
         const showSubscribe = isPaid && !isCurrent;
@@ -289,13 +279,6 @@ export const PaywallScreen: React.FC = () => {
                   <Text style={styles.badgeText}>Current plan</Text>
                 </View>
               )}
-              {tier.id === 'premium_plus' && !isCurrent && (
-                <View style={styles.availableBadge}>
-                  <Text style={styles.availableBadgeText}>
-                    {storeBillingReady ? 'Available now — in-app purchase' : 'Available now'}
-                  </Text>
-                </View>
-              )}
             </View>
             <View style={styles.features}>
               {tier.features.map((f, i) => (
@@ -308,11 +291,7 @@ export const PaywallScreen: React.FC = () => {
                   <ActivityIndicator color={theme.colors.background} />
                 ) : (
                   <Text style={[styles.ctaText, isCurrent && styles.ctaTextCurrent]}>
-                    {isCurrent
-                      ? 'Current plan'
-                      : tier.id === 'premium'
-                        ? 'Start 7-day free trial'
-                        : 'Subscribe to Pro for $9.99/mo'}
+                    {isCurrent ? 'Current plan' : 'Start 7-day free trial'}
                   </Text>
                 )}
               </View>
@@ -325,11 +304,7 @@ export const PaywallScreen: React.FC = () => {
             <Pressable
               key={tier.id}
               accessibilityRole="button"
-              accessibilityLabel={
-                tier.id === 'premium'
-                  ? 'Subscribe to Premium with 7-day free trial'
-                  : 'Subscribe to Pro for 9.99 dollars per month'
-              }
+              accessibilityLabel="Subscribe to Premium with 7-day free trial"
               disabled={loadingThis}
               onPress={() => handleSubscribe(tier.id)}
               android_ripple={{ color: 'rgba(0,255,159,0.25)' }}
@@ -382,11 +357,6 @@ export const PaywallScreen: React.FC = () => {
             lengthLabel: '1 month',
             priceLabel: premiumStorePrice ? `${premiumStorePrice}/month` : '$29.99/month',
             trialNote: '7-day free trial for eligible new subscribers, then auto-renews',
-          },
-          {
-            title: 'Pro',
-            lengthLabel: '1 month',
-            priceLabel: proStorePrice ? `${proStorePrice}/month` : '$9.99/month',
           },
         ]}
       />
