@@ -212,6 +212,8 @@ export interface AccuracyResponse extends AccuracyBucket {
   methodology: AccuracyMethodology;
   /** When this snapshot was computed (server UTC). */
   computed_at_iso?: string;
+  /** Alias for total_games (API returns both). */
+  total_games?: number;
 }
 
 export interface LeagueCoverageRow {
@@ -227,6 +229,18 @@ export interface CoverageResponse {
     latest_standings_sync_iso: string | null;
   };
   disclaimer: string;
+}
+
+/** GET /stats/model — sklearn publish readiness (warming vs ready). */
+export interface ModelStatusResponse {
+  status: 'warming' | 'ready' | 'forced' | string;
+  publish_ready: boolean;
+  artifacts_written?: boolean;
+  games?: number;
+  trained_at?: string | null;
+  league_counts?: Record<string, number>;
+  publish_block_reasons?: string[];
+  detail?: string | null;
 }
 
 class ApiService {
@@ -602,6 +616,10 @@ class ApiService {
 
   async getCoverage() {
     return this.request<CoverageResponse>('/stats/coverage', { requireAuth: false });
+  }
+
+  async getModelStatus() {
+    return this.request<ModelStatusResponse>('/stats/model', { requireAuth: false });
   }
 
   // Feed (top picks + personalized for-you)

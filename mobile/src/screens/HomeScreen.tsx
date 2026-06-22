@@ -40,6 +40,7 @@ import { useIntervalWhen } from '../hooks/useIntervalWhen';
 const LIVE_GAMES_POLL_MS = 60_000;
 import { hasProAccess } from '../utils/subscription';
 import { SoccerBetaNotice } from '../components/SoccerBetaNotice';
+import { ModelWarmingNotice } from '../components/ModelWarmingNotice';
 import { useAdEngine } from '../ads/engine/AdEngineContext';
 import { NativeFeedAdCard } from '../ads/components/NativeFeedAdCard';
 import { BannerStrip } from '../ads/components/BannerStrip';
@@ -342,6 +343,7 @@ export const HomeScreen: React.FC = () => {
       </View>
 
       <SoccerBetaNotice />
+      <ModelWarmingNotice />
 
       {/* User stats widget (logged in): always link to tracked model accuracy */}
       {isAuthenticated && (

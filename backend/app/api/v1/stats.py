@@ -34,9 +34,11 @@ async def get_accuracy(db: Session = Depends(get_db)):
 
     return {
         **full,
+        "total": full["total_games"],
         "computed_at_iso": now.isoformat(),
         "rolling_30d": {
             "total_games": roll_30d["total_games"],
+            "total": roll_30d["total_games"],
             "correct": roll_30d["correct"],
             "accuracy_pct": roll_30d["accuracy_pct"],
             "by_league": roll_30d["by_league"],

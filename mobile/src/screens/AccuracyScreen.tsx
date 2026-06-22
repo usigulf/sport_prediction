@@ -16,6 +16,7 @@ import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { formatLeagueLabel } from '../utils/leagueDisplay';
 import { PRODUCT_SCOPE_LONG_DESCRIPTION } from '../constants/leagues';
 import { theme } from '../constants/theme';
+import { useModelStatus } from '../hooks/useModelStatus';
 
 const CONFIDENCE_ORDER = ['high', 'medium', 'low', 'unknown'] as const;
 
@@ -78,6 +79,7 @@ export const AccuracyScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { isWarming, reload: reloadModelStatus } = useModelStatus();
 
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -108,6 +110,11 @@ export const AccuracyScreen: React.FC = () => {
     }
   }, []);
 
+  const onRefresh = useCallback(() => {
+    void reloadModelStatus();
+    return load(true);
+  }, [load, reloadModelStatus]);
+
   useEffect(() => {
     load();
   }, [load]);
@@ -129,8 +136,10 @@ export const AccuracyScreen: React.FC = () => {
   }
 
   const d = data!;
+  const totalGames = d.total ?? d.total_games ?? 0;
   const leagues = Object.entries(d.by_league || {}).sort((a, b) => b[1].total - a[1].total);
   const roll = d.rolling_30d;
+  const rollTotal = roll.total ?? (roll as { total_games?: number }).total_games ?? 0;
   const confidenceEntries = CONFIDENCE_ORDER.filter((k) => (d.by_confidence[k]?.total ?? 0) > 0).map(
     (k) => [k, d.by_confidence[k]] as const
   );
@@ -143,7 +152,7 @@ export const AccuracyScreen: React.FC = () => {
       style={styles.container}
       contentContainerStyle={styles.content}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} colors={[theme.colors.accent]} />
+        <RefreshControl refreshing={refreshing} onRefresh={() => onRefresh()} colors={[theme.colors.accent]} />
       }
     >
       <Text style={styles.title}>How we've done</Text>
@@ -152,6 +161,16 @@ export const AccuracyScreen: React.FC = () => {
         <Text style={styles.freshnessLine}>
           Last updated {formatLastUpdated(d.computed_at_iso)}
         </Text>
+      ) : null}
+
+      {isWarming ? (
+        <View style={styles.warmingCard}>
+          <Text style={styles.warmingTitle}>Model warming</Text>
+          <Text style={styles.warmingBody}>
+            Accuracy below reflects pre-kickoff picks on finished games. The full ML model publishes once we
+            have enough decisive history per sport — picks may still use the baseline engine until then.
+          </Text>
+        </View>
       ) : null}
 
       <View style={styles.methodCard}>
@@ -163,7 +182,7 @@ export const AccuracyScreen: React.FC = () => {
         <Text style={styles.bigNumber}>{d.accuracy_pct}%</Text>
         <Text style={styles.cardLabel}>Overall accuracy</Text>
         <Text style={styles.cardDetail}>
-          {d.correct} correct out of {d.total} games
+          {d.correct} correct out of {totalGames} games
         </Text>
       </View>
 
@@ -172,11 +191,11 @@ export const AccuracyScreen: React.FC = () => {
         <Text style={styles.windowHint}>Since {formatWindowStart(roll.window_start_iso)}</Text>
         <Text style={styles.bigNumberSmall}>{roll.accuracy_pct}%</Text>
         <Text style={styles.cardDetail}>
-          {roll.correct} correct out of {roll.total} games (in window)
+          {roll.correct} correct out of {rollTotal} games (in window)
         </Text>
       </View>
 
-      {d.total === 0 && (
+      {totalGames === 0 && (
         <Text style={styles.emptyText}>
           No finished games with predictions yet. Accuracy will appear here as games complete.
         </Text>
@@ -275,6 +294,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.colors.textMuted,
     marginBottom: theme.spacing.md,
+  },
+  warmingCard: {
+    backgroundColor: theme.colors.backgroundCard,
+    borderRadius: theme.radii.sm,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
+    borderLeftWidth: 3,
+    borderLeftColor: theme.colors.accent,
+  },
+  warmingTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginBottom: theme.spacing.xs,
+  },
+  warmingBody: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    lineHeight: 19,
   },
   methodCard: {
     backgroundColor: theme.colors.backgroundCard,
