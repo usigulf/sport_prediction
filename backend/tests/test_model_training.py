@@ -13,6 +13,7 @@ from app.services.model_training import (
     ARTIFACT_FEATURES,
     ARTIFACT_MODEL,
     FEATURE_COLUMNS,
+    assess_publish_readiness,
     build_training_frame,
     train_and_save,
 )
@@ -89,7 +90,9 @@ def test_train_and_save_learns_signal_and_roundtrips(db, tmp_path):
     _seed_separable_nfl_history(db, n_games=60)
     out_dir = str(tmp_path / "models")
 
-    summary = train_and_save(db, out_dir, test_frac=0.2, min_games=10)
+    summary = train_and_save(
+        db, out_dir, test_frac=0.2, min_games=10, min_publish_holdout_per_league_group=5, force=True
+    )
 
     assert summary["games"] == 60
     assert (tmp_path / "models" / ARTIFACT_MODEL).exists()
@@ -124,3 +127,32 @@ def test_train_and_save_aborts_on_tiny_dataset(db):
         assert False, "expected ValueError for tiny dataset"
     except ValueError as e:
         assert "min_games" in str(e)
+
+
+def test_assess_publish_readiness_blocks_small_holdout():
+    leagues = ["nfl"] * 60
+    ready, reasons, corpus, holdout = assess_publish_readiness(
+        leagues, n=60, test_frac=0.2, min_holdout_per_group=500
+    )
+    assert ready is False
+    assert reasons
+    assert corpus["football"] == 60
+    assert holdout["football"] == 12
+
+
+def test_train_and_save_writes_metrics_only_when_publish_blocked(db, tmp_path):
+    _seed_separable_nfl_history(db, n_games=60)
+    out_dir = str(tmp_path / "models")
+    summary = train_and_save(
+        db,
+        out_dir,
+        test_frac=0.2,
+        min_games=10,
+        min_publish_holdout_per_league_group=500,
+        force=False,
+    )
+    assert summary["publish_ready"] is False
+    assert summary["artifacts_written"] is False
+    assert summary["status"] == "warming"
+    assert not (tmp_path / "models" / ARTIFACT_MODEL).exists()
+    assert (tmp_path / "models" / "metrics.json").exists()

@@ -12,6 +12,8 @@ from app.services.trust_metrics_service import (
     league_data_coverage,
     methodology_blurb,
 )
+from app.services.model_training import load_metrics_json
+from app.config import get_settings
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 
@@ -42,6 +44,45 @@ async def get_accuracy(db: Session = Depends(get_db)):
             "window_start_iso": since_30d.isoformat(),
         },
         "methodology": meta,
+    }
+
+
+@router.get("/model")
+async def get_model_status():
+    """
+    Public model readiness snapshot from metrics.json (warming vs ready to publish).
+    When artifacts are missing or publish_ready is false, inference uses heuristic fallback.
+    """
+    settings = get_settings()
+    model_dir = (settings.model_artifact_dir or settings.explanation_model_dir or "").strip()
+    if not model_dir:
+        return {
+            "status": "warming",
+            "publish_ready": False,
+            "artifacts_written": False,
+            "detail": "Model artifact directory is not configured on this API instance.",
+        }
+    metrics = load_metrics_json(model_dir)
+    if not metrics:
+        return {
+            "status": "warming",
+            "publish_ready": False,
+            "artifacts_written": False,
+            "detail": "No metrics.json found — model has not been trained on this host yet.",
+        }
+    status = metrics.get("status") or ("ready" if metrics.get("publish_ready") else "warming")
+    return {
+        "status": status,
+        "publish_ready": bool(metrics.get("publish_ready")),
+        "artifacts_written": bool(metrics.get("artifacts_written")),
+        "games": metrics.get("games"),
+        "trained_at": metrics.get("trained_at"),
+        "league_counts": metrics.get("league_counts"),
+        "league_group_corpus_counts": metrics.get("league_group_corpus_counts"),
+        "league_group_holdout_counts": metrics.get("league_group_holdout_counts"),
+        "publish_block_reasons": metrics.get("publish_block_reasons") or [],
+        "min_publish_holdout_per_league_group": metrics.get("min_publish_holdout_per_league_group"),
+        "detail": metrics.get("note"),
     }
 
 

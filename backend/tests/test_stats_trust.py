@@ -281,6 +281,36 @@ def test_stats_accuracy_public_shape(client, db, test_teams):
     assert body["computed_at_iso"]
 
 
+def test_stats_model_warming_when_unconfigured(client):
+    r = client.get("/api/v1/stats/model")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["status"] == "warming"
+    assert body["publish_ready"] is False
+
+
+def test_stats_model_ready_from_metrics(client, monkeypatch, tmp_path):
+    metrics_dir = tmp_path / "models"
+    metrics_dir.mkdir()
+    (metrics_dir / "metrics.json").write_text(
+        '{"status":"ready","publish_ready":true,"artifacts_written":true,"games":1200}',
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("MODEL_ARTIFACT_DIR", str(metrics_dir))
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    try:
+        r = client.get("/api/v1/stats/model")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["status"] == "ready"
+        assert body["publish_ready"] is True
+        assert body["games"] == 1200
+    finally:
+        get_settings.cache_clear()
+
+
 def test_stats_coverage_lists_standings_counts(client, db, test_teams):
     db.add(
         TeamStanding(

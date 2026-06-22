@@ -30,6 +30,7 @@ from typing import Any
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.game import Game
+from app.constants.soccer import SOCCER_LEAGUES_SET
 from app.services.feature_builder import build_game_features
 from app.services.point_in_time_standings import PitStandingsCache
 
@@ -55,6 +56,58 @@ ARTIFACT_METRICS = "metrics.json"
 # Calibration needs enough samples per class to be stable.
 _CALIBRATION_MIN_PER_CLASS = 8
 _CALIBRATION_MIN_TOTAL = 40
+
+
+def league_group(league: str) -> str:
+    """Coarse bucket for publish readiness (football / basketball / soccer / other)."""
+    lg = (league or "").strip().lower()
+    if lg == "nfl":
+        return "football"
+    if lg == "nba":
+        return "basketball"
+    if lg in SOCCER_LEAGUES_SET:
+        return "soccer"
+    return lg or "other"
+
+
+def assess_publish_readiness(
+    leagues: list[str],
+    *,
+    n: int,
+    test_frac: float,
+    min_holdout_per_group: int,
+) -> tuple[bool, list[str], dict[str, int], dict[str, int]]:
+    """
+    Require each represented league group to have enough decisive games in the
+    chronological holdout slice before publishing sklearn artifacts.
+    """
+    n_test = max(1, int(round(n * test_frac))) if n >= 10 else 0
+    holdout_leagues = leagues[n - n_test :] if n_test else []
+    corpus_counts = Counter(league_group(lg) for lg in leagues)
+    holdout_counts = Counter(league_group(lg) for lg in holdout_leagues)
+
+    reasons: list[str] = []
+    for group, total in sorted(corpus_counts.items()):
+        holdout_n = holdout_counts.get(group, 0)
+        if holdout_n < min_holdout_per_group:
+            reasons.append(
+                f"{group}: holdout has {holdout_n} decisive games "
+                f"(< {min_holdout_per_group}; corpus={total})."
+            )
+    return len(reasons) == 0, reasons, dict(corpus_counts), dict(holdout_counts)
+
+
+def load_metrics_json(model_dir: str) -> dict[str, Any] | None:
+    path = os.path.join(model_dir, ARTIFACT_METRICS)
+    if not os.path.isfile(path):
+        return None
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else None
+    except Exception:
+        logger.warning("Could not read %s", path)
+        return None
 
 
 def _finished_decisive_games(db: Session) -> list[Game]:
@@ -139,10 +192,18 @@ def train_and_save(
     *,
     test_frac: float = 0.2,
     min_games: int = 60,
+    min_publish_holdout_per_league_group: int | None = None,
     force: bool = False,
 ) -> dict:
+    from app.config import get_settings
+
     import numpy as np
     from sklearn.metrics import accuracy_score, brier_score_loss, log_loss
+
+    if min_publish_holdout_per_league_group is None:
+        min_publish_holdout_per_league_group = int(
+            get_settings().min_publish_holdout_per_league_group
+        )
 
     X, y, leagues, _times = build_training_frame(db)
     n = len(X)
@@ -181,11 +242,25 @@ def train_and_save(
     # Final model is fit on all available data for production use.
     final, calibrated_full = _fit_safely(_should_calibrate(y), X, y)
 
+    publish_ready, publish_block_reasons, corpus_by_group, holdout_by_group = assess_publish_readiness(
+        leagues,
+        n=n,
+        test_frac=test_frac,
+        min_holdout_per_group=min_publish_holdout_per_league_group,
+    )
+    write_artifacts = publish_ready or force
+
     os.makedirs(out_dir, exist_ok=True)
-    with open(os.path.join(out_dir, ARTIFACT_MODEL), "wb") as f:
-        pickle.dump(final, f)
-    with open(os.path.join(out_dir, ARTIFACT_FEATURES), "wb") as f:
-        pickle.dump(FEATURE_COLUMNS, f)
+    if write_artifacts:
+        with open(os.path.join(out_dir, ARTIFACT_MODEL), "wb") as f:
+            pickle.dump(final, f)
+        with open(os.path.join(out_dir, ARTIFACT_FEATURES), "wb") as f:
+            pickle.dump(FEATURE_COLUMNS, f)
+    else:
+        for name in (ARTIFACT_MODEL, ARTIFACT_FEATURES):
+            path = os.path.join(out_dir, name)
+            if os.path.isfile(path):
+                os.remove(path)
 
     summary = {
         "games": int(n),
@@ -193,16 +268,38 @@ def train_and_save(
         "feature_columns": FEATURE_COLUMNS,
         "home_win_rate": round(float(y.mean()), 4),
         "league_counts": dict(Counter(leagues)),
+        "league_group_corpus_counts": corpus_by_group,
+        "league_group_holdout_counts": holdout_by_group,
         "calibrated_final": bool(calibrated_full),
         "eval": eval_metrics,
         "trained_at": datetime.now(timezone.utc).isoformat(),
+        "publish_ready": bool(publish_ready),
+        "publish_block_reasons": publish_block_reasons,
+        "min_publish_holdout_per_league_group": int(min_publish_holdout_per_league_group),
+        "artifacts_written": bool(write_artifacts),
         "note": (
             "Predicts P(home | decisive); draws excluded from training. Standings "
             "features are point-in-time from finished league games before kickoff "
             "when enough history exists; recent-form is always pre-kickoff."
         ),
     }
+    if not publish_ready and not force:
+        summary["status"] = "warming"
+        summary["note"] += (
+            " Model artifacts were not published — collecting more decisive games per league group."
+        )
+    elif publish_ready:
+        summary["status"] = "ready"
+    else:
+        summary["status"] = "forced"
     with open(os.path.join(out_dir, ARTIFACT_METRICS), "w") as f:
         json.dump(summary, f, indent=2, default=str)
-    logger.info("Wrote model artifacts to %s (games=%d)", out_dir, n)
+    if not write_artifacts:
+        logger.warning(
+            "Training complete but publish blocked (%s); metrics only in %s",
+            "; ".join(publish_block_reasons),
+            out_dir,
+        )
+    else:
+        logger.info("Wrote model artifacts to %s (games=%d)", out_dir, n)
     return summary

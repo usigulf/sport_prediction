@@ -71,6 +71,12 @@ class TrainModelBody(BaseModel):
     )
     test_frac: float = Field(0.2, ge=0.05, le=0.5)
     min_games: int = Field(60, ge=10, le=10000)
+    min_publish_holdout_per_league_group: Optional[int] = Field(
+        None,
+        ge=1,
+        le=10000,
+        description="Min decisive holdout games per league group before writing pickles (default from settings).",
+    )
     force: bool = Field(False, description="Train even when usable games < min_games.")
 
 
@@ -217,6 +223,7 @@ async def train_model_cron(
             out_dir,
             test_frac=body.test_frac,
             min_games=body.min_games,
+            min_publish_holdout_per_league_group=body.min_publish_holdout_per_league_group,
             force=body.force,
         )
     except ValueError as e:

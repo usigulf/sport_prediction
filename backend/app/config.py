@@ -67,6 +67,8 @@ class Settings(BaseSettings):
     model_artifact_dir: Optional[str] = None
     # Gate explanations / rich output when computed quality is below threshold.
     min_data_quality_score: float = 0.45
+    # Block writing sklearn pickles until each league group has enough holdout decisive games.
+    min_publish_holdout_per_league_group: int = 500
     
     # External APIs
     sportradar_api_key: str = ""
