@@ -229,7 +229,9 @@ def test_stats_accuracy_public_shape(client, db, test_teams):
     assert "methodology" in body
     assert body["methodology"]["short"]
     assert body["methodology"]["detail"]
-    assert "eight leagues" in body["methodology"]["detail"].lower()
+    assert "major professional" in body["methodology"]["detail"].lower()
+    assert "computed_at_iso" in body
+    assert body["computed_at_iso"]
 
 
 def test_stats_coverage_lists_standings_counts(client, db, test_teams):

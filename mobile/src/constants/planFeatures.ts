@@ -2,10 +2,11 @@
  * Plan capability matrix (product + backend). Used for copy and upgrade routing.
  */
 import { BETA_SOCCER_ONLY } from './leagues';
+import { PREMIUM_MONTHLY_PRICE_LABEL, PREMIUM_TRIAL_DAYS } from './subscriptionPricing';
 
 const FREE_LEAGUES_LINE = BETA_SOCCER_ONLY
-  ? 'Browse soccer schedules (Premier League, UCL, La Liga, Serie A, Bundesliga, MLS)'
-  : 'Browse games and schedules across eight leagues (six soccer competitions + NFL & NBA)';
+  ? 'Browse major international soccer schedules'
+  : 'Browse games and schedules across major professional competitions';
 
 export const PLAN_MATRIX = {
   free: [
@@ -22,6 +23,6 @@ export const PLAN_MATRIX = {
     'Player props and game spotlights',
     'Challenges and leaderboards',
     'Ad-free experience',
-    '7-day free trial, then $29.99/mo',
+    `${PREMIUM_TRIAL_DAYS}-day free trial, then ${PREMIUM_MONTHLY_PRICE_LABEL}/mo`,
   ],
 } as const;

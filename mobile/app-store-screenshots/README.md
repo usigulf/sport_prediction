@@ -14,12 +14,12 @@ This folder holds exported PNGs ready to drag into **App Store Connect → App �
 | 4 | `04-games-model-picks.png` | Games → Model Picks | Core product |
 | 5 | `05-trending-picks.png` | Trending | Discovery |
 | 6 | `06-game-detail-prediction.png` | Game detail + prediction | Depth |
-| 7 | `07-subscription-paywall.png` | Paywall | Monetization |
+| 7 | `07-subscription-paywall.png` | Paywall (Free + Premium) | Monetization / IAP review |
 | 8 | `08-favorites.png` | Favorites | Personalization |
 | 9 | `09-profile.png` | Profile | Account |
-| 10 | `10-leaderboards.png` | Leaderboard | Pro / gamification |
+| 10 | `10-leaderboards.png` | Leaderboard | Premium gamification |
 
-Use **soccer games with real predictions** for shot 6 (Premier League / UCL). Avoid NFL/NBA if they show “No prediction” in your environment.
+Use **soccer games with real predictions** for shot 6. Avoid screens that show third-party league trademarks in marketing copy.
 
 ## One-time setup
 
@@ -66,7 +66,15 @@ You must see the **tab bar** (Home, Trending, Games, …). If you still see Land
 ./scripts/capture-app-store-screenshots.sh interactive
 ```
 
-Output: `mobile/app-store-screenshots/6.5-inch/*.png`
+**Paywall only** (Free + Premium + legal footer — updates iPhone + iPad 13"):
+```bash
+# Metro must be running first:
+EXPO_PUBLIC_HIDE_DEV_UI=true EXPO_PUBLIC_APP_STORE_CAPTURE=true npx expo start --dev-client
+./scripts/capture-app-store-screenshots.sh paywall
+```
+No login required in dev — the script opens `capture/paywall` on the guest stack. Optional: set `EXPO_PUBLIC_CAPTURE_LOGIN_EMAIL` / `EXPO_PUBLIC_CAPTURE_LOGIN_PASSWORD` in Metro env to capture while signed in.
+
+Output: `mobile/app-store-screenshots/6.5-inch/*.png` and `ipad-13-inch/07-subscription-paywall.png`
 
 ## Upload in App Store Connect
 
@@ -85,4 +93,10 @@ Output: `mobile/app-store-screenshots/6.5-inch/*.png`
 
 ## App previews (optional)
 
-Record screen video on the simulator (**File → Record Screen**), trim to 15–30s, export at 886×1920 or use Apple’s [Preview specifications](https://developer.apple.com/help/app-store-connect/reference/app-preview-specifications).
+Automated:
+
+```bash
+npm run app-store:preview
+```
+
+See [APP_STORE_PREVIEW.md](../docs/APP_STORE_PREVIEW.md) for setup, upload steps, and manual QuickTime fallback.

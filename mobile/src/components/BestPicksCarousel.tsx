@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../constants/theme';
 import type { BestPickItem } from './BestPickMiniCard';
 import { confidenceToPickStrength } from './PredictionCard';
+import { formatLeagueLabel } from '../utils/leagueDisplay';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const H_PADDING = 16;
@@ -81,7 +82,7 @@ const CarouselCard = React.memo<CarouselCardProps>(function CarouselCard({
             <Ionicons name={getSportIcon(pick.league)} size={18} color={theme.colors.textSecondary} />
           </View>
           <Text style={styles.league} numberOfLines={1}>
-            {pick.league.toUpperCase().replace('_', ' ')}
+            {formatLeagueLabel(pick.league)}
           </Text>
         </View>
         <Text style={styles.matchup} numberOfLines={2}>

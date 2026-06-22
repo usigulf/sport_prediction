@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,11 @@ import { apiService } from '../services/api';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { theme } from '../constants/theme';
 import { PLAN_MATRIX } from '../constants/planFeatures';
+import {
+  displayPremiumMonthlyPrice,
+  PREMIUM_MONTHLY_PRICE_LABEL,
+  premiumMonthlyPriceWithPeriod,
+} from '../constants/subscriptionPricing';
 import { normalizeSubscriptionTier, type NormalizedTier } from '../utils/subscription';
 import {
   isPurchasesAvailable,
@@ -30,6 +35,7 @@ import {
   type OfferingPackage,
 } from '../services/purchases';
 import { SubscriptionLegalFooter } from '../components/SubscriptionLegalFooter';
+import { captureRoutesEnabled } from '../navigation/screenshotNavigation';
 
 const CHECKOUT_TIMEOUT_MS = 20000;
 
@@ -54,7 +60,7 @@ const TIERS = [
   {
     id: 'premium',
     name: 'Premium',
-    price: '$29.99',
+    price: PREMIUM_MONTHLY_PRICE_LABEL,
     period: '/month',
     features: [...PLAN_MATRIX.premium],
   },
@@ -76,7 +82,9 @@ export const PaywallScreen: React.FC = () => {
       : undefined);
 
   const dispatch = useAppDispatch();
+  const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
   const reduxTier = useAppSelector((s) => s.auth.user?.subscriptionTier ?? 'free');
+  const screenshotGuest = captureRoutesEnabled() && !isAuthenticated;
 
   const [currentTier, setCurrentTier] = useState<string>('free');
   const [loading, setLoading] = useState(true);
@@ -84,6 +92,7 @@ export const PaywallScreen: React.FC = () => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [packages, setPackages] = useState<OfferingPackage[]>([]);
   const [restoring, setRestoring] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
 
   // Store billing (App Store / Play Billing via RevenueCat) is the compliant
   // path when the native SDK + a configured offering are present; otherwise we
@@ -116,6 +125,12 @@ export const PaywallScreen: React.FC = () => {
   );
 
   const loadTier = useCallback(async () => {
+    if (screenshotGuest) {
+      setLoadError(null);
+      setCurrentTier('free');
+      setLoading(false);
+      return;
+    }
     setLoadError(null);
     setLoading(true);
     try {
@@ -127,7 +142,7 @@ export const PaywallScreen: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [dispatch, reduxTier]);
+  }, [dispatch, reduxTier, screenshotGuest]);
 
   // Do not put `loading` in this callback's deps: when load finishes, `loading` flips to false,
   // React Navigation re-runs the focus effect, and `loadTier()` runs again → infinite blink.
@@ -145,6 +160,14 @@ export const PaywallScreen: React.FC = () => {
     });
     return () => sub.remove();
   }, [loadTier]);
+
+  useEffect(() => {
+    if (!captureRoutesEnabled() || loading) return;
+    const t = setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: false });
+    }, 500);
+    return () => clearTimeout(t);
+  }, [loading]);
 
   const purchaseViaStore = useCallback(
     async (tierId: 'premium'): Promise<boolean> => {
@@ -175,7 +198,14 @@ export const PaywallScreen: React.FC = () => {
           const handled = await purchaseViaStore(tierId);
           if (handled) return;
         }
-        // Fallback: Stripe web checkout (web platform or store billing unavailable).
+        if (Platform.OS === 'ios') {
+          Alert.alert(
+            'Subscriptions',
+            'In-app purchase is not available right now. Check your connection and try Restore purchases.',
+          );
+          return;
+        }
+        // Web / Android fallback: Stripe checkout when store billing unavailable.
         const { url } = await withTimeout(
           apiService.createCheckoutSession(tierId),
           CHECKOUT_TIMEOUT_MS,
@@ -225,10 +255,12 @@ export const PaywallScreen: React.FC = () => {
   const appVersion =
     Constants.expoConfig?.version ?? (Constants as { nativeAppVersion?: string }).nativeAppVersion ?? '—';
 
-  const premiumStorePrice = packages.find((p) => p.tier === 'premium')?.priceString;
+  const storePremiumPrice = packages.find((p) => p.tier === 'premium')?.priceString;
+  const premiumDisplayPrice = displayPremiumMonthlyPrice(storePremiumPrice);
 
   return (
     <ScrollView
+      ref={scrollRef}
       style={styles.container}
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
@@ -263,8 +295,8 @@ export const PaywallScreen: React.FC = () => {
         const isPaid = tier.id !== 'free';
         const loadingThis = checkoutLoadingTier === tier.id;
         const showSubscribe = isPaid && !isCurrent;
-        const storePrice = packages.find((p) => p.tier === tier.id)?.priceString;
-        const displayPrice = storePrice || tier.price;
+        const displayPrice =
+          tier.id === 'premium' ? premiumDisplayPrice : tier.price;
 
         const cardBody = (
           <>
@@ -355,12 +387,12 @@ export const PaywallScreen: React.FC = () => {
           {
             title: 'Premium',
             lengthLabel: '1 month',
-            priceLabel: premiumStorePrice ? `${premiumStorePrice}/month` : '$29.99/month',
+            priceLabel: premiumMonthlyPriceWithPeriod(storePremiumPrice),
             trialNote: '7-day free trial for eligible new subscribers, then auto-renews',
           },
         ]}
       />
-      {!storeBillingReady ? (
+      {!storeBillingReady && Platform.OS !== 'ios' ? (
         <Text style={styles.footer}>
           Web checkout uses Stripe when in-app purchase is unavailable. Return to Subscription after
           payment to refresh your plan.

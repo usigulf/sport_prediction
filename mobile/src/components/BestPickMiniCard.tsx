@@ -10,6 +10,7 @@ import { theme } from '../constants/theme';
 import { leagueBadgeSource } from '../constants/sportLogos';
 import { teamLogoUriCandidates } from '../utils/teamLogoUrl';
 import { confidenceToPickStrength } from './PredictionCard';
+import { formatLeagueLabel } from '../utils/leagueDisplay';
 
 export interface BestPickItem {
   id: string;
@@ -66,7 +67,7 @@ export const BestPickMiniCard: React.FC<BestPickMiniCardProps> = ({ pick, onPres
             <Ionicons name="football-outline" size={18} color={theme.colors.accent} />
           )}
         </View>
-        <Text style={styles.league} numberOfLines={1}>{pick.league.toUpperCase()}</Text>
+        <Text style={styles.league} numberOfLines={1}>{formatLeagueLabel(pick.league)}</Text>
       </View>
       <View style={styles.clubsRow}>
         <ClubFace candidates={homeCrest} fallbackLabel={home} />
@@ -104,16 +105,13 @@ export const BestPickMiniCard: React.FC<BestPickMiniCardProps> = ({ pick, onPres
 };
 
 function ClubFace({ candidates, fallbackLabel }: { candidates: string[]; fallbackLabel: string }) {
-  const letter = fallbackLabel.trim().slice(0, 1).toUpperCase() || '?';
-  if (candidates.length > 0) {
-    return (
-      <TeamCrestImage candidates={candidates} style={styles.clubLogo} contentFit="contain" />
-    );
-  }
   return (
-    <View style={[styles.clubLogo, styles.clubFallback]} accessibilityRole="image">
-      <Text style={styles.clubFallbackText}>{letter}</Text>
-    </View>
+    <TeamCrestImage
+      candidates={candidates}
+      fallbackLabel={fallbackLabel}
+      style={styles.clubLogo}
+      contentFit="contain"
+    />
   );
 }
 

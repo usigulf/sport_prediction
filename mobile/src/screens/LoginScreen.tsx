@@ -3,12 +3,13 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
   Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -53,8 +54,13 @@ export const LoginScreen: React.FC = () => {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' && !Platform.isPad ? 'padding' : undefined}
     >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
+      >
       <View style={styles.content}>
         <OctobetiQWordmark variant="title" style={styles.title} />
         <Text style={styles.subtitle}>{AUTH_SCREEN_TAGLINE}</Text>
@@ -81,30 +87,37 @@ export const LoginScreen: React.FC = () => {
             autoCapitalize="none"
           />
 
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+          <Pressable
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.button,
+              loading && styles.buttonDisabled,
+              pressed && !loading && styles.buttonPressed,
+            ]}
             onPress={handleLogin}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color={theme.colors.background} />
             ) : (
-              <Text style={styles.buttonText}>Login</Text>
+              <Text style={styles.buttonText}>Sign In</Text>
             )}
-          </TouchableOpacity>
+          </Pressable>
 
-          <TouchableOpacity
-            style={styles.linkButton}
+          <Pressable
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.linkButton, pressed && styles.linkPressed]}
             onPress={() => navigation.navigate('Register')}
           >
             <Text style={styles.linkText}>
               Don't have an account? <Text style={styles.linkTextBold}>Sign Up</Text>
             </Text>
-          </TouchableOpacity>
+          </Pressable>
 
           <AuthTrustLinks />
         </View>
       </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 };
@@ -113,6 +126,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   content: {
     flex: 1,
@@ -153,6 +169,9 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.6,
   },
+  buttonPressed: {
+    opacity: 0.9,
+  },
   buttonText: {
     color: theme.colors.background,
     fontSize: 16,
@@ -163,6 +182,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minHeight: theme.minTouchSize,
     justifyContent: 'center',
+  },
+  linkPressed: {
+    opacity: 0.7,
   },
   linkText: {
     color: theme.colors.textSecondary,

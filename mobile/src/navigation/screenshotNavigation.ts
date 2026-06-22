@@ -20,10 +20,14 @@ const ALL_TAB_ROUTES = (
   ['Home', 'LiveHub', 'Games', 'Favorites', 'Profile'] as const
 ).map((name) => ({ name }));
 
-function tabState(active: TabName) {
+function tabState(active: TabName, gamesLeague?: string) {
   return {
     index: TAB_INDEX[active],
-    routes: ALL_TAB_ROUTES,
+    routes: ALL_TAB_ROUTES.map((r) =>
+      r.name === 'Games' && gamesLeague
+        ? { name: 'Games' as const, params: { league: gamesLeague } }
+        : { name: r.name },
+    ),
   };
 }
 
@@ -43,14 +47,14 @@ function waitForNavigationReady(): Promise<void> {
   });
 }
 
-function goToTab(screen: TabName) {
+function goToTab(screen: TabName, gamesLeague?: string) {
   navigationRef.dispatch(
     CommonActions.reset({
       index: 0,
       routes: [
         {
           name: 'MainTabs',
-          state: tabState(screen),
+          state: tabState(screen, gamesLeague),
         },
       ],
     }),
@@ -93,11 +97,23 @@ export async function navigateScreenshotRoute(route: string): Promise<void> {
   const authed = store.getState().auth.isAuthenticated;
 
   switch (route) {
-    case 'landing':
-      if (!authed) {
+    case 'logout': {
+      const { signOut } = await import('../utils/signOut');
+      await signOut(store.dispatch);
+      await new Promise((r) => setTimeout(r, 2000));
+      return;
+    }
+    case 'landing': {
+      if (authed) {
+        const { signOut } = await import('../utils/signOut');
+        await signOut(store.dispatch);
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+      if (!store.getState().auth.isAuthenticated) {
         navigationRef.dispatch(CommonActions.navigate('Landing'));
       }
       return;
+    }
     case 'accuracy':
       if (authed) {
         goToStackScreen('Accuracy');
@@ -111,7 +127,7 @@ export async function navigateScreenshotRoute(route: string): Promise<void> {
       return;
     case 'games':
       if (!authed) throw new Error('Not signed in');
-      goToTab('Games');
+      goToTab('Games', 'premier_league');
       return;
     case 'trending':
       if (!authed) throw new Error('Not signed in');
@@ -125,9 +141,26 @@ export async function navigateScreenshotRoute(route: string): Promise<void> {
       if (!authed) throw new Error('Not signed in');
       goToTab('Profile');
       return;
+    case 'login': {
+      const email = process.env.EXPO_PUBLIC_CAPTURE_LOGIN_EMAIL;
+      const password = process.env.EXPO_PUBLIC_CAPTURE_LOGIN_PASSWORD;
+      if (!email || !password) {
+        throw new Error(
+          'Set EXPO_PUBLIC_CAPTURE_LOGIN_EMAIL and EXPO_PUBLIC_CAPTURE_LOGIN_PASSWORD in Metro env',
+        );
+      }
+      const { completeSignIn } = await import('../utils/signIn');
+      await completeSignIn(store.dispatch, email, password);
+      await new Promise((r) => setTimeout(r, 2500));
+      return;
+    }
     case 'paywall':
-      if (!authed) throw new Error('Not signed in');
-      goToStackScreen('Paywall');
+      if (!authed) {
+        if (!captureRoutesEnabled()) throw new Error('Not signed in');
+        navigationRef.dispatch(CommonActions.navigate('Paywall'));
+      } else {
+        goToStackScreen('Paywall');
+      }
       return;
     case 'leaderboards':
       if (!authed) throw new Error('Not signed in');

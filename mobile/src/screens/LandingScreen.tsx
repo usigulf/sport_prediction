@@ -28,6 +28,7 @@ import {
 import { apiService } from '../services/api';
 import { soccerBetaFetchParams } from '../utils/soccerBetaFetch';
 import { formatLeagueLabel } from '../utils/leagueDisplay';
+import { PREMIUM_MONTHLY_PRICE_LABEL } from '../constants/subscriptionPricing';
 
 type LandingScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -69,7 +70,7 @@ function mapFeedPickToTeaser(pick: {
     match: `${home} vs ${away}`,
     confidence,
     reason: `${formatLeagueLabel(pick.league)} · ${pred.confidence_level ?? 'model'} confidence`,
-    locked: index % 2 === 1,
+    locked: false,
   };
 }
 
@@ -124,10 +125,6 @@ export const LandingScreen: React.FC = () => {
   }, []);
 
   const handleGetFreePicks = () => navigation.navigate('Register');
-  const handleDownloadApp = () => {
-    if (Platform.OS === 'ios') Linking.openURL('https://apps.apple.com/app/octobet').catch(() => {});
-    else Linking.openURL('https://play.google.com/store/apps/details?id=com.sportsprediction.app').catch(() => {});
-  };
   const handleLogIn = () => navigation.navigate('Login');
   const handleUnlockMore = () => navigation.navigate('Register');
   const handleStartTrial = () => navigation.navigate('Register');
@@ -155,13 +152,19 @@ export const LandingScreen: React.FC = () => {
               <TouchableOpacity style={styles.primaryButton} onPress={handleGetFreePicks} activeOpacity={0.85}>
                 <Text style={styles.primaryButtonText}>Get Free Daily Picks</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.outlineButton} onPress={handleDownloadApp} activeOpacity={0.85}>
-                <Text style={styles.outlineButtonText}>Download App</Text>
-                <View style={styles.badges}>
-                  <View style={styles.badge}><Text style={styles.badgeText}>App Store</Text></View>
-                  <View style={styles.badge}><Text style={styles.badgeText}>Google Play</Text></View>
-                </View>
-              </TouchableOpacity>
+              {Platform.OS === 'android' ? (
+                <TouchableOpacity
+                  style={styles.outlineButton}
+                  onPress={() =>
+                    Linking.openURL(
+                      'https://play.google.com/store/apps/details?id=com.sportsprediction.app',
+                    ).catch(() => {})
+                  }
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.outlineButtonText}>Get it on Google Play</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
             <Text style={styles.proofLine}>Informational picks · Methodology & accuracy tracked in the app</Text>
             <AuthTrustLinks style={{ marginTop: theme.spacing.md }} />
@@ -250,7 +253,7 @@ export const LandingScreen: React.FC = () => {
             </View>
             <View style={[styles.pricingCard, styles.pricingCardHighlight]}>
               <Text style={styles.pricingName}>Premium</Text>
-              <Text style={styles.pricingPrice}>$29.99/mo</Text>
+              <Text style={styles.pricingPrice}>{PREMIUM_MONTHLY_PRICE_LABEL}/mo</Text>
               <Text style={styles.pricingDesc}>
                 Unlimited AI picks, challenges, leaderboards, in-play updates, player props, ad-free
               </Text>

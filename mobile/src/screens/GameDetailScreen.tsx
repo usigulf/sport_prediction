@@ -30,6 +30,7 @@ import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useLiveUpdates } from '../hooks/useLiveUpdates';
 import { theme } from '../constants/theme';
+import { PLAYER_PROPS_ENABLED } from '../constants/featureFlags';
 import { formatLeagueLabel } from '../utils/predictionDisplay';
 import { hasPremiumAccess } from '../utils/subscription';
 import { teamLogoUriCandidates } from '../utils/teamLogoUrl';
@@ -125,7 +126,7 @@ export const GameDetailScreen: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!hasPremiumAccess(subscriptionTier)) return;
+    if (!PLAYER_PROPS_ENABLED || !hasPremiumAccess(subscriptionTier)) return;
     let cancelled = false;
     setPlayerPropsError(null);
     setPlayerPropsLoading(true);
@@ -285,9 +286,12 @@ export const GameDetailScreen: React.FC = () => {
       <View style={styles.teamsSection}>
         <View style={styles.teamColumn}>
           <Text style={styles.teamRole}>Home</Text>
-          {homeCrestCandidates.length > 0 ? (
-            <TeamCrestImage candidates={homeCrestCandidates} style={styles.teamLogo} contentFit="contain" />
-          ) : null}
+          <TeamCrestImage
+            candidates={homeCrestCandidates}
+            fallbackLabel={homeName}
+            style={styles.teamLogo}
+            contentFit="contain"
+          />
           <Text style={styles.teamName} numberOfLines={2}>
             {homeName}
           </Text>
@@ -321,9 +325,12 @@ export const GameDetailScreen: React.FC = () => {
 
         <View style={styles.teamColumn}>
           <Text style={styles.teamRole}>Away</Text>
-          {awayCrestCandidates.length > 0 ? (
-            <TeamCrestImage candidates={awayCrestCandidates} style={styles.teamLogo} contentFit="contain" />
-          ) : null}
+          <TeamCrestImage
+            candidates={awayCrestCandidates}
+            fallbackLabel={awayName}
+            style={styles.teamLogo}
+            contentFit="contain"
+          />
           <Text style={styles.teamName} numberOfLines={2}>
             {awayName}
           </Text>
@@ -489,7 +496,8 @@ export const GameDetailScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Player Props */}
+      {/* Player Props (hidden until licensed data — see featureFlags) */}
+      {PLAYER_PROPS_ENABLED ? (
       <View style={styles.infoSection}>
         <Text style={styles.sectionTitle}>
           {playerPropsNamed ? 'Player props' : 'Player props (model est.)'}
@@ -539,6 +547,7 @@ export const GameDetailScreen: React.FC = () => {
           </>
         )}
       </View>
+      ) : null}
 
       {/* Game Info */}
       <View style={styles.infoSection}>

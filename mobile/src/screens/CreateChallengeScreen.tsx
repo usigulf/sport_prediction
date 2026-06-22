@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { apiService } from '../services/api';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
+import { formatLeagueLabel } from '../utils/leagueDisplay';
 import { theme } from '../constants/theme';
 import { hasProAccess } from '../utils/subscription';
 
@@ -155,7 +156,7 @@ export const CreateChallengeScreen: React.FC = () => {
           />
         </View>
         <View style={styles.gameInfo}>
-          <Text style={styles.league}>{item.league?.toUpperCase() ?? '—'}</Text>
+          <Text style={styles.league}>{item.league ? formatLeagueLabel(item.league) : '—'}</Text>
           <Text style={styles.teams}>
             {item.home_team?.name ?? 'Home'} vs {item.away_team?.name ?? 'Away'}
           </Text>

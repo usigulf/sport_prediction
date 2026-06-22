@@ -92,13 +92,22 @@ export function buildLiveWebSocketUrl(gameId: string): string {
 
 // Token is set on login and cleared on logout. Persistence: SecureStore (native) / AsyncStorage (web); see authStorage.
 let authToken: string | null = null;
+/** Bumped whenever a new access token is installed — stale 401s / signOut must not clobber a newer session. */
+let authSessionGeneration = 0;
 
 export function setAuthToken(token: string | null): void {
   authToken = token;
+  if (token) {
+    authSessionGeneration += 1;
+  }
 }
 
 export function getAuthToken(): string | null {
   return authToken;
+}
+
+export function getAuthSessionGeneration(): number {
+  return authSessionGeneration;
 }
 
 /** Called when the server returns 401 (e.g. session expired). Set from App to dispatch logout. */
@@ -201,6 +210,8 @@ export interface AccuracyResponse extends AccuracyBucket {
   by_confidence: Record<string, AccuracyBucket>;
   rolling_30d: AccuracyRollingWindow;
   methodology: AccuracyMethodology;
+  /** When this snapshot was computed (server UTC). */
+  computed_at_iso?: string;
 }
 
 export interface LeagueCoverageRow {
@@ -244,6 +255,7 @@ class ApiService {
     };
 
     const token = this.getStoredToken();
+    const tokenAtRequestStart = token;
     if (requireAuth || sendAuthIfPresent) {
       if (token) {
         requestHeaders['Authorization'] = `Bearer ${token}`;
@@ -302,12 +314,15 @@ class ApiService {
       clearTimeout(timeoutId);
       if (error?.status === 401) {
         const isAuthSessionEndpoint =
-          endpoint.startsWith('/auth/refresh') || endpoint.startsWith('/auth/logout');
+          endpoint.startsWith('/auth/refresh') ||
+          endpoint.startsWith('/auth/logout') ||
+          endpoint.startsWith('/auth/login') ||
+          endpoint.startsWith('/auth/register');
         if (!isRetryAfterRefresh && !isAuthSessionEndpoint) {
           try {
             const stored = await getStoredAuth();
             const rt = stored?.refreshToken;
-            if (rt) {
+            if (rt && tokenAtRequestStart === this.getStoredToken()) {
               const tokens = await refreshAccessToken(rt);
               setAuthToken(tokens.access_token);
               await setStoredAuth({
@@ -325,7 +340,9 @@ class ApiService {
             // refresh failed or no refresh token
           }
         }
-        if (!endpoint.startsWith('/auth/logout')) {
+        const sessionStillCurrent =
+          tokenAtRequestStart != null && tokenAtRequestStart === this.getStoredToken();
+        if (!isAuthSessionEndpoint && sessionStillCurrent) {
           setAuthToken(null);
           clearStoredAuth().catch(() => {});
           onUnauthorized?.();

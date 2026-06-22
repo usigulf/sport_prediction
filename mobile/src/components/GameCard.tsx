@@ -17,14 +17,8 @@ function CrestOrInitial(props: {
   style: StyleProp<ImageStyle>;
 }) {
   const { candidates, fallbackName, style } = props;
-  const letter = fallbackName.trim().slice(0, 1).toUpperCase() || '?';
-  if (candidates.length > 0) {
-    return <TeamCrestImage candidates={candidates} style={style} />;
-  }
   return (
-    <View style={[style, styles.logoFallback]} accessibilityRole="image">
-      <Text style={styles.logoFallbackText}>{letter}</Text>
-    </View>
+    <TeamCrestImage candidates={candidates} fallbackLabel={fallbackName} style={style} />
   );
 }
 

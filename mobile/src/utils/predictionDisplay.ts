@@ -1,13 +1,10 @@
 /**
  * Display helpers for prediction UI (no invented stats — only math on API probabilities).
  */
+import { formatLeagueLabel as formatLeagueLabelFromDisplay } from './leagueDisplay';
 
 export function formatLeagueLabel(league: string): string {
-  if (!league) return '';
-  return league
-    .replace(/_/g, ' ')
-    .toUpperCase()
-    .trim();
+  return formatLeagueLabelFromDisplay(league);
 }
 
 /** Implied third outcome when the model splits mass across three results (e.g. soccer). */

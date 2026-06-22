@@ -31,7 +31,9 @@ import {
   GAMES_ALL_SPORTS_SUBTITLE,
   BETA_SOCCER_ONLY,
 } from '../constants/leagues';
+import { formatLeagueLabel } from '../utils/leagueDisplay';
 import { theme } from '../constants/theme';
+import { PLAYER_PROPS_ENABLED } from '../constants/featureFlags';
 import type { PredictionExplanation } from '../types';
 import {
   buildSoccerWeekDays,
@@ -308,9 +310,9 @@ export const GamesScreen: React.FC = () => {
   const subTabs: { key: GamesViewType; label: string }[] = [
     { key: 'model', label: 'Model Picks' },
     { key: 'trending', label: 'Trending Picks' },
-    ...(BETA_SOCCER_ONLY
-      ? []
-      : [{ key: 'props' as GamesViewType, label: 'Props (preview)' }]),
+    ...(PLAYER_PROPS_ENABLED && !BETA_SOCCER_ONLY
+      ? [{ key: 'props' as GamesViewType, label: 'Props (preview)' }]
+      : []),
   ];
 
   return (
@@ -383,8 +385,7 @@ export const GamesScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
             <Text style={styles.soccerWeekHint}>
-              Fixtures shown here are from your server database (Sportradar sync), not live TV listings. Use
-              arrows to move weeks — e.g. mid‑April games are often one or more weeks ahead of “today”.
+              Swipe the week arrows to browse upcoming fixtures by day.
             </Text>
             <ScrollView
               horizontal
@@ -429,12 +430,10 @@ export const GamesScreen: React.FC = () => {
               {(
                 [
                   { id: 'all' as const, label: 'All soccer' },
-                  { id: 'premier_league' as const, label: 'Premier League' },
-                  { id: 'champions_league' as const, label: 'Champions League' },
-                  { id: 'la_liga' as const, label: 'La Liga' },
-                  { id: 'serie_a' as const, label: 'Serie A' },
-                  { id: 'bundesliga' as const, label: 'Bundesliga' },
-                  { id: 'mls' as const, label: 'MLS' },
+                  ...SOCCER_LEAGUE_IDS.map((id) => ({
+                    id,
+                    label: formatLeagueLabel(id),
+                  })),
                 ] satisfies { id: SoccerSubFilter; label: string }[]
               ).map((opt) => (
                 <TouchableOpacity

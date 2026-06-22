@@ -5,6 +5,9 @@
  * Some CDNs (e.g. ESPN) reject React Native's default User-Agent — always send a browser-like UA.
  */
 
+/** Third-party team/league marks are not shown (trademark / App Store compliance). */
+export const TEAM_LOGOS_ENABLED = false;
+
 /** Minimal fields for resolving a crest URL (full `Team` or nested game team). */
 export type TeamLogoFields = {
   league?: string;
@@ -133,7 +136,7 @@ export function teamLogoUriCandidates(
   team: TeamLogoFields | null | undefined,
   gameLeague?: string | null
 ): string[] {
-  if (!team) return [];
+  if (!TEAM_LOGOS_ENABLED || !team) return [];
   const raw = (team.logo_url || '').trim();
   const fromApi =
     raw && !raw.startsWith('https://example.com') ? [raw] : [];

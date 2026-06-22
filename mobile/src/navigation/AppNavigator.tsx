@@ -12,6 +12,7 @@ import { theme } from '../constants/theme';
 import { getOnboardingComplete, setOnboardingComplete } from '../utils/onboardingStorage';
 import { linking } from './linking';
 import { navigationRef } from './navigationRef';
+import { captureRoutesEnabled } from './screenshotNavigation';
 
 const skipOnboardingForCapture =
   process.env.EXPO_PUBLIC_APP_STORE_CAPTURE === 'true';
@@ -118,7 +119,7 @@ function MainTabs() {
       <Tab.Screen
         name="LiveHub"
         component={LiveHubScreen}
-        options={{ title: 'Trending' }}
+        options={{ title: 'Live' }}
       />
       <Tab.Screen
         name="Games"
@@ -156,7 +157,11 @@ function AuthenticatedStack({ showOnboarding }: { showOnboarding: boolean }) {
       <Stack.Screen
         name="Onboarding"
         component={OnboardingScreen}
-        options={{ headerShown: false }}
+        options={{
+          headerShown: false,
+          gestureEnabled: false,
+          cardStyle: { backgroundColor: theme.colors.background },
+        }}
       />
       <Stack.Screen
         name="MainTabs"
@@ -256,8 +261,10 @@ export function AppNavigator() {
     };
   }, [isAuthenticated]);
 
+  const navigationKey = isAuthenticated ? 'authenticated' : 'guest';
+
   return (
-    <NavigationContainer ref={navigationRef} linking={linking}>
+    <NavigationContainer key={navigationKey} ref={navigationRef} linking={linking}>
       {!isAuthenticated ? (
         <Stack.Navigator
           screenOptions={{
@@ -305,6 +312,13 @@ export function AppNavigator() {
             component={TermsOfServiceScreen}
             options={{ title: 'Terms of Service' }}
           />
+          {captureRoutesEnabled() ? (
+            <Stack.Screen
+              name="Paywall"
+              component={PaywallScreen}
+              options={{ title: 'Subscription' }}
+            />
+          ) : null}
         </Stack.Navigator>
       ) : !onboardingChecked ? (
         <View style={styles.gate}>

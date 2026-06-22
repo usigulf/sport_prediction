@@ -15,11 +15,10 @@ ALLOWED_LEAGUE_CODES = {
 
 # Stats / methodology — keep aligned with mobile `PRODUCT_SCOPE_LONG_DESCRIPTION`.
 PRODUCT_SCOPE_SUMMARY = (
-    "Product scope is eight leagues: soccer (Premier League, Champions League, "
-    "La Liga, Serie A, Bundesliga, MLS), NFL, and NBA."
+    "Coverage spans major professional football, basketball, and soccer competitions worldwide."
 )
 
-# GET /games/leagues: id + display label
+# GET /games/leagues: id + display label (navigation / data organization)
 LEAGUES_LIST = [
     {"id": "nfl", "label": "NFL"},
     {"id": "nba", "label": "NBA"},

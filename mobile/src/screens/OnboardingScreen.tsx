@@ -2,17 +2,18 @@
  * First-run onboarding: choose favorite leagues for Best Picks and Favorites.
  * Shown once after login/register; Save syncs to backend, Skip completes without adding leagues.
  */
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
+  Pressable,
   ScrollView,
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { CommonActions, useNavigation } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../constants/theme';
 import { AVAILABLE_LEAGUES, ONBOARDING_LEAGUES_SUBTITLE } from '../constants/leagues';
 import { apiService } from '../services/api';
@@ -24,6 +25,16 @@ export function OnboardingScreen() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
 
+  const finishOnboarding = useCallback(() => {
+    void setOnboardingComplete().catch(() => {});
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: 'MainTabs' }],
+      }),
+    );
+  }, [navigation]);
+
   const toggle = (id: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -34,41 +45,38 @@ export function OnboardingScreen() {
   };
 
   const handleSave = async () => {
+    if (saving) return;
     setSaving(true);
+    const leagues = [...selected];
     try {
-      for (const leagueId of selected) {
-        await apiService.addFavoriteLeague(leagueId);
-      }
-      await setOnboardingComplete();
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'MainTabs' as never }],
-      });
+      await Promise.all(
+        leagues.map((leagueId) =>
+          apiService.addFavoriteLeague(leagueId).catch(() => undefined),
+        ),
+      );
     } catch (error) {
       Alert.alert('Could not save leagues', getUserFriendlyMessage(error));
-    } finally {
       setSaving(false);
+      return;
     }
+    finishOnboarding();
+    setSaving(false);
   };
 
-  const handleSkip = async () => {
+  const handleSkip = () => {
+    if (saving) return;
     setSaving(true);
-    try {
-      await setOnboardingComplete();
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'MainTabs' as never }],
-      });
-    } finally {
-      setSaving(false);
-    }
+    finishOnboarding();
+    setSaving(false);
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         <Text style={styles.title}>Choose your leagues</Text>
         <Text style={styles.subtitle}>{ONBOARDING_LEAGUES_SUBTITLE}</Text>
@@ -76,43 +84,56 @@ export function OnboardingScreen() {
           {AVAILABLE_LEAGUES.map((league) => {
             const isSelected = selected.has(league.id);
             return (
-              <TouchableOpacity
+              <Pressable
                 key={league.id}
-                style={[styles.chip, isSelected && styles.chipSelected]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isSelected }}
                 onPress={() => toggle(league.id)}
-                activeOpacity={0.8}
+                style={({ pressed }) => [
+                  styles.chip,
+                  isSelected && styles.chipSelected,
+                  pressed && styles.chipPressed,
+                ]}
               >
                 <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
                   {league.name}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             );
           })}
         </View>
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={[styles.primaryButton, saving && styles.buttonDisabled]}
-            onPress={handleSave}
-            disabled={saving}
-          >
-            {saving ? (
-              <ActivityIndicator color={theme.colors.background} />
-            ) : (
-              <Text style={styles.primaryButtonText}>
-                {selected.size > 0 ? `Save ${selected.size} league${selected.size === 1 ? '' : 's'}` : 'Continue'}
-              </Text>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.skipButton}
-            onPress={handleSkip}
-            disabled={saving}
-          >
-            <Text style={styles.skipText}>Skip for now</Text>
-          </TouchableOpacity>
-        </View>
       </ScrollView>
-    </View>
+      <View style={styles.footer}>
+        <Pressable
+          accessibilityRole="button"
+          disabled={saving}
+          onPress={handleSave}
+          style={({ pressed }) => [
+            styles.primaryButton,
+            saving && styles.buttonDisabled,
+            pressed && !saving && styles.primaryPressed,
+          ]}
+        >
+          {saving ? (
+            <ActivityIndicator color={theme.colors.background} />
+          ) : (
+            <Text style={styles.primaryButtonText}>
+              {selected.size > 0
+                ? `Save ${selected.size} league${selected.size === 1 ? '' : 's'}`
+                : 'Continue'}
+            </Text>
+          )}
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          disabled={saving}
+          onPress={handleSkip}
+          style={({ pressed }) => [styles.skipButton, pressed && !saving && styles.skipPressed]}
+        >
+          <Text style={styles.skipText}>Skip for now</Text>
+        </Pressable>
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -122,8 +143,12 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   scroll: {
+    flex: 1,
+  },
+  scrollContent: {
     padding: theme.spacing.lg,
     paddingTop: theme.spacing.xl,
+    paddingBottom: theme.spacing.md,
   },
   title: {
     fontSize: 24,
@@ -140,8 +165,7 @@ const styles = StyleSheet.create({
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.xl,
+    marginBottom: theme.spacing.md,
   },
   chip: {
     paddingHorizontal: theme.spacing.md,
@@ -150,10 +174,17 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.backgroundCard,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    marginRight: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
+    minHeight: theme.minTouchSize,
+    justifyContent: 'center',
   },
   chipSelected: {
     backgroundColor: theme.colors.accentDim,
     borderColor: theme.colors.accent,
+  },
+  chipPressed: {
+    opacity: 0.85,
   },
   chipText: {
     fontSize: 15,
@@ -163,8 +194,13 @@ const styles = StyleSheet.create({
     color: theme.colors.accent,
     fontWeight: '600',
   },
-  actions: {
-    gap: theme.spacing.md,
+  footer: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.colors.borderSubtle,
+    backgroundColor: theme.colors.background,
   },
   primaryButton: {
     backgroundColor: theme.colors.accent,
@@ -173,6 +209,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minHeight: theme.minTouchSize,
     justifyContent: 'center',
+  },
+  primaryPressed: {
+    opacity: 0.9,
   },
   buttonDisabled: {
     opacity: 0.7,
@@ -183,8 +222,14 @@ const styles = StyleSheet.create({
     color: theme.colors.background,
   },
   skipButton: {
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: theme.spacing.md,
     alignItems: 'center',
+    minHeight: theme.minTouchSize,
+    justifyContent: 'center',
+    marginTop: theme.spacing.xs,
+  },
+  skipPressed: {
+    opacity: 0.7,
   },
   skipText: {
     fontSize: 15,

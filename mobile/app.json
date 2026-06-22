@@ -2,8 +2,8 @@
   "expo": {
     "name": "octobetiQ",
     "slug": "sport-prediction",
-    "description": "Informational AI picks across 8 leagues: Premier League, Champions League, La Liga, Serie A, Bundesliga, MLS, NFL, and NBA. Tracked model accuracy. Not betting advice.",
-    "version": "1.0.0",
+    "description": "Informational AI picks across major professional competitions. Tracked model accuracy. Not betting advice.",
+    "version": "1.0.1",
     "icon": "./assets/icon.png",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",

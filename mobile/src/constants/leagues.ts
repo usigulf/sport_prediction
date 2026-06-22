@@ -19,9 +19,19 @@ export const SOCCER_LEAGUE_IDS = [
   'mls',
 ] as const;
 
-/** Marketing/onboarding copy — keep aligned with SOCCER_LEAGUE_IDS. */
+/** Marketing/onboarding copy — generic wording (no third-party league trademarks). */
 export const SOCCER_COMPETITIONS_DISPLAY =
-  'Premier League, Champions League, La Liga, Serie A, Bundesliga, and MLS';
+  'major international soccer competitions';
+
+/** App Store / landing hero — no league or team trademarks. */
+export const MARKETING_SCOPE_LINE =
+  'Coverage across major professional football, basketball, and soccer competitions worldwide';
+
+export const MARKETING_SCOPE_SHORT =
+  'AI-powered predictions and analytics across major North American and international sports competitions';
+
+/** @deprecated Use MARKETING_SCOPE_LINE — kept for imports */
+export const APP_STORE_LEAGUES_LINE = MARKETING_SCOPE_LINE;
 
 /** All supported competition codes (NFL, NBA, six soccer leagues). */
 export const PRODUCT_LEAGUE_IDS = [
@@ -65,7 +75,7 @@ export const HOME_SPORT_IDS = BETA_SOCCER_ONLY
 
 export const MY_LEAGUES_ID = 'my_leagues';
 
-/** Favorites → add league (competition-level ids). */
+/** Favorites / onboarding league tabs — real league names for navigation. */
 const _ALL_LEAGUES = [
   { id: 'nfl', name: 'NFL' },
   { id: 'nba', name: 'NBA' },
@@ -84,40 +94,40 @@ export const AVAILABLE_LEAGUES = BETA_SOCCER_ONLY
 /** Selectable league rows: six soccer competitions + NFL + NBA. */
 export const AVAILABLE_LEAGUES_COUNT = AVAILABLE_LEAGUES.length;
 
-/** Games tab — “All” sport filter */
+/** Games tab — “All” sport filter (navigation; league names OK here). */
 export const GAMES_ALL_SPORTS_SUBTITLE = BETA_SOCCER_ONLY
   ? `${AVAILABLE_LEAGUES_COUNT} soccer competitions — pick a league, then a view`
   : `${AVAILABLE_LEAGUES_COUNT} leagues — ${SOCCER_LEAGUE_IDS.length} soccer, NFL & NBA — pick a sport, then a view`;
 
 export const PRODUCT_SCOPE_LONG_DESCRIPTION = BETA_SOCCER_ONLY
   ? `Soccer: ${SOCCER_COMPETITIONS_DISPLAY}`
-  : `${AVAILABLE_LEAGUES_COUNT} leagues: soccer (${SOCCER_COMPETITIONS_DISPLAY}), NFL, and NBA`;
+  : MARKETING_SCOPE_LINE;
 
-export const LANDING_HERO_SUBHEADLINE = `${PRODUCT_SCOPE_LONG_DESCRIPTION}. Informational picks and tracked accuracy. Not betting advice.`;
+export const LANDING_HERO_SUBHEADLINE = `${MARKETING_SCOPE_LINE}. Informational picks and tracked accuracy. Not betting advice.`;
 
 export const LANDING_FEATURE_PREDICTIONS_DESC = BETA_SOCCER_ONLY
   ? `Win probabilities for ${SOCCER_COMPETITIONS_DISPLAY} — with transparency on methodology.`
-  : `Win probabilities for ${SOCCER_LEAGUE_IDS.length} soccer leagues (${SOCCER_COMPETITIONS_DISPLAY}), plus NFL and NBA — with transparency on methodology.`;
+  : 'Win probabilities for major professional competitions — with transparency on methodology.';
 
 export const ONBOARDING_LEAGUES_SUBTITLE = BETA_SOCCER_ONLY
   ? `Pick your soccer competitions (${SOCCER_COMPETITIONS_DISPLAY}). We use these for Best Picks and Favorites; change anytime in Favorites.`
-  : `Pick from ${AVAILABLE_LEAGUES_COUNT} leagues — soccer includes ${SOCCER_COMPETITIONS_DISPLAY}; plus NFL and NBA. We use these for Best Picks and Favorites; you can change them anytime in Favorites.`;
+  : 'Choose competitions for Best Picks and Favorites. You can change these anytime in Favorites.';
 
 export const HOME_HERO_EMPTY_TAGLINE = BETA_SOCCER_ONLY
   ? `Free daily picks · ${SOCCER_COMPETITIONS_DISPLAY} · Accuracy tracked in-app`
-  : `Free daily picks · ${AVAILABLE_LEAGUES_COUNT} leagues — Soccer · NFL · NBA · Accuracy tracked in-app`;
+  : 'Free daily picks · Multiple competitions · Accuracy tracked in-app';
 
 export const PRICING_FREE_LEAGUES_LINE = BETA_SOCCER_ONLY
   ? `Basic picks (${SOCCER_COMPETITIONS_DISPLAY}), limited daily views`
-  : `Basic picks (${AVAILABLE_LEAGUES_COUNT} leagues: soccer, NFL, NBA), limited daily views`;
+  : 'Basic picks across major competitions, limited daily views';
 
 export const HOME_HEADER_SUBTITLE = BETA_SOCCER_ONLY
   ? 'AI soccer picks · tracked accuracy'
-  : 'AI picks · Soccer · NFL · NBA';
+  : 'AI picks · tracked accuracy';
 
 export const AUTH_SCREEN_TAGLINE = BETA_SOCCER_ONLY
   ? 'AI-Powered Soccer Predictions'
-  : 'AI-Powered Predictions · Soccer, NFL & NBA';
+  : 'AI-Powered Sports Predictions';
 
 export const LIVE_HUB_SUBTITLE = BETA_SOCCER_ONLY
   ? "Live scores & in-play win probabilities refresh every minute"

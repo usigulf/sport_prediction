@@ -102,12 +102,12 @@ fetch_soccer_game_id() {
   id="$(curl -sf "${api}/games/upcoming?league=premier_league&limit=20" 2>/dev/null \
     | python3 -c "
 import sys, json
-games = json.load(sys.stdin)
-if isinstance(games, list):
-    for g in games:
-        if g.get('prediction'):
-            print(g['id'])
-            break
+data = json.load(sys.stdin)
+games = data if isinstance(data, list) else data.get('games') or []
+for g in games:
+    if g.get('prediction'):
+        print(g['id'])
+        break
 " 2>/dev/null || true)"
   if [[ -n "$id" ]]; then
     echo "$id"
@@ -121,10 +121,48 @@ if isinstance(games, list):
 capture_guest() {
   log "=== Guest screenshots (no login required) ==="
   launch_app
-  # App cold-starts on Landing; wait until UI is painted (not Metro download bar).
+  log "Sign out + open Landing (shot 01 must be guest hero, not paywall/home)..."
+  open_route "capture/logout"
+  sleep 4
+  open_route "capture/landing"
+  sleep 6
   capture "01-landing-hero.png"
   open_route "capture/accuracy"
+  sleep 4
   capture "02-model-accuracy.png"
+}
+
+capture_landing_only() {
+  log "=== Landing hero only (01-landing-hero.png) ==="
+  require_app_installed
+  xcrun simctl terminate booted "$SCHEME" 2>/dev/null || true
+  sleep 1
+  xcrun simctl launch booted "$SCHEME" 2>&1 || true
+  log "Waiting for Metro bundle (20s)..."
+  sleep 20
+  open_route "capture/logout"
+  sleep 4
+  open_route "capture/landing"
+  sleep 6
+  capture "01-landing-hero.png"
+  log "Regenerating iPad 13\" shot 01..."
+  python3 <<PY
+from pathlib import Path
+from PIL import Image
+inp = Path("$OUT_DIR/01-landing-hero.png")
+out = Path("${MOBILE_DIR}/app-store-screenshots/ipad-13-inch/01-landing-hero.png")
+bg = (10, 20, 40)
+im = Image.open(inp).convert("RGB")
+w, h = im.size
+scale = 2752 / h
+nw, nh = int(w * scale), int(h * scale)
+resized = im.resize((nw, nh), Image.Resampling.LANCZOS)
+canvas = Image.new("RGB", (2064, 2752), bg)
+canvas.paste(resized, ((2064 - nw) // 2, (2752 - nh) // 2))
+out.parent.mkdir(parents=True, exist_ok=True)
+canvas.save(out, "PNG", optimize=True)
+print(f"OK {out}")
+PY
 }
 
 # --- Logged-in screens (deep links + manual fallbacks) ---
@@ -169,10 +207,17 @@ capture_authenticated() {
 capture_authenticated_auto() {
   log "=== Logged-in screenshots (automated capture/* routes) ==="
   require_app_installed
+  xcrun simctl terminate booted "$SCHEME" 2>/dev/null || true
+  sleep 1
   xcrun simctl launch booted "$SCHEME" 2>&1 || true
-  sleep 20
+  log "Waiting for app + Metro bundle (25s)..."
+  sleep 25
+  log "Auto-login (requires EXPO_PUBLIC_CAPTURE_LOGIN_* in Metro env)..."
+  open_route "capture/login"
+  sleep 15
 
   open_route "capture/home"
+  sleep 5
   capture "03-home-top-picks.png"
   open_route "capture/games"
   capture "04-games-model-picks.png"
@@ -181,8 +226,11 @@ capture_authenticated_auto() {
   GAME_ID="$(fetch_soccer_game_id)"
   if [[ -n "$GAME_ID" ]]; then
     open_route "capture/game/${GAME_ID}"
+    sleep 8
   else
-    wait_enter "06 — Game Detail with prediction, press Enter"
+    log "No soccer game id from API — capturing Games tab for shot 06"
+    open_route "capture/games"
+    sleep 8
   fi
   capture "06-game-detail-prediction.png"
   open_route "capture/paywall"
@@ -195,15 +243,42 @@ capture_authenticated_auto() {
   capture "10-leaderboards.png"
 }
 
+capture_paywall_only() {
+  log "=== Paywall screenshot only (07-subscription-paywall.png) ==="
+  log "Uses capture/paywall (guest paywall in dev, or capture/login if Metro has review credentials)."
+  require_app_installed
+  xcrun simctl terminate booted "$SCHEME" 2>/dev/null || true
+  sleep 1
+  xcrun simctl launch booted "$SCHEME" 2>&1 || true
+  log "Waiting for app + Metro bundle (25s)..."
+  sleep 25
+  if [[ -n "${EXPO_PUBLIC_CAPTURE_LOGIN_EMAIL:-}" && -n "${EXPO_PUBLIC_CAPTURE_LOGIN_PASSWORD:-}" ]]; then
+    open_route "capture/login"
+    sleep 12
+  fi
+  open_route "capture/paywall"
+  sleep 4
+  open_route "paywall"
+  log "Waiting for paywall + legal footer scroll (10s)..."
+  sleep 10
+  capture "07-subscription-paywall.png"
+  log "Regenerating iPad 13\" from iPhone shot..."
+  "$SCRIPT_DIR/resize-screenshots-ipad-13.sh" "$OUT_DIR" "${MOBILE_DIR}/app-store-screenshots/ipad-13-inch" 2>/dev/null || {
+    log "iPad resize skipped (install Pillow: pip3 install Pillow)"
+  }
+}
+
 usage() {
   cat <<EOF
-Usage: $(basename "$0") [guest|auth|auth-auto|all|interactive]
+Usage: $(basename "$0") [guest|auth|auth-auto|all|interactive|paywall]
 
   guest        Landing + Accuracy (automated)
   auth         Home–Leaderboards — YOU navigate, script captures (recommended)
   auth-auto    Same routes via capture/* deep links (only if already logged in)
   all          guest + auth (manual)
   interactive  Same as auth after guest shots
+  paywall      Shot 07 only (capture/paywall) + iPad 13" resize
+  landing      Shot 01 only (guest Landing hero) + iPad 13" resize
 
 Output: $OUT_DIR
 EOF
@@ -223,6 +298,8 @@ main() {
       capture_guest
       capture_authenticated
       ;;
+    paywall) capture_paywall_only ;;
+    landing) capture_landing_only ;;
     -h|--help) usage; exit 0 ;;
     *) usage; exit 1 ;;
   esac

@@ -1,5 +1,87 @@
 # App Store submit checklist (octobetiQ)
 
+## Build upload failures (June 20, 2026 — builds 29, 30, 1.0.2)
+
+**Cause:** `eas build:version:set` was used to enter **1.0.1** — EAS stored that as the **build number** (CFBundleVersion), not the marketing version. Apple requires build numbers to be **integers** (28, 29, 31), not semver (1.0.1, 1.0.2). Hence **Failed** in Build Uploads.
+
+**Submit now:** Use **build 28** (Complete) on **version 1.0.0** — no new build needed.
+
+**Before the next EAS build**, reset the remote build number:
+
+```bash
+cd mobile
+npx eas-cli build:version:set --platform ios
+# When prompted "What version would you like to set?" enter: 31
+# (integer only — NOT 1.0.1)
+```
+
+Marketing version **1.0.1** is set in `app.json` + `ios/octobetiQ/Info.plist`. Next successful build will be **1.0.1 (31)** for ASC version 1.0.1.
+
+---
+
+## Rejection fix (June 13, 2026 — build 28+)
+
+Apple flagged **4.1(a)** marketing copy and screenshots that name third-party leagues (NFL, NBA, Premier League, etc.).
+
+### Code fix (build 28+)
+
+- **Landing / auth / home** — generic scope line in `leagues.ts` (no league trademarks in marketing strings)
+- **League labels** — `Pro Football`, `Pro Basketball`, `English Soccer`, etc. in pickers and game cards
+- **Accuracy screen** — methodology scope uses client copy even if API still returns legacy text
+- **Backend** — `PRODUCT_SCOPE_SUMMARY` + `LEAGUES_LIST` labels updated (deploy API before or with build)
+- **Screenshots** — re-captured `6.5-inch/` and `ipad-13-inch/` (Jun 13)
+
+### App Store Connect (required)
+
+1. **Description / subtitle / keywords** — use [APP_STORE_METADATA_COPY.md](./APP_STORE_METADATA_COPY.md) (no league trademarks)
+2. **Screenshots** — re-upload all 10 iPhone 6.5" + iPad 13" PNGs from `app-store-screenshots/`
+3. **View All Sizes in Media Manager** — confirm every iPad slot uses updated shots
+
+### Reply to Apple (paste in Resolution Center)
+
+```
+Build 28 removes third-party league names from marketing copy and App Store screenshots.
+Landing hero, accuracy methodology, and in-app labels now use generic competition wording
+(e.g. “major professional football, basketball, and soccer competitions worldwide”).
+Screenshots have been re-captured accordingly.
+
+Demo: appstore-review@octobetiq.com / AppReview2026!
+```
+
+---
+
+## Rejection fix (June 11, 2026 — build 26)
+
+Apple rejected **4.1(a)** (copycats / league trademarks in metadata), **2.3.10** (Google Play in binary/screenshots), and **2.1(a)** (onboarding taps dead on iPad).
+
+### Code fix (build 27+)
+
+- **Onboarding** — fixed iPad taps: `Pressable`, pinned footer buttons, optimistic navigation (`OnboardingScreen.tsx`)
+- **Landing** — removed Google Play on iOS; hero copy uses generic league wording (no Premier League / NFL / NBA in marketing line)
+- **Paywall** — already shows $29.99 + legal footer (build 25+)
+
+### App Store Connect (required)
+
+1. **Subtitle / description / keywords** — remove trademarked league & team names (see [listing copy](#listing-copy-build-27) below)
+2. **Screenshots** — re-capture **01-landing-hero** (no Google Play badge); check **View All Sizes in Media Manager** for every iPad slot
+3. **Premium Monthly** — Ready to Submit + review screenshot attached; add to version **In-App Purchases and Subscriptions**
+4. **Description** — keep Terms + Privacy URLs at the end
+5. Upload build **27+**, attach Premium only, resubmit
+
+### Reply to Apple (paste in Resolution Center)
+
+```
+Build 27 addresses all three issues:
+
+1. Onboarding — Continue, Skip, and league chips now use fixed footer controls tested on iPad.
+2. Google Play — removed from the iOS landing screen and updated screenshots.
+3. Metadata — App Store description, subtitle, and keywords no longer reference third-party league trademarks; in-app league pickers are functional category labels only.
+
+Demo: appstore-review@octobetiq.com / AppReview2026!
+```
+
+---
+
 ## Rejection fix (June 9, 2026 — build 20)
 
 Apple rejected **3.1.2(c)** (subscription legal info) and **2.1(b)** (IAPs not submitted with version).
@@ -46,18 +128,18 @@ Confirm paywall shows subscription details and links; IAPs attached to version; 
 | 8 | **App Review Information** | Demo account below · notes optional |
 | 9 | Version page | **Add for Review** → **Submit to App Review** |
 
-### Listing copy (paste into App Store Connect)
+### Listing copy (build 27)
 
 **Subtitle** (30 chars max):
 
 ```
-AI picks: soccer, NFL & NBA
+AI sports picks & accuracy
 ```
 
 **Promotional text** (optional, 170 chars):
 
 ```
-Informational AI win-probability picks across 8 leagues. Tracked accuracy, favorites, challenges, and optional Premium for unlimited picks and in-play updates.
+Informational AI win-probability picks across major professional competitions. Tracked accuracy, favorites, challenges, and optional Premium for unlimited picks and in-play updates.
 ```
 
 **Description:**
@@ -65,24 +147,24 @@ Informational AI win-probability picks across 8 leagues. Tracked accuracy, favor
 ```
 octobetiQ delivers informational AI sports picks — not betting advice.
 
-LEAGUES
-• Soccer: Premier League, Champions League, La Liga, Serie A, Bundesliga, MLS
-• US sports: NFL and NBA
+COVERAGE
+• International soccer, pro football, and pro basketball competitions
+• Schedules, model picks, and tracked accuracy in one app
 
 FEATURES
 • Daily model picks ranked by confidence
-• Personalized “For You” feed from your favorite teams and leagues
+• Personalized “For You” feed from your favorite leagues
 • Game detail with win probability, explanations, and player prop projections (Premium)
 • In-play score and probability updates while matches are on (Premium)
 • Push alerts for high-confidence plays and game reminders
-• Challenges and leaderboards (Pro)
-• Free tier with limited daily picks; Premium and Pro subscriptions
+• Challenges and leaderboards (Premium)
+• Free tier with limited daily picks; optional Premium subscription
 
 TRANSPARENCY
 We publish tracked model accuracy in the app. Picks are for entertainment and research — not financial or gambling advice.
 
 SUBSCRIPTIONS
-Premium and Pro are optional auto-renewing subscriptions (7-day free trial on Premium where offered). Manage or cancel in iOS Settings → Apple ID → Subscriptions.
+Premium is an optional auto-renewing subscription ($29.99/month; 7-day free trial where offered). Manage or cancel in iOS Settings → Apple ID → Subscriptions.
 
 Support: https://octobetiq.com/support
 Privacy: https://octobetiq.com/privacy
@@ -92,7 +174,7 @@ Terms of Use (EULA): https://octobetiq.com/terms
 **Keywords** (100 chars, comma-separated, no spaces after commas):
 
 ```
-soccer,NFL,NBA,predictions,sports,premier league,AI picks,football,basketball,odds
+sports,predictions,soccer,football,basketball,AI picks,accuracy,model,stats,analysis
 ```
 
 ### What's New (1.0.0, build 24)
@@ -100,7 +182,7 @@ soccer,NFL,NBA,predictions,sports,premier league,AI picks,football,basketball,od
 ```
 Initial App Store release.
 
-• AI predictions across 8 leagues (soccer, NFL, NBA)
+• AI predictions across major professional competitions
 • Personalized For You feed, Trending picks, and game detail analysis
 • In-play win-probability updates for live games (Premium)
 • Push notifications, favorites, challenges, and leaderboards

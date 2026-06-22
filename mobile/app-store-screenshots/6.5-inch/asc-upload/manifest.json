@@ -1,0 +1,72 @@
+[
+  {
+    "slot": 1,
+    "source": "03-home-top-picks.png",
+    "output": "01-home-top-picks.png",
+    "headline": "AI Picks That Win More",
+    "subtitle": "Daily confidence-ranked plays for you"
+  },
+  {
+    "slot": 2,
+    "source": "06-game-detail-prediction.png",
+    "output": "02-game-detail-prediction.png",
+    "headline": "Win Probability \u00b7 Deep Context",
+    "subtitle": "See the model's read on every matchup"
+  },
+  {
+    "slot": 3,
+    "source": "02-model-accuracy.png",
+    "output": "03-model-accuracy.png",
+    "headline": "Accuracy You Can Verify",
+    "subtitle": "Methodology & rolling stats on every finished game"
+  },
+  {
+    "slot": 4,
+    "source": "05-trending-picks.png",
+    "output": "04-trending-picks.png",
+    "headline": "Today's Top Plays",
+    "subtitle": "Discover high-confidence picks fast"
+  },
+  {
+    "slot": 5,
+    "source": "07-subscription-paywall.png",
+    "output": "05-subscription-paywall.png",
+    "headline": "Start Your 7-Day Free Trial",
+    "subtitle": "Premium \u00b7 unlimited picks & in-play updates"
+  },
+  {
+    "slot": 6,
+    "source": "08-favorites.png",
+    "output": "06-favorites.png",
+    "headline": "Your Leagues. Your Feed.",
+    "subtitle": "Personalized Best Picks from favorites"
+  },
+  {
+    "slot": 7,
+    "source": "04-games-model-picks.png",
+    "output": "07-games-model-picks.png",
+    "headline": "Browse Every Match",
+    "subtitle": "Upcoming games with model win probabilities"
+  },
+  {
+    "slot": 8,
+    "source": "10-leaderboards.png",
+    "output": "08-leaderboards.png",
+    "headline": "Compete on Accuracy",
+    "subtitle": "Challenges & leaderboards for Premium"
+  },
+  {
+    "slot": 9,
+    "source": "01-landing-hero.png",
+    "output": "09-landing-hero.png",
+    "headline": "Smarter Sports Predictions",
+    "subtitle": "AI picks across major competitions worldwide"
+  },
+  {
+    "slot": 10,
+    "source": "09-profile.png",
+    "output": "10-profile.png",
+    "headline": "Your Hub",
+    "subtitle": "Accuracy, subscription & account in one place"
+  }
+]

@@ -1,18 +1,39 @@
 import React, { useEffect, useState } from 'react';
 import { Image, ImageContentFit } from 'expo-image';
-import { ImageStyle, StyleProp } from 'react-native';
-import { CDN_IMAGE_HEADERS } from '../utils/teamLogoUrl';
+import { ImageStyle, StyleProp, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { theme } from '../constants/theme';
+import { CDN_IMAGE_HEADERS, TEAM_LOGOS_ENABLED } from '../utils/teamLogoUrl';
+
+function CrestPlaceholder({
+  style,
+  fallbackLabel,
+}: {
+  style: StyleProp<ImageStyle>;
+  fallbackLabel?: string;
+}) {
+  const letter = fallbackLabel?.trim().slice(0, 1).toUpperCase();
+  return (
+    <View style={[style, styles.placeholder]} accessibilityRole="image">
+      {letter ? (
+        <Text style={styles.placeholderLetter}>{letter}</Text>
+      ) : (
+        <Ionicons name="shield-outline" size={20} color={theme.colors.textMuted} />
+      )}
+    </View>
+  );
+}
 
 /**
- * Remote team crests (ESPN CDN). Tries each candidate URL when the previous fails (e.g. stale
- * provider URL in API, then ESPN fallback from abbreviation).
+ * Team crest slot — remote logos when `TEAM_LOGOS_ENABLED`; otherwise initials / shield only.
  */
 export function TeamCrestImage(props: {
   candidates: string[];
   style: StyleProp<ImageStyle>;
   contentFit?: ImageContentFit;
+  fallbackLabel?: string;
 }) {
-  const { candidates, style, contentFit = 'contain' } = props;
+  const { candidates, style, contentFit = 'contain', fallbackLabel } = props;
   const [index, setIndex] = useState(0);
   const resetKey = candidates.join('\0');
 
@@ -20,8 +41,14 @@ export function TeamCrestImage(props: {
     setIndex(0);
   }, [resetKey]);
 
+  if (!TEAM_LOGOS_ENABLED || candidates.length === 0) {
+    return <CrestPlaceholder style={style} fallbackLabel={fallbackLabel} />;
+  }
+
   const uri = candidates[index];
-  if (!uri) return null;
+  if (!uri) {
+    return <CrestPlaceholder style={style} fallbackLabel={fallbackLabel} />;
+  }
 
   return (
     <Image
@@ -35,3 +62,17 @@ export function TeamCrestImage(props: {
     />
   );
 }
+
+const styles = StyleSheet.create({
+  placeholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.backgroundCard,
+    borderRadius: 8,
+  },
+  placeholderLetter: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.textSecondary,
+  },
+});

@@ -88,7 +88,7 @@ export const LeaderboardsScreen: React.FC = () => {
               })
             }
           >
-            <Text style={styles.upgradeBtnText}>Upgrade to Pro</Text>
+            <Text style={styles.upgradeBtnText}>Upgrade to Premium</Text>
           </TouchableOpacity>
         </View>
       </View>

@@ -21,7 +21,13 @@
     "eas:submit:android": "EAS_NO_VCS=1 npx eas-cli submit --platform android --profile production --latest",
     "screenshots:ios": "bash scripts/capture-app-store-screenshots.sh all",
     "screenshots:ios:guest": "bash scripts/capture-app-store-screenshots.sh guest",
-    "screenshots:ios:auth": "bash scripts/capture-app-store-screenshots.sh auth"
+    "screenshots:ios:auth": "bash scripts/capture-app-store-screenshots.sh auth",
+    "screenshots:figma-prep": "bash scripts/prepare-figma-screenshot-assets.sh",
+    "screenshots:figma-import": "bash scripts/import-figma-exports.sh",
+    "screenshots:figma": "bash scripts/capture-app-store-screenshots.sh auth-auto && bash scripts/prepare-figma-screenshot-assets.sh",
+    "screenshots:import": "bash scripts/import-external-screenshots.sh",
+    "app-store:preview": "bash scripts/record-app-store-preview.sh",
+    "app-store:captions": "bash scripts/build-asc-screenshots.sh"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

@@ -509,7 +509,7 @@ export const ExplanationView: React.FC<ExplanationViewProps> = ({
       ) : null}
 
       {sa?.provider_context_note?.trim() ? (
-        <AnalysisSection title="Live standings (Sportradar)">
+        <AnalysisSection title="Live standings">
           <RichFormattedBody text={sa.provider_context_note.trim()} />
         </AnalysisSection>
       ) : null}

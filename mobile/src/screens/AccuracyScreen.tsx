@@ -13,6 +13,8 @@ import {
   type CoverageResponse,
 } from '../services/api';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
+import { formatLeagueLabel } from '../utils/leagueDisplay';
+import { PRODUCT_SCOPE_LONG_DESCRIPTION } from '../constants/leagues';
 import { theme } from '../constants/theme';
 
 const CONFIDENCE_ORDER = ['high', 'medium', 'low', 'unknown'] as const;
@@ -32,8 +34,10 @@ function confidenceLabel(key: string): string {
   }
 }
 
-function formatLeagueTitle(league: string): string {
-  return league.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+/** Strip legacy API scope sentences; always show client copy (4.1a-safe). */
+function methodologyDetailText(apiDetail: string): string {
+  const base = apiDetail.replace(/\s*Product scope is[^.]*\./i, '').trim();
+  return `${base} ${PRODUCT_SCOPE_LONG_DESCRIPTION}`.trim();
 }
 
 function formatWindowStart(iso: string): string {
@@ -144,10 +148,15 @@ export const AccuracyScreen: React.FC = () => {
     >
       <Text style={styles.title}>How we've done</Text>
       <Text style={styles.subtitle}>Prediction accuracy on finished games</Text>
+      {formatLastUpdated(d.computed_at_iso) ? (
+        <Text style={styles.freshnessLine}>
+          Last updated {formatLastUpdated(d.computed_at_iso)}
+        </Text>
+      ) : null}
 
       <View style={styles.methodCard}>
         <Text style={styles.methodShort}>{d.methodology.short}</Text>
-        <Text style={styles.methodDetail}>{d.methodology.detail}</Text>
+        <Text style={styles.methodDetail}>{methodologyDetailText(d.methodology.detail)}</Text>
       </View>
 
       <View style={styles.card}>
@@ -193,7 +202,7 @@ export const AccuracyScreen: React.FC = () => {
           <Text style={styles.sectionTitle}>By league</Text>
           {leagues.map(([league, stats]) => (
             <View key={league} style={styles.leagueRow}>
-              <Text style={styles.leagueName}>{formatLeagueTitle(league)}</Text>
+              <Text style={styles.leagueName}>{formatLeagueLabel(league)}</Text>
               <Text style={styles.leagueStat}>
                 {stats.accuracy_pct}% ({stats.correct}/{stats.total})
               </Text>
@@ -219,7 +228,7 @@ export const AccuracyScreen: React.FC = () => {
           const updatedLabel = formatLastUpdated(row.standings_last_updated_iso);
           return (
             <View key={row.league} style={styles.leagueRow}>
-              <Text style={styles.leagueName}>{formatLeagueTitle(row.league)}</Text>
+              <Text style={styles.leagueName}>{formatLeagueLabel(row.league)}</Text>
               <View style={styles.coverageStatBlock}>
                 <Text style={styles.leagueStat}>
                   {row.standings_rows} standings row{row.standings_rows === 1 ? '' : 's'}
@@ -260,6 +269,11 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.xs,
+  },
+  freshnessLine: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
     marginBottom: theme.spacing.md,
   },
   methodCard: {

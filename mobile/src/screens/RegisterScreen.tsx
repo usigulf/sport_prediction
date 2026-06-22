@@ -3,7 +3,7 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
   Alert,
   ActivityIndicator,
@@ -20,6 +20,7 @@ import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { completeSignIn } from '../utils/signIn';
 import { theme } from '../constants/theme';
 import { AUTH_SCREEN_TAGLINE } from '../constants/leagues';
+import { OctobetiQWordmark } from '../components/OctobetiQWordmark';
 import { AuthTrustLinks } from '../components/AuthTrustLinks';
 
 type RegisterScreenNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -52,7 +53,7 @@ export const RegisterScreen: React.FC = () => {
     try {
       await apiService.register(email, password);
       await completeSignIn(dispatch, email, password);
-    } catch (error: any) {
+    } catch (error: unknown) {
       Alert.alert('Registration Failed', getUserFriendlyMessage(error));
     } finally {
       setLoading(false);
@@ -62,11 +63,15 @@ export const RegisterScreen: React.FC = () => {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' && !Platform.isPad ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
+      >
         <View style={styles.content}>
-          <Text style={styles.title}>Create Account</Text>
+          <OctobetiQWordmark variant="title" style={styles.title} />
           <Text style={styles.subtitle}>{AUTH_SCREEN_TAGLINE}</Text>
 
           <View style={styles.form}>
@@ -101,8 +106,13 @@ export const RegisterScreen: React.FC = () => {
               autoCapitalize="none"
             />
 
-            <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
+            <Pressable
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.button,
+                loading && styles.buttonDisabled,
+                pressed && !loading && styles.buttonPressed,
+              ]}
               onPress={handleRegister}
               disabled={loading}
             >
@@ -111,16 +121,17 @@ export const RegisterScreen: React.FC = () => {
               ) : (
                 <Text style={styles.buttonText}>Create Account</Text>
               )}
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
-              style={styles.linkButton}
-              onPress={() => navigation.goBack()}
+            <Pressable
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.linkButton, pressed && styles.linkPressed]}
+              onPress={() => navigation.navigate('Login')}
             >
               <Text style={styles.linkText}>
-                Already have an account? <Text style={styles.linkTextBold}>Login</Text>
+                Already have an account? <Text style={styles.linkTextBold}>Sign In</Text>
               </Text>
-            </TouchableOpacity>
+            </Pressable>
 
             <AuthTrustLinks />
           </View>
@@ -141,43 +152,44 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     justifyContent: 'center',
-    padding: 24,
+    padding: theme.spacing.lg,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-    textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: theme.spacing.sm,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: theme.colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 48,
+    marginBottom: theme.spacing.lg,
   },
   form: {
     width: '100%',
   },
   input: {
     backgroundColor: theme.colors.backgroundCard,
-    borderRadius: theme.radii.sm,
-    padding: 16,
+    borderRadius: theme.radii.md,
+    padding: theme.spacing.md,
     fontSize: 16,
-    marginBottom: 16,
+    marginBottom: theme.spacing.md,
     color: theme.colors.text,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
   button: {
     backgroundColor: theme.colors.accent,
-    borderRadius: theme.radii.sm,
-    padding: 16,
+    borderRadius: theme.radii.lg,
+    padding: theme.spacing.md,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: theme.spacing.sm,
+    minHeight: theme.minTouchSize,
+    justifyContent: 'center',
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  buttonPressed: {
+    opacity: 0.9,
   },
   buttonText: {
     color: theme.colors.background,
@@ -185,8 +197,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   linkButton: {
-    marginTop: 24,
+    marginTop: theme.spacing.lg,
     alignItems: 'center',
+    minHeight: theme.minTouchSize,
+    justifyContent: 'center',
+  },
+  linkPressed: {
+    opacity: 0.7,
   },
   linkText: {
     color: theme.colors.textSecondary,

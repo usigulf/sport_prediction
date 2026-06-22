@@ -9,7 +9,7 @@ const OCTOBETIQ_ADMOB_APP_IOS = 'ca-app-pub-1914108971892809~4005514565';
 const TEST_APP_ANDROID = 'ca-app-pub-3940256099942544~3347511713';
 
 const SOCCER_BETA_DESCRIPTION =
-  'Informational AI soccer picks: Premier League, Champions League, La Liga, Serie A, Bundesliga, MLS. Tracked model accuracy. Not betting advice.';
+  'Informational AI soccer picks across major international competitions. Tracked model accuracy. Not betting advice.';
 
 // RevenueCat public SDK key. Safe to ship in-app (publishable, not a secret).
 // Override per platform with EXPO_PUBLIC_REVENUECAT_IOS_KEY / _ANDROID_KEY (EAS secrets).

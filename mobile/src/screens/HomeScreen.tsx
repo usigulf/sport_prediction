@@ -22,6 +22,7 @@ import { SportIconsRow } from '../components/SportIconsRow';
 import { OctobetiQWordmark } from '../components/OctobetiQWordmark';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchUpcomingGames, restoreGamesFromCache } from '../store/slices/gamesSlice';
+import { PREMIUM_TRIAL_DAYS } from '../constants/subscriptionPricing';
 import { apiService } from '../services/api';
 import { MainTabParamList, RootStackParamList } from '../navigation/AppNavigator';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
@@ -550,7 +551,9 @@ export const HomeScreen: React.FC = () => {
               <Ionicons name="close" size={20} color={theme.colors.textMuted} />
             </TouchableOpacity>
             <Text style={styles.premiumTeaserTitle}>Live picks & full analysis</Text>
-            <Text style={styles.premiumTeaserSub}>7-day free trial via Stripe Checkout</Text>
+            <Text style={styles.premiumTeaserSub}>
+              {PREMIUM_TRIAL_DAYS}-day free trial · cancel anytime in Settings
+            </Text>
             <TouchableOpacity
               style={styles.premiumTeaserButton}
               onPress={() =>
