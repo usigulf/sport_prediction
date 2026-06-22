@@ -16,7 +16,8 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { GameCard } from '../components/GameCard';
 import { PredictionCard } from '../components/PredictionCard';
-import { BestPickMiniCard, CARD_WIDTH_WITH_MARGIN } from '../components/BestPickMiniCard';
+import { GUEST_TEASER_PICK_LIMIT } from '../constants/guestBrowse';
+import { BestPickMiniCard, CARD_WIDTH_WITH_MARGIN, type BestPickItem } from '../components/BestPickMiniCard';
 import { BestPicksCarousel } from '../components/BestPicksCarousel';
 import { SportIconsRow } from '../components/SportIconsRow';
 import { OctobetiQWordmark } from '../components/OctobetiQWordmark';
@@ -247,6 +248,14 @@ export const HomeScreen: React.FC = () => {
     navigation.navigate('GameDetail', { gameId });
   };
 
+  const handlePickPress = (pick: BestPickItem) => {
+    if (pick.guest_locked) {
+      navigation.navigate('Register');
+      return;
+    }
+    handleGamePress(pick.id);
+  };
+
   const handleSportPress = (sportId: string) => {
     navigation.navigate('Games', { league: sportId });
   };
@@ -345,6 +354,18 @@ export const HomeScreen: React.FC = () => {
       <SoccerBetaNotice />
       <ModelWarmingNotice />
 
+      {!isAuthenticated ? (
+        <View style={styles.guestBanner}>
+          <Text style={styles.guestBannerText}>
+            Guest mode — {GUEST_TEASER_PICK_LIMIT} free picks with probabilities today. Create an account for
+            full analysis and unlimited picks.
+          </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Register')} style={styles.guestBannerBtn}>
+            <Text style={styles.guestBannerBtnText}>Create free account</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
       {/* User stats widget (logged in): always link to tracked model accuracy */}
       {isAuthenticated && (
         <View style={styles.statsWidget}>
@@ -424,7 +445,7 @@ export const HomeScreen: React.FC = () => {
           <Animated.View style={{ opacity: bestPicksFade }}>
             <BestPicksCarousel
               picks={forYouPicks.slice(0, 5)}
-              onPickPress={(id) => handleGamePress(id)}
+              onPickPress={handlePickPress}
               onSetFeatured={(id) => setSelectedFeaturedId(id)}
             />
           </Animated.View>
@@ -460,7 +481,7 @@ export const HomeScreen: React.FC = () => {
                 index,
               })}
               renderItem={({ item }) => (
-                <BestPickMiniCard pick={item} onPress={() => handleGamePress(item.id)} />
+                <BestPickMiniCard pick={item} onPress={() => handlePickPress(item)} />
               )}
             />
           ) : null}
@@ -705,6 +726,35 @@ const styles = StyleSheet.create({
     borderRadius: theme.radii.lg,
     borderWidth: 1,
     borderColor: theme.colors.border,
+  },
+  guestBanner: {
+    marginHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    backgroundColor: theme.colors.accentDim,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSubtle,
+  },
+  guestBannerText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.sm,
+  },
+  guestBannerBtn: {
+    alignSelf: 'flex-start',
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    backgroundColor: theme.colors.accent,
+    minHeight: theme.minTouchSize,
+    justifyContent: 'center',
+  },
+  guestBannerBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.background,
   },
   heroGreeting: {
     fontSize: 13,

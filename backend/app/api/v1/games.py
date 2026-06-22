@@ -224,8 +224,8 @@ async def get_upcoming_games(
         .all()
     )
     
-    # Include predictions if user has access
-    include_predictions = True
+    # Guests see schedules only; signed-in free tier uses daily prediction cap.
+    include_predictions = current_user is not None
     if current_user and current_user.subscription_tier == "free":
         if prediction_service.has_exceeded_daily_limit(current_user.id):
             include_predictions = False
@@ -310,7 +310,10 @@ async def get_game(
     
     if prediction:
         game_dict["prediction"] = _prediction_payload(db, game, prediction)
-    
+
+    if not current_user:
+        game_dict["guest_signup_required"] = True
+
     return game_dict
 
 

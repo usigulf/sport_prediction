@@ -31,6 +31,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { useLiveUpdates } from '../hooks/useLiveUpdates';
 import { theme } from '../constants/theme';
 import { PLAYER_PROPS_ENABLED } from '../constants/featureFlags';
+import { GuestSignupCard } from '../components/GuestSignupCard';
 import { formatLeagueLabel } from '../utils/predictionDisplay';
 import { hasPremiumAccess } from '../utils/subscription';
 import { teamLogoUriCandidates } from '../utils/teamLogoUrl';
@@ -69,6 +70,7 @@ export const GameDetailScreen: React.FC = () => {
   useGameExitInterstitial(navigation);
   const dispatch = useAppDispatch();
   const { gameId } = route.params as { gameId: string };
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
 
   const { currentGame, currentPrediction, loading, loadingPrediction, error: gamesError } =
     useAppSelector((state) => state.games);
@@ -430,6 +432,11 @@ export const GameDetailScreen: React.FC = () => {
               />
             ) : null}
           </>
+        ) : !isAuthenticated ? (
+          <GuestSignupCard
+            title="Sign up to see this pick"
+            message="Create a free account to view win probabilities, full analysis, favorites, and live updates for every game."
+          />
         ) : (
           <View style={styles.predictionPlaceholder}>
             {gamesError && /daily prediction limit/i.test(gamesError) ? (

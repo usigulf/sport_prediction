@@ -22,6 +22,7 @@ export interface BestPickItem {
     away_win_probability: number;
     confidence_level?: string;
   } | null;
+  guest_locked?: boolean;
 }
 
 interface BestPickMiniCardProps {
@@ -41,6 +42,7 @@ export const BestPickMiniCard: React.FC<BestPickMiniCardProps> = ({ pick, onPres
   const pred = pick.prediction;
   const stars = pred ? confidenceToPickStrength(pred.confidence_level) : 0;
   const probHome = pred ? pred.home_win_probability : 0;
+  const locked = Boolean(pick.guest_locked);
   const badge = leagueBadgeSource(pick.league);
   const homeCrest = teamLogoUriCandidates({
     league: pick.league,
@@ -75,7 +77,13 @@ export const BestPickMiniCard: React.FC<BestPickMiniCardProps> = ({ pick, onPres
         <ClubFace candidates={awayCrest} fallbackLabel={away} />
       </View>
       <Text style={styles.matchup} numberOfLines={2}>{matchup}</Text>
-      {pred && (
+      {locked ? (
+        <View style={styles.lockRow}>
+          <Ionicons name="lock-closed" size={14} color={theme.colors.accent} />
+          <Text style={styles.lockText}>Sign up to unlock</Text>
+        </View>
+      ) : null}
+      {pred && !locked && (
         <>
           <View style={styles.starRow}>
             {[1, 2, 3, 4, 5].map((i) => (
@@ -213,5 +221,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: theme.colors.accent,
     minWidth: 28,
+  },
+  lockRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  lockText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: theme.colors.accent,
   },
 });

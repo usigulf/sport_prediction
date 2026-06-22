@@ -38,6 +38,7 @@ class GameResponse(BaseModel):
     away_score: Optional[int] = None
     venue: Optional[str] = None
     prediction: Optional[PredictionResponse] = None
+    guest_signup_required: Optional[bool] = None
 
     @field_validator("id", "home_team_id", "away_team_id", mode="before")
     @classmethod

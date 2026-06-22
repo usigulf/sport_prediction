@@ -39,6 +39,7 @@ import { ChallengesScreen } from '../screens/ChallengesScreen';
 import { CreateChallengeScreen } from '../screens/CreateChallengeScreen';
 import { ChallengeDetailScreen } from '../screens/ChallengeDetailScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
+import { GuestProfileScreen } from '../screens/GuestProfileScreen';
 
 // Types
 export type RootStackParamList = {
@@ -72,6 +73,81 @@ export type MainTabParamList = {
 
 const Stack = createStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
+
+function GuestTabs() {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName: keyof typeof Ionicons.glyphMap;
+
+          if (route.name === 'Home') {
+            iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'Games') {
+            iconName = focused ? 'football' : 'football-outline';
+          } else if (route.name === 'Profile') {
+            iconName = focused ? 'person' : 'person-outline';
+          } else {
+            iconName = 'help-outline';
+          }
+
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: theme.colors.accent,
+        tabBarInactiveTintColor: theme.colors.textMuted,
+        tabBarStyle: {
+          backgroundColor: theme.colors.backgroundElevated,
+          borderTopColor: theme.colors.borderSubtle,
+        },
+        headerStyle: {
+          backgroundColor: theme.colors.backgroundElevated,
+        },
+        headerTintColor: theme.colors.text,
+        headerTitleStyle: {
+          fontWeight: 'bold',
+        },
+      })}
+    >
+      <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Home' }} />
+      <Tab.Screen name="Games" component={GamesScreen} options={{ title: 'Games' }} />
+      <Tab.Screen
+        name="Profile"
+        component={GuestProfileScreen}
+        options={{ title: 'Account' }}
+      />
+    </Tab.Navigator>
+  );
+}
+
+function GuestStack() {
+  return (
+    <Stack.Navigator
+      initialRouteName="MainTabs"
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: theme.colors.backgroundElevated,
+        },
+        headerTintColor: theme.colors.text,
+        headerTitleStyle: {
+          fontWeight: 'bold',
+        },
+      }}
+    >
+      <Stack.Screen name="MainTabs" component={GuestTabs} options={{ headerShown: false }} />
+      <Stack.Screen name="GameDetail" component={GameDetailScreen} options={{ title: 'Game Details' }} />
+      <Stack.Screen name="Landing" component={LandingScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Create Account' }} />
+      <Stack.Screen name="Accuracy" component={AccuracyScreen} options={{ title: 'Model accuracy' }} />
+      <Stack.Screen name="Help" component={HelpScreen} options={{ title: 'Help & FAQ' }} />
+      <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ title: 'Privacy Policy' }} />
+      <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} options={{ title: 'Terms of Service' }} />
+      {captureRoutesEnabled() ? (
+        <Stack.Screen name="Paywall" component={PaywallScreen} options={{ title: 'Subscription' }} />
+      ) : null}
+    </Stack.Navigator>
+  );
+}
 
 function MainTabs() {
   return (
@@ -266,60 +342,7 @@ export function AppNavigator() {
   return (
     <NavigationContainer key={navigationKey} ref={navigationRef} linking={linking}>
       {!isAuthenticated ? (
-        <Stack.Navigator
-          screenOptions={{
-            headerStyle: {
-              backgroundColor: theme.colors.backgroundElevated,
-            },
-            headerTintColor: theme.colors.text,
-            headerTitleStyle: {
-              fontWeight: 'bold',
-            },
-          }}
-        >
-          <Stack.Screen
-            name="Landing"
-            component={LandingScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="Login"
-            component={LoginScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="Register"
-            component={RegisterScreen}
-            options={{ title: 'Create Account' }}
-          />
-          <Stack.Screen
-            name="Accuracy"
-            component={AccuracyScreen}
-            options={{ title: 'Model accuracy' }}
-          />
-          <Stack.Screen
-            name="Help"
-            component={HelpScreen}
-            options={{ title: 'Help & FAQ' }}
-          />
-          <Stack.Screen
-            name="PrivacyPolicy"
-            component={PrivacyPolicyScreen}
-            options={{ title: 'Privacy Policy' }}
-          />
-          <Stack.Screen
-            name="TermsOfService"
-            component={TermsOfServiceScreen}
-            options={{ title: 'Terms of Service' }}
-          />
-          {captureRoutesEnabled() ? (
-            <Stack.Screen
-              name="Paywall"
-              component={PaywallScreen}
-              options={{ title: 'Subscription' }}
-            />
-          ) : null}
-        </Stack.Navigator>
+        <GuestStack />
       ) : !onboardingChecked ? (
         <View style={styles.gate}>
           <ActivityIndicator size="large" color={theme.colors.accent} />

@@ -18,6 +18,7 @@ from app.schemas.common import datetime_to_iso
 from app.services.prediction_service import PredictionService
 from app.services.player_props_service import PROPS_DISCLAIMER, build_game_player_props
 from app.services.data_quality_service import compute_prediction_quality
+from app.services.guest_access_service import cap_guest_teaser_picks
 from app.config import get_settings
 
 router = APIRouter(prefix="/feed", tags=["feed"])
@@ -235,6 +236,10 @@ async def get_top_picks(
         )
 
     picks = _build_picks(db, games=games, current_user=current_user, limit=limit, sort_key=sort_key)
+    if current_user is None:
+        picks = cap_guest_teaser_picks(
+            picks, limit=int(get_settings().guest_teaser_pick_limit)
+        )
     return {"picks": picks, "count": len(picks)}
 
 
@@ -289,6 +294,10 @@ async def get_for_you_feed(
         )
 
     picks = _build_picks(db, games=games, current_user=current_user, limit=limit, sort_key=sort_key)
+    if current_user is None:
+        picks = cap_guest_teaser_picks(
+            picks, limit=int(get_settings().guest_teaser_pick_limit)
+        )
     return {"picks": picks, "count": len(picks), "personalized": personalized}
 
 

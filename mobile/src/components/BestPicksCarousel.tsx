@@ -45,7 +45,7 @@ const getSportIcon = (leagueId: string): keyof typeof Ionicons.glyphMap => {
 
 export interface BestPicksCarouselProps {
   picks: BestPickItem[];
-  onPickPress: (gameId: string) => void;
+  onPickPress: (pick: BestPickItem) => void;
   onSetFeatured?: (gameId: string) => void;
 }
 
@@ -64,8 +64,9 @@ const CarouselCard = React.memo<CarouselCardProps>(function CarouselCard({
   const away = pick.away_team?.name ?? 'Away';
   const matchup = `${home} vs ${away}`;
   const pred = pick.prediction;
-  const stars = pred ? confidenceToPickStrength(pred.confidence_level) : 0;
-  const probHome = pred ? pred.home_win_probability : 0;
+  const locked = Boolean(pick.guest_locked);
+  const stars = pred && !locked ? confidenceToPickStrength(pred.confidence_level) : 0;
+  const probHome = pred && !locked ? pred.home_win_probability : 0;
 
   return (
     <View style={styles.cardWrap}>
@@ -88,7 +89,10 @@ const CarouselCard = React.memo<CarouselCardProps>(function CarouselCard({
         <Text style={styles.matchup} numberOfLines={2}>
           {matchup}
         </Text>
-        {pred && (
+        {locked ? (
+          <Text style={styles.lockText}>Sign up to unlock this pick</Text>
+        ) : null}
+        {pred && !locked && (
           <>
             <View style={styles.starRow}>
               {[1, 2, 3, 4, 5].map((i) => (
@@ -125,7 +129,7 @@ export function BestPicksCarousel({ picks, onPickPress, onSetFeatured }: BestPic
   const renderItem = ({ item }: ListRenderItemInfo<BestPickItem>) => (
     <CarouselCard
       pick={item}
-      onPress={() => onPickPress(item.id)}
+      onPress={() => onPickPress(item)}
       onSetFeatured={onSetFeatured ? () => onSetFeatured(item.id) : undefined}
     />
   );
@@ -229,5 +233,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: theme.colors.accent,
     minWidth: 28,
+  },
+  lockText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.accent,
+    marginTop: 4,
   },
 });
