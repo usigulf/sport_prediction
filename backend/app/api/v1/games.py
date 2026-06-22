@@ -59,34 +59,34 @@ def _game_specific_explanation_factors(game: Game, db: Session) -> list[FeatureI
         return max(-limit, min(limit, v))
 
     factors: list[FeatureImportance] = [
-        FeatureImportance(
+        FeatureImportance.from_weight(
             feature="Season win-rate edge",
-            shap_value=round(_cap((h_wr - a_wr) * 2.0), 4),
+            weight=round(_cap((h_wr - a_wr) * 2.0), 4),
             description=f"Home {h_wr:.1%} vs away {a_wr:.1%} from current matchup feature inputs.",
         ),
-        FeatureImportance(
+        FeatureImportance.from_weight(
             feature="Recent form edge",
-            shap_value=round(_cap((h_form - a_form) * 2.0), 4),
+            weight=round(_cap((h_form - a_form) * 2.0), 4),
             description=f"Recent-form index home {h_form:.1%} vs away {a_form:.1%}.",
         ),
-        FeatureImportance(
+        FeatureImportance.from_weight(
             feature="Home advantage",
-            shap_value=round(_cap(home_adv * 8.0), 4),
+            weight=round(_cap(home_adv * 8.0), 4),
             description="Venue/home-field bump applied by the model.",
         ),
-        FeatureImportance(
+        FeatureImportance.from_weight(
             feature="Rest days differential",
-            shap_value=round(_cap((rest_h - rest_a) / 7.0), 4),
+            weight=round(_cap((rest_h - rest_a) / 7.0), 4),
             description=f"Home {rest_h}d rest vs away {rest_a}d.",
         ),
-        FeatureImportance(
+        FeatureImportance.from_weight(
             feature="Scoring environment tilt",
-            shap_value=round(_cap((h_avg - a_avg) / max(1.0, (h_avg + a_avg) / 2.0)), 4),
+            weight=round(_cap((h_avg - a_avg) / max(1.0, (h_avg + a_avg) / 2.0)), 4),
             description=f"Expected scoring context home {h_avg:.2f} vs away {a_avg:.2f}.",
         ),
     ]
     # Most influential first.
-    factors.sort(key=lambda f: abs(f.shap_value), reverse=True)
+    factors.sort(key=lambda f: abs(f.feature_weight), reverse=True)
     # Mention data source in top description for transparency.
     if factors:
         src = (
@@ -377,7 +377,11 @@ async def get_prediction_explanation(
             )
         elif model_factors:
             top_features = [
-                FeatureImportance(feature=f["feature"], shap_value=f["shap_value"], description=f.get("description"))
+                FeatureImportance.from_weight(
+                    feature=f["feature"],
+                    weight=f.get("feature_weight", f["shap_value"]),
+                    description=f.get("description"),
+                )
                 for f in model_factors[:10]
             ]
             confidence_explanation = (
@@ -388,9 +392,21 @@ async def get_prediction_explanation(
             home_prob = float(prediction.home_win_probability)
             away_prob = float(prediction.away_win_probability)
             top_features = [
-                FeatureImportance(feature="Home win probability", shap_value=home_prob - 0.5, description="Model estimate for home team"),
-                FeatureImportance(feature="Away win probability", shap_value=away_prob - 0.5, description="Model estimate for away team"),
-                FeatureImportance(feature="Confidence", shap_value=abs(home_prob - 0.5) * 2, description=f"Confidence level: {prediction.confidence_level}"),
+                FeatureImportance.from_weight(
+                    feature="Home win probability",
+                    weight=home_prob - 0.5,
+                    description="Model estimate for home team",
+                ),
+                FeatureImportance.from_weight(
+                    feature="Away win probability",
+                    weight=away_prob - 0.5,
+                    description="Model estimate for away team",
+                ),
+                FeatureImportance.from_weight(
+                    feature="Confidence",
+                    weight=abs(home_prob - 0.5) * 2,
+                    description=f"Confidence level: {prediction.confidence_level}",
+                ),
             ]
             confidence_explanation = (
                 f"This prediction has {prediction.confidence_level} confidence. "

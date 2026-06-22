@@ -176,10 +176,15 @@ def _build_picks(
     include_predictions = _include_predictions_for_user(db, current_user)
 
     with_pred = []
+    threshold = float(get_settings().min_data_quality_score)
     for game in games:
         pred = prediction_service.get_latest_prediction(str(game.id))
         if not pred and include_predictions:
             continue
+        if include_predictions and pred:
+            quality = compute_prediction_quality(db, game, pred, threshold=threshold)
+            if quality["quality_gate_applied"]:
+                continue
         with_pred.append((game, pred))
 
     if include_predictions:

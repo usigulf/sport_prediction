@@ -62,6 +62,7 @@ def get_model_feature_importance(model_dir: Optional[str]) -> Optional[List[dict
     return [
         {
             "feature": name.replace("_", " ").title(),
+            "feature_weight": round(float(imp), 4),
             "shap_value": round(float(imp), 4),
             "description": FEATURE_DESCRIPTIONS.get(name, f"Model factor: {name}"),
         }

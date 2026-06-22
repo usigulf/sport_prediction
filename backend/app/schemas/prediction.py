@@ -89,8 +89,14 @@ class PredictionResponse(BaseModel):
 
 class FeatureImportance(BaseModel):
     feature: str
-    shap_value: float
+    feature_weight: float
+    shap_value: float  # legacy alias; same value as feature_weight
     description: Optional[str] = None
+
+    @classmethod
+    def from_weight(cls, *, feature: str, weight: float, description: Optional[str] = None) -> "FeatureImportance":
+        w = round(float(weight), 4)
+        return cls(feature=feature, feature_weight=w, shap_value=w, description=description)
 
 
 class RichAnalysisSections(BaseModel):

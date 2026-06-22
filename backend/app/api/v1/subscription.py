@@ -10,6 +10,7 @@ Events: checkout.session.completed, customer.subscription.updated,
 """
 from __future__ import annotations
 import logging
+import secrets
 
 try:
     import stripe
@@ -323,7 +324,7 @@ async def revenuecat_webhook(
     expected = req_settings.revenuecat_webhook_auth
     if not expected:
         raise HTTPException(status_code=503, detail="RevenueCat webhook not configured")
-    if not authorization or authorization != expected:
+    if not authorization or not secrets.compare_digest(authorization, expected):
         logger.warning("RevenueCat webhook auth failed")
         raise HTTPException(status_code=401, detail="Invalid authorization")
 

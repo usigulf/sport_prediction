@@ -12,6 +12,10 @@ from app.services.trust_metrics_service import (
 )
 
 
+def _pregame_created(scheduled_time: datetime) -> datetime:
+    return scheduled_time - timedelta(hours=2)
+
+
 def test_implied_draw_zero_when_home_plus_away_full_mass():
     assert implied_draw_probability(0.5, 0.5) == 0.0
 
@@ -164,12 +168,13 @@ def test_aggregate_skips_finished_game_without_prediction(db, test_teams):
 
 
 def test_aggregate_maps_invalid_confidence_to_unknown_bucket(db, test_teams):
+    kickoff = datetime.now(timezone.utc) - timedelta(days=2)
     g = Game(
         id=uuid4(),
         league="nfl",
         home_team_id=test_teams[0].id,
         away_team_id=test_teams[1].id,
-        scheduled_time=datetime.now(timezone.utc) - timedelta(days=2),
+        scheduled_time=kickoff,
         status="finished",
         home_score=30,
         away_score=27,
@@ -184,6 +189,7 @@ def test_aggregate_maps_invalid_confidence_to_unknown_bucket(db, test_teams):
             home_win_probability=0.55,
             away_win_probability=0.45,
             confidence_level="nonsense_label",
+            created_at=_pregame_created(kickoff),
         )
     )
     db.commit()
@@ -192,13 +198,53 @@ def test_aggregate_maps_invalid_confidence_to_unknown_bucket(db, test_teams):
     assert agg["by_confidence"]["unknown"]["total"] == 1
 
 
+def test_aggregate_uses_pregame_prediction_not_inplay_refresh(db, test_teams):
+    kickoff = datetime.now(timezone.utc) - timedelta(days=1)
+    g = Game(
+        id=uuid4(),
+        league="nfl",
+        home_team_id=test_teams[0].id,
+        away_team_id=test_teams[1].id,
+        scheduled_time=kickoff,
+        status="finished",
+        home_score=28,
+        away_score=10,
+    )
+    db.add(g)
+    db.flush()
+    pre = Prediction(
+        id=uuid4(),
+        game_id=g.id,
+        model_version="heuristic",
+        home_win_probability=0.72,
+        away_win_probability=0.28,
+        confidence_level="high",
+        created_at=kickoff - timedelta(hours=2),
+    )
+    inplay = Prediction(
+        id=uuid4(),
+        game_id=g.id,
+        model_version="heuristic_inplay_v0",
+        home_win_probability=0.95,
+        away_win_probability=0.05,
+        confidence_level="high",
+        created_at=kickoff + timedelta(minutes=30),
+    )
+    db.add_all([pre, inplay])
+    db.commit()
+    agg = aggregate_accuracy_from_finished(db)
+    assert agg["total_games"] == 1
+    assert agg["correct"] == 1
+
+
 def test_stats_accuracy_public_shape(client, db, test_teams):
+    kickoff = datetime.now(timezone.utc) - timedelta(days=5)
     g = Game(
         id=uuid4(),
         league="premier_league",
         home_team_id=test_teams[0].id,
         away_team_id=test_teams[1].id,
-        scheduled_time=datetime.now(timezone.utc) - timedelta(days=5),
+        scheduled_time=kickoff,
         status="finished",
         home_score=1,
         away_score=1,
@@ -213,6 +259,7 @@ def test_stats_accuracy_public_shape(client, db, test_teams):
             home_win_probability=0.20,
             away_win_probability=0.20,
             confidence_level="low",
+            created_at=_pregame_created(kickoff),
         )
     )
     db.commit()

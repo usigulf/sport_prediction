@@ -7,7 +7,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import desc, func
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.constants.soccer import SOCCER_LEAGUES_SET
@@ -16,6 +16,48 @@ from app.models.prediction import Prediction
 from app.models.team_standing import TeamStanding
 
 from app.constants.leagues import PRODUCT_SCOPE_SUMMARY
+from app.services.live_prediction_service import INPLAY_VERSION_MARKER
+
+
+def _kickoff_utc(game: Game) -> datetime | None:
+    kickoff = game.scheduled_time
+    if not kickoff:
+        return None
+    if kickoff.tzinfo is None:
+        return kickoff.replace(tzinfo=timezone.utc)
+    return kickoff
+
+
+def is_inplay_prediction_row(game: Game, pred: Prediction) -> bool:
+    """
+    True when a prediction row reflects live-game refresh (excluded from accuracy rollups).
+    Uses model_version marker and created_at vs kickoff — not game.status (finished games can
+    still have inplay_v0 rows).
+    """
+    mv = (pred.model_version or "").lower()
+    if INPLAY_VERSION_MARKER in mv:
+        return True
+    kickoff = _kickoff_utc(game)
+    if not pred.created_at or not kickoff:
+        return False
+    created = pred.created_at
+    if created.tzinfo is None:
+        created = created.replace(tzinfo=timezone.utc)
+    return created >= kickoff
+
+
+def select_pregame_prediction_for_accuracy(db: Session, game: Game) -> Prediction | None:
+    """First stored prediction before kickoff (pre_game lock for trust metrics)."""
+    preds = (
+        db.query(Prediction)
+        .filter(Prediction.game_id == game.id)
+        .order_by(Prediction.created_at.asc())
+        .all()
+    )
+    for pred in preds:
+        if not is_inplay_prediction_row(game, pred):
+            return pred
+    return None
 
 
 def implied_draw_probability(home_p: float, away_p: float) -> float:
@@ -74,12 +116,7 @@ def aggregate_accuracy_from_finished(
     by_confidence: dict[str, dict[str, int]] = defaultdict(lambda: {"total": 0, "correct": 0})
 
     for game in finished:
-        pred = (
-            db.query(Prediction)
-            .filter(Prediction.game_id == game.id)
-            .order_by(desc(Prediction.created_at))
-            .first()
-        )
+        pred = select_pregame_prediction_for_accuracy(db, game)
         if not pred:
             continue
 
@@ -150,7 +187,8 @@ def methodology_blurb() -> dict[str, str]:
             "Soccer uses 1X2 (home / draw / away); other sports use predicted favorite vs winner."
         ),
         "detail": (
-            "For finished games we compare the latest stored prediction to the final score. "
+            "For finished games we compare the first pre-kickoff prediction to the final score "
+            "(live in-play refreshes are excluded). "
             "Soccer competitions use implied draw probability (residual mass) alongside home and away "
             "so accuracy matches three-way outcomes. Non-soccer games use the higher of home vs away "
             "probability as the predicted side. Confidence buckets group how often each label was "
