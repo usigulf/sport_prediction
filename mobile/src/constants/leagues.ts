@@ -3,6 +3,7 @@
  * Set EXPO_PUBLIC_BETA_SOCCER_ONLY=true for soccer-only beta (hides NFL/NBA in UI).
  */
 import Constants from 'expo-constants';
+import { LEAGUE_DISPLAY_LABELS } from '../utils/leagueDisplay';
 
 const extra =
   (Constants.expoConfig?.extra as { betaSoccerOnly?: boolean } | undefined) ?? {};
@@ -73,12 +74,15 @@ export function isSoccerLeague(league: string | undefined | null): boolean {
 }
 
 export const SPORT_OPTIONS: { id: string; label: string }[] = BETA_SOCCER_ONLY
-  ? [{ id: 'soccer', label: 'Soccer' }]
+  ? [{ id: 'soccer', label: LEAGUE_DISPLAY_LABELS.soccer }]
   : [
-      { id: 'nfl', label: 'NFL' },
-      { id: 'nba', label: 'NBA' },
-      { id: 'soccer', label: 'Soccer' },
+      { id: 'nfl', label: LEAGUE_DISPLAY_LABELS.nfl },
+      { id: 'nba', label: LEAGUE_DISPLAY_LABELS.nba },
+      { id: 'soccer', label: LEAGUE_DISPLAY_LABELS.soccer },
     ];
+
+/** Games sub-tab — aligns with Live hub (was "Trending Picks"). */
+export const GAMES_LIVE_PICKS_TAB_LABEL = 'Live Picks';
 
 /** Home screen quick filters (NFL & NBA first when full product). */
 export const HOME_SPORT_IDS = BETA_SOCCER_ONLY
@@ -89,14 +93,14 @@ export const MY_LEAGUES_ID = 'my_leagues';
 
 /** Favorites / onboarding league tabs — real league names for navigation. */
 const _ALL_LEAGUES = [
-  { id: 'nfl', name: 'NFL' },
-  { id: 'nba', name: 'NBA' },
-  { id: 'premier_league', name: 'Premier League' },
-  { id: 'champions_league', name: 'Champions League' },
-  { id: 'la_liga', name: 'La Liga' },
-  { id: 'serie_a', name: 'Serie A' },
-  { id: 'bundesliga', name: 'Bundesliga' },
-  { id: 'mls', name: 'MLS' },
+  { id: 'nfl', name: LEAGUE_DISPLAY_LABELS.nfl },
+  { id: 'nba', name: LEAGUE_DISPLAY_LABELS.nba },
+  { id: 'premier_league', name: LEAGUE_DISPLAY_LABELS.premier_league },
+  { id: 'champions_league', name: LEAGUE_DISPLAY_LABELS.champions_league },
+  { id: 'la_liga', name: LEAGUE_DISPLAY_LABELS.la_liga },
+  { id: 'serie_a', name: LEAGUE_DISPLAY_LABELS.serie_a },
+  { id: 'bundesliga', name: LEAGUE_DISPLAY_LABELS.bundesliga },
+  { id: 'mls', name: LEAGUE_DISPLAY_LABELS.mls },
 ];
 
 export const AVAILABLE_LEAGUES = BETA_SOCCER_ONLY
@@ -109,7 +113,7 @@ export const AVAILABLE_LEAGUES_COUNT = AVAILABLE_LEAGUES.length;
 /** Games tab — “All” sport filter (navigation; league names OK here). */
 export const GAMES_ALL_SPORTS_SUBTITLE = BETA_SOCCER_ONLY
   ? `${AVAILABLE_LEAGUES_COUNT} soccer competitions — pick a league, then a view`
-  : `${AVAILABLE_LEAGUES_COUNT} leagues — ${SOCCER_LEAGUE_IDS.length} soccer, NFL & NBA — pick a sport, then a view`;
+  : `${AVAILABLE_LEAGUES_COUNT} competitions — pick a sport, then a view`;
 
 export const PRODUCT_SCOPE_LONG_DESCRIPTION = BETA_SOCCER_ONLY
   ? `Soccer: ${SOCCER_COMPETITIONS_DISPLAY}`

@@ -46,7 +46,6 @@ type TeaserPick = {
   match: string;
   confidence: number;
   reason: string;
-  locked: boolean;
 };
 
 function mapFeedPickToTeaser(pick: {
@@ -59,7 +58,7 @@ function mapFeedPickToTeaser(pick: {
     away_win_probability: number;
     confidence_level?: string;
   } | null;
-}, index: number): TeaserPick | null {
+}, _index: number): TeaserPick | null {
   const pred = pick.prediction;
   if (!pred) return null;
   const home = pick.home_team?.name?.trim() || 'Home';
@@ -73,7 +72,6 @@ function mapFeedPickToTeaser(pick: {
     match: `${home} vs ${away}`,
     confidence,
     reason: `${formatLeagueLabel(pick.league)} · ${pred.confidence_level ?? 'model'} confidence`,
-    locked: false,
   };
 }
 
@@ -212,11 +210,6 @@ export const LandingScreen: React.FC = () => {
             >
               {teaserPicks.map((pick) => (
                 <View key={pick.id} style={styles.pickCard}>
-                  {pick.locked && (
-                    <View style={styles.pickCardLock}>
-                      <Text style={styles.pickCardLockText}>Premium Unlock</Text>
-                    </View>
-                  )}
                   <Text style={styles.pickMatch} numberOfLines={2}>{pick.match}</Text>
                   <View style={styles.confidenceRow}>
                     <View style={styles.confidenceBarBg}>
@@ -485,18 +478,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.borderSubtle,
     marginRight: theme.spacing.md,
-  },
-  pickCardLock: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(10, 20, 40, 0.75)',
-    borderRadius: theme.radii.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pickCardLockText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: theme.colors.accent,
   },
   pickMatch: {
     fontSize: 16,

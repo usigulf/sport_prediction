@@ -14,7 +14,7 @@ export const SoccerBetaNotice: React.FC<{ compact?: boolean }> = ({ compact }) =
       <Text style={styles.title}>Soccer beta</Text>
       <Text style={styles.body}>
         This release focuses on soccer competitions with ClearSports schedules. Premium
-        subscribers see no ads. NFL and NBA are hidden until full data pipelines are live.
+        subscribers see no ads. Pro football and pro basketball are hidden until full data pipelines are live.
       </Text>
     </View>
   );

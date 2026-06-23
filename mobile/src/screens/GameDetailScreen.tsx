@@ -31,6 +31,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { useLiveUpdates } from '../hooks/useLiveUpdates';
 import { theme } from '../constants/theme';
 import { PLAYER_PROPS_ENABLED } from '../constants/featureFlags';
+import { PREMIUM_PROPS_UNLOCK_CONTEXT } from '../constants/premiumCopy';
 import { GuestSignupCard } from '../components/GuestSignupCard';
 import { formatLeagueLabel } from '../utils/predictionDisplay';
 import { hasPremiumAccess } from '../utils/subscription';
@@ -539,8 +540,7 @@ export const GameDetailScreen: React.FC = () => {
               onPress={() =>
                 navigation.navigate('Paywall', {
                   emphasizeTier: 'premium',
-                  contextMessage:
-                    'Premium unlocks unlimited picks, full analysis, live updates, and player props.',
+                  contextMessage: PREMIUM_PROPS_UNLOCK_CONTEXT,
                 })
               }
             >

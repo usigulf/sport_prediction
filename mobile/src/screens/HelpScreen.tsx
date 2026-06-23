@@ -19,7 +19,7 @@ const SUPPORT_EMAIL = 'support@sportsprediction.com';
 const FAQ = [
   {
     q: 'Which sports does octobetiQ cover?',
-    a: `We cover ${AVAILABLE_LEAGUES_COUNT} leagues — six soccer competitions plus NFL and NBA (names match your league picker and Favorites). Coverage depth varies by competition depending on licensed data and sync jobs.`,
+    a: `We cover ${AVAILABLE_LEAGUES_COUNT} major professional competitions — pro football, pro basketball, and international soccer. Labels in the league picker match Favorites. Coverage depth varies by competition depending on licensed data and sync jobs.`,
   },
   {
     q: 'How do predictions work?',

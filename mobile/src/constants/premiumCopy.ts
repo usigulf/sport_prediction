@@ -17,3 +17,6 @@ export const PREMIUM_LANDING_FEATURES_LINE = PLAYER_PROPS_ENABLED
 export const HOUSE_PROMO_SUBTITLE = PLAYER_PROPS_ENABLED
   ? 'Full analysis, live updates & player props. 7-day trial.'
   : 'Full analysis, live updates & ad-free. 7-day trial.';
+
+/** Paywall copy when upgrading for player props (props feature on). */
+export const PREMIUM_PROPS_UNLOCK_CONTEXT = `Premium unlocks ${CORE_BENEFITS}, and player props.`;

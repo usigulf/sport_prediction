@@ -29,9 +29,10 @@ import {
   MY_LEAGUES_ID,
   SOCCER_LEAGUE_IDS,
   GAMES_ALL_SPORTS_SUBTITLE,
+  GAMES_LIVE_PICKS_TAB_LABEL,
   BETA_SOCCER_ONLY,
 } from '../constants/leagues';
-import { formatLeagueLabel } from '../utils/leagueDisplay';
+import { formatLeagueLabel, sportHubLabel } from '../utils/leagueDisplay';
 import { theme } from '../constants/theme';
 import { PLAYER_PROPS_ENABLED } from '../constants/featureFlags';
 import type { PredictionExplanation } from '../types';
@@ -317,7 +318,7 @@ export const GamesScreen: React.FC = () => {
 
   const subTabs: { key: GamesViewType; label: string }[] = [
     { key: 'model', label: 'Model Picks' },
-    { key: 'trending', label: 'Trending Picks' },
+    { key: 'trending', label: GAMES_LIVE_PICKS_TAB_LABEL },
     ...(PLAYER_PROPS_ENABLED && !BETA_SOCCER_ONLY
       ? [{ key: 'props' as GamesViewType, label: 'Props (preview)' }]
       : []),
@@ -333,9 +334,9 @@ export const GamesScreen: React.FC = () => {
             {selectedLeague === 'soccer'
               ? 'Pick a day — all soccer competitions for that date'
               : selectedLeague === 'nfl'
-                ? 'NFL schedules and AI picks for the week'
+                ? `${sportHubLabel('nfl')} schedules and AI picks for the week`
                 : selectedLeague === 'nba'
-                  ? 'NBA schedules and AI picks for the week'
+                  ? `${sportHubLabel('nba')} schedules and AI picks for the week`
                   : selectedLeague == null
                     ? GAMES_ALL_SPORTS_SUBTITLE
                     : 'Pick a sport, then a view'}
@@ -466,7 +467,7 @@ export const GamesScreen: React.FC = () => {
           </View>
         )}
 
-        {/* BetQL-style sub-tabs: Model Picks | Trending Picks | Player Props */}
+        {/* Model Picks | Live Picks | Player Props (when enabled) */}
         <View style={styles.subTabRow}>
           {subTabs.map(({ key, label }) => (
             <TouchableOpacity

@@ -453,12 +453,12 @@ export const HomeScreen: React.FC = () => {
         )}
       </View>
 
-      {/* Trending / Hot Right Now */}
+      {/* Live / high-confidence picks carousel */}
       {(trendingLoading || trendingPicks.length > 0) && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="flame" size={18} color={theme.colors.accent} />
-            <Text style={styles.sectionTitle}>HOT RIGHT NOW</Text>
+            <Text style={styles.sectionTitle}>LIVE PICKS</Text>
           </View>
           {trendingLoading && trendingPicks.length === 0 ? (
             <View style={styles.skeletonContainer}>

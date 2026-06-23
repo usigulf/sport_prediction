@@ -1,23 +1,30 @@
 /**
  * Human-readable league labels for game cards and filters.
+ * Generic category names only — no third-party league trademarks (App Store 4.1a).
  */
 
-const LABELS: Record<string, string> = {
-  nfl: 'NFL',
-  nba: 'NBA',
-  premier_league: 'Premier League',
-  champions_league: 'Champions League',
-  la_liga: 'La Liga',
-  serie_a: 'Serie A',
-  bundesliga: 'Bundesliga',
-  mls: 'MLS',
+export const LEAGUE_DISPLAY_LABELS: Record<string, string> = {
+  nfl: 'Pro Football',
+  nba: 'Pro Basketball',
+  premier_league: 'English Soccer',
+  champions_league: 'European Soccer',
+  la_liga: 'Spanish Soccer',
+  serie_a: 'Italian Soccer',
+  bundesliga: 'German Soccer',
+  mls: 'US Soccer',
+  soccer: 'Soccer',
 };
 
 export function formatLeagueLabel(league: string): string {
   const key = (league || '').toLowerCase();
-  if (LABELS[key]) return LABELS[key];
+  if (LEAGUE_DISPLAY_LABELS[key]) return LEAGUE_DISPLAY_LABELS[key];
   return key
     .split('_')
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ');
+}
+
+/** Sport strip labels on Games (nfl / nba / soccer hub ids). */
+export function sportHubLabel(sportId: string): string {
+  return LEAGUE_DISPLAY_LABELS[sportId.toLowerCase()] ?? formatLeagueLabel(sportId);
 }
