@@ -12,6 +12,7 @@ import {
   Linking,
   Platform,
   ScrollView,
+  Pressable,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -29,6 +30,7 @@ import { apiService } from '../services/api';
 import { soccerBetaFetchParams } from '../utils/soccerBetaFetch';
 import { formatLeagueLabel } from '../utils/leagueDisplay';
 import { PREMIUM_MONTHLY_PRICE_LABEL } from '../constants/subscriptionPricing';
+import { PremiumPreviewModal } from '../components/PremiumPreviewModal';
 
 type LandingScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -101,6 +103,7 @@ export const LandingScreen: React.FC = () => {
   const navigation = useNavigation<LandingScreenNavigationProp>();
   const [teaserPicks, setTeaserPicks] = useState<TeaserPick[]>([]);
   const [teaserLoading, setTeaserLoading] = useState(true);
+  const [showPremiumPreview, setShowPremiumPreview] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -127,8 +130,9 @@ export const LandingScreen: React.FC = () => {
   const handleGetFreePicks = () => navigation.navigate('Register');
   const handleLogIn = () => navigation.navigate('Login');
   const handleUnlockMore = () => navigation.navigate('Register');
-  const handleStartTrial = () => navigation.navigate('Register');
+  const handleStartTrial = () => setShowPremiumPreview(true);
   const handleGetStarted = () => navigation.navigate('Register');
+  const handleSeePremium = () => setShowPremiumPreview(true);
 
   return (
     <View style={styles.container}>
@@ -252,16 +256,27 @@ export const LandingScreen: React.FC = () => {
               <Text style={styles.pricingDesc}>{PRICING_FREE_LEAGUES_LINE}</Text>
             </View>
             <View style={[styles.pricingCard, styles.pricingCardHighlight]}>
-              <Text style={styles.pricingName}>Premium</Text>
-              <Text style={styles.pricingPrice}>{PREMIUM_MONTHLY_PRICE_LABEL}/mo</Text>
-              <Text style={styles.pricingDesc}>
-                Unlimited AI picks, challenges, leaderboards, in-play updates, player props, ad-free
-              </Text>
-              <Text style={styles.pricingTrial}>7-Day Free Trial • Cancel anytime</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="See Premium features"
+                onPress={handleSeePremium}
+                style={({ pressed }) => pressed && styles.pressedLink}
+              >
+                <Text style={styles.pricingName}>Premium</Text>
+                <Text style={styles.pricingPrice}>{PREMIUM_MONTHLY_PRICE_LABEL}/mo</Text>
+                <Text style={styles.pricingDesc}>
+                  Unlimited AI picks, challenges, leaderboards, in-play updates, player props, ad-free
+                </Text>
+                <Text style={styles.pricingTrial}>7-Day Free Trial • Cancel anytime</Text>
+                <Text style={styles.seePremiumLink}>See Premium features →</Text>
+              </Pressable>
             </View>
           </View>
           <TouchableOpacity style={styles.trialButton} onPress={handleStartTrial}>
-            <Text style={styles.trialButtonText}>Start 7-Day Free Trial</Text>
+            <Text style={styles.trialButtonText}>See Premium & Sign Up</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.seePremiumTextButton} onPress={handleSeePremium}>
+            <Text style={styles.seePremiumTextOnly}>Compare Free vs Premium</Text>
           </TouchableOpacity>
         </View>
 
@@ -274,6 +289,12 @@ export const LandingScreen: React.FC = () => {
           <Text style={styles.stickyCtaText}>Get Started Free</Text>
         </TouchableOpacity>
       </SafeAreaView>
+
+      <PremiumPreviewModal
+        visible={showPremiumPreview}
+        onClose={() => setShowPremiumPreview(false)}
+        onRegister={() => navigation.navigate('Register')}
+      />
     </View>
   );
 };
@@ -583,6 +604,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.colors.accent,
     fontWeight: '600',
+  },
+  seePremiumLink: {
+    marginTop: theme.spacing.sm,
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.text,
+  },
+  seePremiumTextButton: {
+    marginTop: theme.spacing.sm,
+    alignSelf: 'center',
+    minHeight: theme.minTouchSize,
+    justifyContent: 'center',
+    paddingHorizontal: theme.spacing.md,
+  },
+  seePremiumTextOnly: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+  },
+  pressedLink: {
+    opacity: 0.9,
   },
   pricingCardPro: {
     marginTop: theme.spacing.md,
