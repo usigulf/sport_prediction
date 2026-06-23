@@ -13,7 +13,7 @@ from app.database import get_db
 from app.config import get_settings
 from app.models.game import Game
 from app.models.game_player_spotlight import GamePlayerSpotlight
-from app.services.push_trigger_service import send_game_starting_reminders, send_high_confidence_picks
+from app.services.push_trigger_service import send_game_starting_reminders, send_high_confidence_picks, send_post_game_results
 from app.services.prediction_inference_service import run_prediction_job
 from app.services.model_training import train_and_save
 from app.services.sportradar_nfl_service import fetch_nfl_standings_json
@@ -131,12 +131,17 @@ async def run_push_triggers(
     _: None = Depends(_require_cron_secret),
 ):
     """
-    Run game-starting and high-confidence push triggers. Call from cron with header:
+    Run game-starting, high-confidence, and post-game push triggers. Call from cron with header:
     X-Cron-Secret: <PUSH_CRON_SECRET>
     """
     n_reminders = send_game_starting_reminders(db)
     n_picks = send_high_confidence_picks(db)
-    return {"game_reminders_sent": n_reminders, "high_confidence_picks_sent": n_picks}
+    n_post_game = send_post_game_results(db)
+    return {
+        "game_reminders_sent": n_reminders,
+        "high_confidence_picks_sent": n_picks,
+        "post_game_results_sent": n_post_game,
+    }
 
 
 class LiveSyncBody(BaseModel):

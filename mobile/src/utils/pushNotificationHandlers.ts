@@ -1,6 +1,6 @@
 /**
  * Expo push: foreground display + tap → open game detail.
- * Backend payload: { type: "game_reminder"|"high_confidence", game_id: "<uuid>" }
+ * Backend payload: { type: "game_reminder"|"high_confidence"|"post_game_result", game_id: "<uuid>" }
  */
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';

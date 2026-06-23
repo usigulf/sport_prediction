@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# POST /internal/push-triggers/run — game reminders + high-confidence pick pushes.
+# POST /internal/push-triggers/run — kickoff reminders, high-confidence picks, post-game results.
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$REPO_ROOT"

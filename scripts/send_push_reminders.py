@@ -11,7 +11,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 
 from app.database import SessionLocal, init_sqlite_tables
-from app.services.push_trigger_service import send_game_starting_reminders, send_high_confidence_picks
+from app.services.push_trigger_service import send_game_starting_reminders, send_high_confidence_picks, send_post_game_results
 
 
 def main():
@@ -20,7 +20,8 @@ def main():
     try:
         n1 = send_game_starting_reminders(db)
         n2 = send_high_confidence_picks(db)
-        print(f"Sent {n1} game reminders, {n2} high-confidence pick notifications")
+        n3 = send_post_game_results(db)
+        print(f"Sent {n1} game reminders, {n2} high-confidence picks, {n3} post-game results")
     finally:
         db.close()
 
