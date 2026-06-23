@@ -118,6 +118,7 @@ export const AdEngineProvider: React.FC<{ children: React.ReactNode }> = ({
   const [nativeLive, setNativeLive] = useState(0);
 
   const lastInterstitialMs = useRef(0);
+  const interstitialsThisSession = useRef(0);
   const sessionStartsAtMs = useRef(Date.now());
 
   useEffect(() => {
@@ -197,6 +198,8 @@ export const AdEngineProvider: React.FC<{ children: React.ReactNode }> = ({
   const shouldAttemptInterstitial = useCallback((): boolean => {
     const now = Date.now();
     if (segment === 'new') return false;
+    if (interstitialsThisSession.current >= rulesState.maxInterstitialsPerSession)
+      return false;
     const sr = segRules.interstitialBlacklistSessionRange;
     if (sr) {
       const [lo, hi] = sr;
@@ -207,10 +210,11 @@ export const AdEngineProvider: React.FC<{ children: React.ReactNode }> = ({
     if (now - lastInterstitialMs.current < segRules.minMsBetweenInterstitials)
       return false;
     return true;
-  }, [segment, segRules, sessionOrdinal]);
+  }, [segment, segRules, sessionOrdinal, rulesState.maxInterstitialsPerSession]);
 
   const markInterstitialConsumed = useCallback(() => {
     lastInterstitialMs.current = Date.now();
+    interstitialsThisSession.current += 1;
   }, []);
 
   const nextRewardedUnlockMinutes = useCallback(() => {

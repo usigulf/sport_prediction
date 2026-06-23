@@ -17,6 +17,8 @@ export interface SegmentAdRules {
 
 export type AdRulesFile = {
   version: number;
+  /** Hard cap on interstitial impressions per app session (cold start until process exit). */
+  maxInterstitialsPerSession: number;
   /** Adjust thresholds for HIGH_VALUE classification. */
   highValueMinSessions: number;
   highValueMinLifetimeEngagementScore: number;
@@ -24,7 +26,8 @@ export type AdRulesFile = {
 };
 
 export const DEFAULT_AD_RULES: AdRulesFile = {
-  version: 1,
+  version: 2,
+  maxInterstitialsPerSession: 1,
   highValueMinSessions: 16,
   highValueMinLifetimeEngagementScore: 48,
   segments: {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Linking, Platform } from 'react-native';
 import { theme } from '../constants/theme';
 
 const SUPPORT_EMAIL = 'support@sportsprediction.com';
@@ -28,7 +28,9 @@ export const PrivacyPolicyScreen: React.FC = () => {
         <Text style={styles.body}>
           • Account: email address and a hashed password when you register.{'\n'}
           • Usage: games and predictions you view, favorites, leagues, and related activity.{'\n'}
-          • Purchases: subscription tier via App Store (RevenueCat) and/or Stripe on the web.{'\n'}
+          • Purchases: subscription tier via App Store in-app purchase (RevenueCat).
+          {Platform.OS !== 'ios' ? ' Web checkout may use Stripe where available.' : ''}
+          {'\n'}
           • Push: device push token when you enable notifications in Settings.{'\n'}
           • Ads (free tier): Google AdMob may show ads; on iOS, if you allow App Tracking
           Transparency, AdMob may use your advertising identifier (IDFA) for ad delivery and
@@ -49,8 +51,9 @@ export const PrivacyPolicyScreen: React.FC = () => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>4. Third parties</Text>
         <Text style={styles.body}>
-          We use Google (AdMob), Apple (in-app purchases), RevenueCat (subscriptions), Stripe (web
-          billing), and licensed sports data providers. They process data under their own policies.
+          We use Google (AdMob), Apple (in-app purchases), RevenueCat (subscriptions)
+          {Platform.OS !== 'ios' ? ', Stripe (web billing)' : ''}, and licensed sports data
+          providers. They process data under their own policies.
         </Text>
       </View>
 
