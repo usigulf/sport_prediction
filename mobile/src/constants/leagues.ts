@@ -40,7 +40,7 @@ export const ONBOARDING_TRUST_BODY =
   'We lock predictions before kickoff and track results in the Accuracy tab. See methodology, sample size, and when the model is still warming up.';
 
 export const ONBOARDING_PUSH_HINT =
-  'Optional alerts for high-confidence picks and game reminders. Change anytime in Settings.';
+  'Optional kickoff alerts ~2 hours before your favorite teams play, plus high-confidence pick alerts. Change anytime in Settings.';
 
 /** @deprecated Use MARKETING_SCOPE_LINE — kept for imports */
 export const APP_STORE_LEAGUES_LINE = MARKETING_SCOPE_LINE;

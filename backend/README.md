@@ -32,7 +32,7 @@ The app registers Expo push tokens via `POST /user/push-token`. Tokens are store
 
 **Push triggers** (game reminders and high-confidence picks):
 
-- **Game starting in ~1 hour** — Notifies users who have either team in favorites; only for games with `scheduled_time` in the next 50–70 minutes; at most once per user per game.
+- **Kickoff alert (~2 hours before)** — Notifies users who favorited either team or the game's league; only for games with `scheduled_time` in the next 110–130 minutes (UTC); at most once per user per game.
 - **High-confidence pick ready** — Notifies users who have either team in favorites when the game has a prediction with `confidence_level='high'` and the game is still upcoming; at most once per user per game.
 
 **Run triggers:**

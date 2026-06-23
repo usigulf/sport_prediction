@@ -1,6 +1,6 @@
 """
 Send push notifications via Expo Push API.
-Used when we have user push tokens (e.g. "game starting in 1 hour" for favorites).
+Used when we have user push tokens (e.g. kickoff alerts ~2h before favorite-team games).
 """
 import json
 import logging

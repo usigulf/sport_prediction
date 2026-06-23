@@ -1,5 +1,5 @@
 """
-Tracks push reminders we've already sent so we don't spam (e.g. one "game starting in 1h" per user per game).
+Tracks push reminders we've already sent so we don't spam (e.g. one kickoff alert per user per game).
 """
 from sqlalchemy import Column, DateTime, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import relationship

@@ -1,4 +1,6 @@
 """Internal cron / ops routes (X-Cron-Secret)."""
+from unittest.mock import patch
+
 import pytest
 from fastapi import status
 
@@ -282,3 +284,13 @@ def test_internal_ml_train(client, monkeypatch, tmp_path):
         assert captured["kwargs"]["force"] is True
     finally:
         get_settings.cache_clear()
+
+
+@patch("app.api.internal.send_game_starting_reminders", return_value=2)
+@patch("app.api.internal.send_high_confidence_picks", return_value=1)
+def test_run_push_triggers(mock_picks, mock_reminders, client):
+    r = client.post("/internal/push-triggers/run", headers=_headers())
+    assert r.status_code == status.HTTP_200_OK
+    assert r.json() == {"game_reminders_sent": 2, "high_confidence_picks_sent": 1}
+    mock_reminders.assert_called_once()
+    mock_picks.assert_called_once()

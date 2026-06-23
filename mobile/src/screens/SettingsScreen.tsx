@@ -63,7 +63,8 @@ export const SettingsScreen: React.FC = () => {
           )}
         </View>
         <Text style={styles.hint}>
-          Game reminders and high-confidence pick alerts. Turn off to stop all push notifications.
+          Kickoff alerts about 2 hours before games for your favorite teams and leagues, plus
+          high-confidence pick alerts. Turn off to stop all push notifications.
         </Text>
       </View>
 
