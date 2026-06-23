@@ -63,7 +63,7 @@ export const HelpScreen: React.FC = () => {
         <Text style={styles.trustTitle}>Trust & transparency</Text>
         <Text style={styles.trustBody}>
           {PRODUCT_SCOPE_LONG_DESCRIPTION}. See how we score picks against final results, rolling accuracy (
-          {AVAILABLE_LEAGUES_COUNT} leagues), and which competitions have standings data in the app right now.
+          {AVAILABLE_LEAGUES_COUNT} competitions), and which competitions have standings data in the app right now.
         </Text>
         <TouchableOpacity
           style={styles.trustButton}

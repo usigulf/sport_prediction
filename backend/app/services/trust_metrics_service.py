@@ -269,12 +269,12 @@ def methodology_blurb() -> dict[str, str]:
             "Soccer uses 1X2 (home / draw / away); other sports use predicted favorite vs winner."
         ),
         "detail": (
-            "For finished games we compare the first pre-kickoff prediction (prediction_type=pre_game) "
-            "to the final score (live in-play refreshes with prediction_type=inplay_v0 are excluded). "
+            "For finished games we compare the first pre-kickoff prediction to the final score "
+            "(live in-play refreshes are excluded). "
             "Soccer competitions use implied draw probability (residual mass) alongside home and away "
             "so accuracy matches three-way outcomes. Non-soccer games use the higher of home vs away "
             "probability as the predicted side. Confidence buckets group how often each label was "
-            "right, not trading performance. Coverage grows as more league data is licensed and synced. "
+            "right, not trading performance. Coverage grows as more competition data is licensed and synced. "
             + PRODUCT_SCOPE_SUMMARY
         ),
     }

@@ -13,7 +13,7 @@ export const SoccerBetaNotice: React.FC<{ compact?: boolean }> = ({ compact }) =
     <View style={[styles.box, compact && styles.boxCompact]}>
       <Text style={styles.title}>Soccer beta</Text>
       <Text style={styles.body}>
-        This release focuses on soccer competitions with ClearSports schedules. Premium
+        This release focuses on major international soccer competitions. Premium
         subscribers see no ads. Pro football and pro basketball are hidden until full data pipelines are live.
       </Text>
     </View>

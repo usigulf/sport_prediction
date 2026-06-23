@@ -16,7 +16,7 @@ import {
 } from '../services/api';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { formatLeagueLabel } from '../utils/leagueDisplay';
-import { PRODUCT_SCOPE_LONG_DESCRIPTION } from '../constants/leagues';
+import { ACCURACY_METHODOLOGY_DETAIL } from '../utils/methodologyDisplay';
 import { theme } from '../constants/theme';
 import { useModelStatus } from '../hooks/useModelStatus';
 import { CalibrationChart } from '../components/CalibrationChart';
@@ -39,10 +39,9 @@ function confidenceLabel(key: string): string {
   }
 }
 
-/** Strip legacy API scope sentences; always show client copy (4.1a-safe). */
-function methodologyDetailText(apiDetail: string): string {
-  const base = apiDetail.replace(/\s*Product scope is[^.]*\./i, '').trim();
-  return `${base} ${PRODUCT_SCOPE_LONG_DESCRIPTION}`.trim();
+/** Always show client copy — API detail may include legacy scope or technical field names. */
+function methodologyDetailText(_apiDetail: string): string {
+  return ACCURACY_METHODOLOGY_DETAIL;
 }
 
 function formatWindowStart(iso: string): string {
@@ -301,7 +300,7 @@ export const AccuracyScreen: React.FC = () => {
           );
         })
       ) : (
-        <Text style={styles.mutedSmall}>No league standings synced in the database yet.</Text>
+        <Text style={styles.mutedSmall}>Standings data not available yet for any competition.</Text>
       )}
     </ScrollView>
   );
