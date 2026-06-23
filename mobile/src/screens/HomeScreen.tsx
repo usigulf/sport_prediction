@@ -24,6 +24,7 @@ import { OctobetiQWordmark } from '../components/OctobetiQWordmark';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchUpcomingGames, restoreGamesFromCache } from '../store/slices/gamesSlice';
 import { PREMIUM_TRIAL_DAYS } from '../constants/subscriptionPricing';
+import { PREMIUM_PAYWALL_CONTEXT } from '../constants/premiumCopy';
 import { apiService } from '../services/api';
 import { MainTabParamList, RootStackParamList } from '../navigation/AppNavigator';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
@@ -37,14 +38,14 @@ import { formatLeagueLabel } from '../utils/leagueDisplay';
 import { theme } from '../constants/theme';
 import { soccerBetaFetchParams } from '../utils/soccerBetaFetch';
 import { useIntervalWhen } from '../hooks/useIntervalWhen';
-
-const LIVE_GAMES_POLL_MS = 60_000;
 import { hasProAccess } from '../utils/subscription';
 import { SoccerBetaNotice } from '../components/SoccerBetaNotice';
 import { ModelWarmingNotice } from '../components/ModelWarmingNotice';
 import { useAdEngine } from '../ads/engine/AdEngineContext';
 import { NativeFeedAdCard } from '../ads/components/NativeFeedAdCard';
 import { BannerStrip } from '../ads/components/BannerStrip';
+
+const LIVE_GAMES_POLL_MS = 60_000;
 
 type HomeScreenNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, 'Home'>,
@@ -582,7 +583,7 @@ export const HomeScreen: React.FC = () => {
               onPress={() =>
                 navigation.navigate('Paywall', {
                   emphasizeTier: 'premium',
-                  contextMessage: 'Premium: unlimited picks, full analysis, live updates, and player props. 7-day free trial.',
+                  contextMessage: PREMIUM_PAYWALL_CONTEXT,
                 })
               }
               activeOpacity={0.9}

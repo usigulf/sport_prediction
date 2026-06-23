@@ -38,7 +38,7 @@ interface ExplanationViewProps {
   };
 }
 
-/** Backend returns these three when no ML artifact dir is configured — not real SHAP factors. */
+/** Backend returns these three when no ML artifact dir is configured — not real model factors. */
 function isStubTopFeatures(
   features: { feature: string }[] | undefined
 ): boolean {
@@ -79,6 +79,13 @@ function factorLabel(name: string): string {
     default:
       return name;
   }
+}
+
+function featureWeight(feature: {
+  feature_weight?: number;
+  shap_value?: number;
+}): number {
+  return feature.feature_weight ?? feature.shap_value ?? 0;
 }
 
 function AnalysisSection({ title, children }: { title: string; children: React.ReactNode }) {
@@ -547,32 +554,34 @@ export const ExplanationView: React.FC<ExplanationViewProps> = ({
           ))}
 
       {showModelDrivers ? (
-        <AnalysisSection title="What drove this pick">
+        <AnalysisSection title="Key factors">
           <Text style={styles.bodyLead}>Strongest model inputs for this version (not live odds).</Text>
           <Text style={styles.driverHint}>Positive values lean home; negative values lean away.</Text>
-          {explanation.top_features!.map((feature: { feature: string; shap_value: number; description?: string }, index: number) => (
+          {explanation.top_features!.map((feature, index: number) => {
+            const weight = featureWeight(feature);
+            return (
             <View key={index} style={styles.featureItem}>
               <View style={styles.featureHeader}>
                 <Text style={styles.featureName}>{factorLabel(feature.feature)}</Text>
                 <View
                   style={[
-                    styles.shapBadge,
+                    styles.factorBadge,
                     {
                       backgroundColor:
-                        feature.shap_value > 0 ? theme.colors.accentDim : theme.colors.secondaryDim,
+                        weight > 0 ? theme.colors.accentDim : theme.colors.secondaryDim,
                     },
                   ]}
                 >
                   <Text
                     style={[
-                      styles.shapValue,
+                      styles.factorValue,
                       {
-                        color: feature.shap_value > 0 ? theme.colors.accent : theme.colors.secondary,
+                        color: weight > 0 ? theme.colors.accent : theme.colors.secondary,
                       },
                     ]}
                   >
-                    {feature.shap_value > 0 ? '+' : ''}
-                    {(feature.shap_value * 100).toFixed(1)}%
+                    {weight > 0 ? '+' : ''}
+                    {(weight * 100).toFixed(1)}%
                   </Text>
                 </View>
               </View>
@@ -580,7 +589,8 @@ export const ExplanationView: React.FC<ExplanationViewProps> = ({
                 {feature.description?.trim() || FACTOR_HELP[feature.feature] || 'Model-derived matchup factor.'}
               </Text>
             </View>
-          ))}
+            );
+          })}
         </AnalysisSection>
       ) : null}
 
@@ -872,12 +882,12 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingRight: 8,
   },
-  shapBadge: {
+  factorBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: theme.radii.sm,
   },
-  shapValue: {
+  factorValue: {
     fontSize: 12,
     fontWeight: '700',
   },

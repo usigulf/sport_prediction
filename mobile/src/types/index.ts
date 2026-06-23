@@ -124,7 +124,9 @@ export interface StructuredGameAnalysis {
 export interface PredictionExplanation {
   top_features: Array<{
     feature: string;
-    shap_value: number;
+    feature_weight?: number;
+    /** @deprecated Legacy alias for feature_weight */
+    shap_value?: number;
     description?: string;
   }>;
   confidence_explanation?: string;

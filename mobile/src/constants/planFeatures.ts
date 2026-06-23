@@ -1,6 +1,7 @@
 /**
  * Plan capability matrix (product + backend). Used for copy and upgrade routing.
  */
+import { PLAYER_PROPS_ENABLED } from './featureFlags';
 import { BETA_SOCCER_ONLY } from './leagues';
 import { PREMIUM_MONTHLY_PRICE_LABEL, PREMIUM_TRIAL_DAYS } from './subscriptionPricing';
 
@@ -20,7 +21,7 @@ export const PLAN_MATRIX = {
     'Unlimited predictions & pick history',
     'Full AI explanations and analysis',
     'In-play win-probability updates while a match is on (informational — not betting odds)',
-    'Player props and game spotlights',
+    ...(PLAYER_PROPS_ENABLED ? (['Player props and game spotlights'] as const) : []),
     'Challenges and leaderboards',
     'Ad-free experience',
     `${PREMIUM_TRIAL_DAYS}-day free trial, then ${PREMIUM_MONTHLY_PRICE_LABEL}/mo`,

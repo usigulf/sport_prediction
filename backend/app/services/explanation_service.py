@@ -44,7 +44,7 @@ def _load_model_and_features(model_dir: str) -> Optional[Tuple[object, List[str]
 def get_model_feature_importance(model_dir: Optional[str]) -> Optional[List[dict]]:
     """
     If model_dir is set and contains the simple model, return a list of
-    {"feature": str, "shap_value": float, "description": str} sorted by absolute importance.
+    {"feature": str, "feature_weight": float, "description": str} sorted by absolute importance.
     Otherwise return None (caller uses stub).
     """
     if not model_dir or not os.path.isdir(model_dir):
@@ -63,7 +63,6 @@ def get_model_feature_importance(model_dir: Optional[str]) -> Optional[List[dict
         {
             "feature": name.replace("_", " ").title(),
             "feature_weight": round(float(imp), 4),
-            "shap_value": round(float(imp), 4),
             "description": FEATURE_DESCRIPTIONS.get(name, f"Model factor: {name}"),
         }
         for name, imp in pairs

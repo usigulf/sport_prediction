@@ -30,6 +30,7 @@ import { apiService } from '../services/api';
 import { soccerBetaFetchParams } from '../utils/soccerBetaFetch';
 import { formatLeagueLabel } from '../utils/leagueDisplay';
 import { PREMIUM_MONTHLY_PRICE_LABEL } from '../constants/subscriptionPricing';
+import { PREMIUM_LANDING_FEATURES_LINE } from '../constants/premiumCopy';
 import { PremiumPreviewModal } from '../components/PremiumPreviewModal';
 
 type LandingScreenNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -265,7 +266,7 @@ export const LandingScreen: React.FC = () => {
                 <Text style={styles.pricingName}>Premium</Text>
                 <Text style={styles.pricingPrice}>{PREMIUM_MONTHLY_PRICE_LABEL}/mo</Text>
                 <Text style={styles.pricingDesc}>
-                  Unlimited AI picks, challenges, leaderboards, in-play updates, player props, ad-free
+                  {PREMIUM_LANDING_FEATURES_LINE}
                 </Text>
                 <Text style={styles.pricingTrial}>7-Day Free Trial • Cancel anytime</Text>
                 <Text style={styles.seePremiumLink}>See Premium features →</Text>

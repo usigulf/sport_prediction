@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { HOUSE_PROMO_SUBTITLE } from '../../constants/premiumCopy';
 import { theme } from '../../constants/theme';
 
 type Props = {
@@ -14,7 +15,7 @@ type Props = {
  */
 export const HousePromotionCard: React.FC<Props> = ({
   title = 'Try octobetiQ Premium',
-  subtitle = 'Full analysis, live updates & player props. 7-day trial.',
+  subtitle = HOUSE_PROMO_SUBTITLE,
   surface,
 }) => {
   return (

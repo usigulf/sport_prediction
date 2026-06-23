@@ -383,7 +383,7 @@ async def get_prediction_explanation(
             top_features = [
                 FeatureImportance.from_weight(
                     feature=f["feature"],
-                    weight=f.get("feature_weight", f["shap_value"]),
+                    weight=f.get("feature_weight", f.get("shap_value", 0)),
                     description=f.get("description"),
                 )
                 for f in model_factors[:10]
