@@ -370,11 +370,6 @@ export const GameDetailScreen: React.FC = () => {
           </View>
         ) : currentPrediction ? (
           <>
-            <View style={styles.predictionMetaRow}>
-              <Text style={styles.predictionMetaText}>
-                Updated: {new Date(currentPrediction.created_at).toLocaleTimeString()}
-              </Text>
-            </View>
             <TouchableOpacity
               activeOpacity={0.9}
               onPress={() => setShowExplanation(!showExplanation)}
@@ -764,14 +759,6 @@ const styles = StyleSheet.create({
   },
   predictionTapArea: {
     marginHorizontal: theme.spacing.md,
-  },
-  predictionMetaRow: {
-    marginHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.xs,
-  },
-  predictionMetaText: {
-    fontSize: 12,
-    color: theme.colors.textMuted,
   },
   whyButton: {
     marginTop: theme.spacing.xs,

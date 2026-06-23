@@ -30,7 +30,7 @@ from app.services.player_props_service import build_game_player_props
 from app.services.explanation_service import get_model_feature_importance
 from app.services.feature_builder import build_game_features
 from app.services.analysis_context_service import enrich_rich_analysis, build_structured_game_analysis
-from app.services.data_quality_service import compute_prediction_quality
+from app.services.data_quality_service import compute_prediction_quality, league_standings_last_updated_iso
 from app.services.share_image_service import generate_share_image
 from app.config import get_settings
 
@@ -169,6 +169,7 @@ def _prediction_payload(db: Session, game: Game, prediction: Prediction) -> dict
         "quality_gate_applied": quality["quality_gate_applied"],
         "quality_reasons": quality["quality_reasons"],
         "created_at": prediction.created_at,
+        "standings_last_updated_iso": league_standings_last_updated_iso(db, game.league),
     }
 
 

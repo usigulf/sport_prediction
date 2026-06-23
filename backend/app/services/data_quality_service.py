@@ -6,6 +6,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.game import Game
@@ -100,3 +101,20 @@ def compute_prediction_quality(
         "quality_gate_applied": gate,
         "quality_reasons": reasons,
     }
+
+
+def league_standings_last_updated_iso(db: Session, league: str | None) -> str | None:
+    """Latest standings sync timestamp for a league (for pick-card freshness badges)."""
+    code = (league or "").strip()
+    if not code:
+        return None
+    updated = (
+        db.query(func.max(TeamStanding.updated_at))
+        .filter(TeamStanding.league == code)
+        .scalar()
+    )
+    if updated is None:
+        return None
+    if updated.tzinfo is None:
+        updated = updated.replace(tzinfo=timezone.utc)
+    return updated.isoformat()

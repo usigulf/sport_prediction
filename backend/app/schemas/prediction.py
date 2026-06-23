@@ -82,6 +82,7 @@ class PredictionResponse(BaseModel):
     quality_gate_applied: Optional[bool] = None
     quality_reasons: Optional[List[str]] = None
     created_at: datetime
+    standings_last_updated_iso: Optional[str] = None
     
     class Config:
         from_attributes = True

@@ -10,6 +10,7 @@ import {
   normalizeThreeWay,
 } from '../utils/predictionDisplay';
 import { demoModelDisclaimer, isDemoModelPrediction } from '../utils/predictionTrust';
+import { PredictionFreshnessBadge } from './PredictionFreshnessBadge';
 
 /** BetQL-style pick strength 1–5 from confidence (high→5, medium→3, low→1). */
 export function confidenceToPickStrength(confidenceLevel: string | undefined): number {
@@ -114,6 +115,7 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
       {showDemoNote ? (
         <Text style={styles.demoNote}>{demoModelDisclaimer(league)}</Text>
       ) : null}
+      <PredictionFreshnessBadge prediction={prediction} />
       <View style={styles.header}>
         <View style={styles.headerTitleCol}>
           <Text style={styles.title}>Prediction</Text>

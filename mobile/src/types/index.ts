@@ -46,6 +46,7 @@ export interface Prediction {
   quality_gate_applied?: boolean;
   quality_reasons?: string[];
   created_at: string;
+  standings_last_updated_iso?: string | null;
 }
 
 export interface RichAnalysisSections {

@@ -17,7 +17,7 @@ from app.utils.team_logo_urls import team_to_api_dict
 from app.schemas.common import datetime_to_iso
 from app.services.prediction_service import PredictionService
 from app.services.player_props_service import PROPS_DISCLAIMER, build_game_player_props
-from app.services.data_quality_service import compute_prediction_quality
+from app.services.data_quality_service import compute_prediction_quality, league_standings_last_updated_iso
 from app.services.guest_access_service import cap_guest_teaser_picks
 from app.config import get_settings
 
@@ -136,6 +136,7 @@ def _serialize_pick(db: Session, game: Game, pred, include_predictions: bool) ->
             "quality_gate_applied": quality["quality_gate_applied"],
             "quality_reasons": quality["quality_reasons"],
             "created_at": pred.created_at,
+            "standings_last_updated_iso": league_standings_last_updated_iso(db, game.league),
         }
     return game_dict
 
