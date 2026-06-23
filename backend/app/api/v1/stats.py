@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.services.trust_metrics_service import (
     aggregate_accuracy_from_finished,
+    aggregate_calibration_from_finished,
     league_data_coverage,
     methodology_blurb,
 )
@@ -46,6 +47,25 @@ async def get_accuracy(db: Session = Depends(get_db)):
             "window_start_iso": since_30d.isoformat(),
         },
         "methodology": meta,
+    }
+
+
+@router.get("/calibration")
+async def get_calibration(db: Session = Depends(get_db)):
+    """
+    Reliability diagram: predicted outcome probability vs actual hit rate in decile buckets.
+    Chart is shown in-app when total_scored >= min_sample (100).
+    """
+    now = datetime.now(timezone.utc)
+    payload = aggregate_calibration_from_finished(db, since=None)
+    return {
+        **payload,
+        "computed_at_iso": now.isoformat(),
+        "methodology": (
+            "Each finished game uses the first pre-kickoff prediction. We bucket by the model's "
+            "probability on its predicted outcome (home, away, or draw for soccer), then plot "
+            "how often that pick was right. Points on the diagonal mean well-calibrated probabilities."
+        ),
     }
 
 

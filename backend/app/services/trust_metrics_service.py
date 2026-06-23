@@ -99,6 +99,75 @@ def prediction_correct_vs_result(game: Game, pred: Prediction) -> bool:
     return predicted_home == actual_home
 
 
+def predicted_outcome_probability(game: Game, pred: Prediction) -> float:
+    """Max probability assigned to the predicted 1X2 / binary outcome (for calibration bins)."""
+    hp = float(pred.home_win_probability)
+    ap = float(pred.away_win_probability)
+    league = (game.league or "").lower()
+    if league in SOCCER_LEAGUES_SET:
+        dp = implied_draw_probability(hp, ap)
+        return max(hp, ap, dp)
+    return max(hp, ap)
+
+
+NUM_CALIBRATION_BUCKETS = 10
+CALIBRATION_MIN_SAMPLE = 100
+
+
+def aggregate_calibration_from_finished(
+    db: Session,
+    *,
+    since: datetime | None = None,
+) -> dict[str, Any]:
+    """
+    Reliability diagram data: bucket pre-kickoff predicted outcome probability vs actual hit rate.
+    Uses the same pre-game prediction lock and scoring rules as /stats/accuracy.
+    """
+    q = db.query(Game).filter(Game.status.in_(["finished", "final"]))
+    if since is not None:
+        q = q.filter(Game.scheduled_time.isnot(None)).filter(Game.scheduled_time >= since)
+    finished = q.all()
+
+    bucket_hits: list[list[float]] = [[] for _ in range(NUM_CALIBRATION_BUCKETS)]
+    total = 0
+
+    for game in finished:
+        pred = select_pregame_prediction_for_accuracy(db, game)
+        if not pred:
+            continue
+        p = min(max(predicted_outcome_probability(game, pred), 0.0), 1.0)
+        hit = 1.0 if prediction_correct_vs_result(game, pred) else 0.0
+        idx = min(int(p * NUM_CALIBRATION_BUCKETS), NUM_CALIBRATION_BUCKETS - 1)
+        bucket_hits[idx].append(hit)
+        total += 1
+
+    buckets: list[dict[str, Any]] = []
+    for i in range(NUM_CALIBRATION_BUCKETS):
+        hits = bucket_hits[i]
+        bin_start = round(i / NUM_CALIBRATION_BUCKETS, 2)
+        bin_end = round((i + 1) / NUM_CALIBRATION_BUCKETS, 2)
+        predicted_mid = round((bin_start + bin_end) / 2, 2)
+        count = len(hits)
+        actual_rate = round(sum(hits) / count, 4) if count else None
+        buckets.append(
+            {
+                "bin_start": bin_start,
+                "bin_end": bin_end,
+                "predicted_mid": predicted_mid,
+                "count": count,
+                "actual_rate": actual_rate,
+                "actual_rate_pct": round(actual_rate * 100, 1) if actual_rate is not None else None,
+            }
+        )
+
+    return {
+        "total_scored": total,
+        "min_sample": CALIBRATION_MIN_SAMPLE,
+        "min_sample_met": total >= CALIBRATION_MIN_SAMPLE,
+        "buckets": buckets,
+    }
+
+
 def aggregate_accuracy_from_finished(
     db: Session,
     *,

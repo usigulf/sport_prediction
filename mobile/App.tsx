@@ -30,6 +30,7 @@ import {
   subscribeToPushNotificationResponses,
 } from './src/utils/pushNotificationHandlers';
 import { getPushNotificationsEnabled } from './src/utils/settingsStorage';
+import { recordAppLaunch } from './src/utils/storeReview';
 import { RewardedUnlockProvider } from './src/ads/engine/RewardedUnlockContext';
 import { AdEngineProvider } from './src/ads/engine/AdEngineContext';
 
@@ -47,6 +48,7 @@ function AppContent() {
 
   useEffect(() => {
     if (!appReady) return;
+    void recordAppLaunch();
     return subscribeToPushNotificationResponses();
   }, [appReady]);
 

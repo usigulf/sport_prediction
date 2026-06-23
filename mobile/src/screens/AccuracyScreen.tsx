@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,12 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
 import {
   apiService,
   type AccuracyResponse,
+  type CalibrationResponse,
   type CoverageResponse,
 } from '../services/api';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
@@ -17,6 +19,8 @@ import { formatLeagueLabel } from '../utils/leagueDisplay';
 import { PRODUCT_SCOPE_LONG_DESCRIPTION } from '../constants/leagues';
 import { theme } from '../constants/theme';
 import { useModelStatus } from '../hooks/useModelStatus';
+import { CalibrationChart } from '../components/CalibrationChart';
+import { maybeRequestStoreReview, recordPositiveSession } from '../utils/storeReview';
 
 const CONFIDENCE_ORDER = ['high', 'medium', 'low', 'unknown'] as const;
 
@@ -73,25 +77,34 @@ function formatLastUpdated(iso: string | null): string | null {
 }
 
 export const AccuracyScreen: React.FC = () => {
+  const { width: windowWidth } = useWindowDimensions();
   const [data, setData] = useState<AccuracyResponse | null>(null);
+  const [calibration, setCalibration] = useState<CalibrationResponse | null>(null);
   const [coverage, setCoverage] = useState<CoverageResponse | null>(null);
   const [coverageFailed, setCoverageFailed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { isWarming, reload: reloadModelStatus } = useModelStatus();
+  const reviewPromptedRef = useRef(false);
 
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     setError(null);
     try {
-      const [accRes, covRes] = await Promise.allSettled([
+      const [accRes, calRes, covRes] = await Promise.allSettled([
         apiService.getAccuracy(),
+        apiService.getCalibration(),
         apiService.getCoverage(),
       ]);
       if (accRes.status === 'rejected') throw accRes.reason;
       setData(accRes.value);
+      if (calRes.status === 'fulfilled') {
+        setCalibration(calRes.value);
+      } else {
+        setCalibration(null);
+      }
       if (covRes.status === 'fulfilled') {
         setCoverage(covRes.value);
         setCoverageFailed(false);
@@ -102,6 +115,7 @@ export const AccuracyScreen: React.FC = () => {
     } catch (e) {
       setError(getUserFriendlyMessage(e));
       setData(null);
+      setCalibration(null);
       setCoverage(null);
       setCoverageFailed(false);
     } finally {
@@ -118,6 +132,17 @@ export const AccuracyScreen: React.FC = () => {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!data || reviewPromptedRef.current) return;
+    const totalGames = data.total ?? data.total_games ?? 0;
+    if (totalGames < 30 || data.accuracy_pct < 50) return;
+    reviewPromptedRef.current = true;
+    void (async () => {
+      await recordPositiveSession();
+      await maybeRequestStoreReview();
+    })();
+  }, [data]);
 
   if (loading && !refreshing) {
     return (
@@ -194,6 +219,24 @@ export const AccuracyScreen: React.FC = () => {
           {roll.correct} correct out of {rollTotal} games (in window)
         </Text>
       </View>
+
+      {calibration?.min_sample_met ? (
+        <View style={styles.cardSecondaryBlock}>
+          <Text style={styles.sectionTitle}>Calibration</Text>
+          <Text style={styles.sectionHint}>
+            Predicted probability vs how often we were right ({calibration.total_scored} scored games)
+          </Text>
+          <CalibrationChart
+            buckets={calibration.buckets}
+            width={windowWidth - theme.spacing.md * 2}
+          />
+        </View>
+      ) : calibration && calibration.total_scored > 0 ? (
+        <Text style={styles.mutedSmall}>
+          Calibration chart unlocks at {calibration.min_sample} scored games (
+          {calibration.total_scored} so far).
+        </Text>
+      ) : null}
 
       {totalGames === 0 && (
         <Text style={styles.emptyText}>
@@ -345,6 +388,14 @@ const styles = StyleSheet.create({
   },
   cardSecondary: {
     alignItems: 'stretch',
+    borderLeftColor: theme.colors.borderSubtle,
+  },
+  cardSecondaryBlock: {
+    backgroundColor: theme.colors.backgroundCard,
+    borderRadius: theme.radii.sm,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
+    borderLeftWidth: 4,
     borderLeftColor: theme.colors.borderSubtle,
   },
   bigNumber: {

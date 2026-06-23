@@ -231,6 +231,25 @@ export interface CoverageResponse {
   disclaimer: string;
 }
 
+export interface CalibrationBucket {
+  bin_start: number;
+  bin_end: number;
+  predicted_mid: number;
+  count: number;
+  actual_rate: number | null;
+  actual_rate_pct: number | null;
+}
+
+/** GET /stats/calibration — reliability diagram buckets */
+export interface CalibrationResponse {
+  total_scored: number;
+  min_sample: number;
+  min_sample_met: boolean;
+  buckets: CalibrationBucket[];
+  computed_at_iso?: string;
+  methodology?: string;
+}
+
 /** GET /stats/model — sklearn publish readiness (warming vs ready). */
 export interface ModelStatusResponse {
   status: 'warming' | 'ready' | 'forced' | string;
@@ -628,6 +647,10 @@ class ApiService {
   // Stats (public; trust / transparency)
   async getAccuracy() {
     return this.request<AccuracyResponse>('/stats/accuracy', { requireAuth: false });
+  }
+
+  async getCalibration() {
+    return this.request<CalibrationResponse>('/stats/calibration', { requireAuth: false });
   }
 
   async getCoverage() {

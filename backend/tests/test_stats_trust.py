@@ -7,6 +7,7 @@ from app.models.prediction import Prediction
 from app.models.team_standing import TeamStanding
 from app.services.trust_metrics_service import (
     aggregate_accuracy_from_finished,
+    aggregate_calibration_from_finished,
     implied_draw_probability,
     prediction_correct_vs_result,
 )
@@ -336,3 +337,78 @@ def test_stats_coverage_lists_standings_counts(client, db, test_teams):
     leagues = {row["league"]: row for row in body["leagues"]}
     assert leagues["premier_league"]["standings_rows"] >= 1
     assert leagues["premier_league"]["standings_last_updated_iso"] is not None
+
+
+def test_stats_calibration_public_shape(client, db, test_teams):
+    kickoff = datetime.now(timezone.utc) - timedelta(days=3)
+    g = Game(
+        id=uuid4(),
+        league="nfl",
+        home_team_id=test_teams[0].id,
+        away_team_id=test_teams[1].id,
+        scheduled_time=kickoff,
+        status="finished",
+        home_score=21,
+        away_score=14,
+    )
+    db.add(g)
+    db.flush()
+    db.add(
+        Prediction(
+            id=uuid4(),
+            game_id=g.id,
+            model_version="v1",
+            home_win_probability=0.62,
+            away_win_probability=0.38,
+            confidence_level="high",
+            created_at=_pregame_created(kickoff),
+        )
+    )
+    db.commit()
+
+    r = client.get("/api/v1/stats/calibration")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["total_scored"] >= 1
+    assert body["min_sample"] == 100
+    assert body["min_sample_met"] is False
+    assert len(body["buckets"]) == 10
+    assert body["buckets"][0]["bin_start"] == 0.0
+
+
+def test_calibration_min_sample_met(db, test_teams):
+    base = datetime.now(timezone.utc) - timedelta(days=20)
+    for i in range(105):
+        kickoff = base - timedelta(hours=i)
+        home_score = 24 if i % 2 == 0 else 10
+        away_score = 17 if i % 2 == 0 else 27
+        g = Game(
+            id=uuid4(),
+            league="nfl",
+            home_team_id=test_teams[0].id,
+            away_team_id=test_teams[1].id,
+            scheduled_time=kickoff,
+            status="finished",
+            home_score=home_score,
+            away_score=away_score,
+        )
+        db.add(g)
+        db.flush()
+        db.add(
+            Prediction(
+                id=uuid4(),
+                game_id=g.id,
+                model_version="v1",
+                home_win_probability=0.62 if i % 2 == 0 else 0.38,
+                away_win_probability=0.38 if i % 2 == 0 else 0.62,
+                confidence_level="medium",
+                created_at=_pregame_created(kickoff),
+            )
+        )
+    db.commit()
+
+    agg = aggregate_calibration_from_finished(db)
+    assert agg["total_scored"] == 105
+    assert agg["min_sample_met"] is True
+    populated = [b for b in agg["buckets"] if b["count"] > 0]
+    assert len(populated) >= 1
