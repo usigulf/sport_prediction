@@ -1,4 +1,5 @@
 """Batch prediction inference job (writes new Prediction rows, invalidates cache)."""
+from app.constants.predictions import PREDICTION_TYPE_PRE_GAME
 from app.services.prediction_inference_service import run_prediction_job
 from app.services.prediction_service import PredictionService
 from app.models.prediction import Prediction
@@ -10,6 +11,7 @@ def test_run_prediction_job_writes_row(db, test_game):
     assert r.games_considered == 1
     pred = PredictionService(db).get_latest_prediction(str(test_game.id), use_cache=False)
     assert pred is not None
+    assert pred.prediction_type == PREDICTION_TYPE_PRE_GAME
     assert 0 < float(pred.home_win_probability) < 1
     assert pred.rich_analysis and pred.rich_analysis.get("real_time_analysis")
     assert pred.rich_analysis.get("form_standings")

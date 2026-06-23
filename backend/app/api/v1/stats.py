@@ -22,9 +22,10 @@ router = APIRouter(prefix="/stats", tags=["stats"])
 @router.get("/accuracy")
 async def get_accuracy(db: Session = Depends(get_db)):
     """
-    Historical accuracy for finished games with a stored prediction.
+    Historical accuracy for finished games with a stored pre_game prediction.
 
-    Public endpoint (no auth) for transparency. See `methodology` for scoring rules.
+    Public endpoint (no auth) for transparency. Live in-play refreshes (inplay_v0) are
+    excluded; each game uses the first pre-kickoff row. See `methodology` for scoring rules.
     Includes rolling 30-day window and confidence-bucket breakdown.
     """
     full = aggregate_accuracy_from_finished(db, since=None)

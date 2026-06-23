@@ -4,9 +4,11 @@ from uuid import uuid4
 
 from app.models.game import Game
 from app.models.prediction import Prediction
+from app.constants.predictions import PREDICTION_TYPE_INPLAY, PREDICTION_TYPE_PRE_GAME
 from app.services.live_prediction_service import (
     INPLAY_VERSION_MARKER,
     build_live_prediction_payload,
+    classify_prediction_type,
     is_in_play_prediction,
     tag_inplay_model_version,
 )
@@ -73,3 +75,23 @@ def test_build_live_prediction_payload():
     assert payload["prediction_source"] == "score_adjusted_inplay_v0"
     assert payload["home_score"] == 80
     assert payload["game_status"] == "live"
+
+
+def test_classify_prediction_type_pre_game_before_kickoff():
+    kickoff = datetime.now(timezone.utc) + timedelta(hours=2)
+    game = _game(status="scheduled", scheduled_time=kickoff)
+    created = datetime.now(timezone.utc)
+    assert classify_prediction_type(game, created_at=created, model_version="sklearn_simple") == PREDICTION_TYPE_PRE_GAME
+
+
+def test_classify_prediction_type_inplay_when_live():
+    game = _game(status="live")
+    created = datetime.now(timezone.utc)
+    assert classify_prediction_type(game, created_at=created, model_version="sklearn_simple") == PREDICTION_TYPE_INPLAY
+
+
+def test_classify_prediction_type_inplay_after_kickoff():
+    kickoff = datetime.now(timezone.utc) - timedelta(hours=1)
+    game = _game(status="finished", scheduled_time=kickoff)
+    created = datetime.now(timezone.utc)
+    assert classify_prediction_type(game, created_at=created, model_version="sklearn_simple") == PREDICTION_TYPE_INPLAY

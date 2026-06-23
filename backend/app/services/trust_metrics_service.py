@@ -10,6 +10,7 @@ from typing import Any
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.constants.predictions import PREDICTION_TYPE_INPLAY, PREDICTION_TYPE_PRE_GAME
 from app.constants.soccer import SOCCER_LEAGUES_SET
 from app.models.game import Game
 from app.models.prediction import Prediction
@@ -28,12 +29,8 @@ def _kickoff_utc(game: Game) -> datetime | None:
     return kickoff
 
 
-def is_inplay_prediction_row(game: Game, pred: Prediction) -> bool:
-    """
-    True when a prediction row reflects live-game refresh (excluded from accuracy rollups).
-    Uses model_version marker and created_at vs kickoff — not game.status (finished games can
-    still have inplay_v0 rows).
-    """
+def _legacy_inplay_heuristic(game: Game, pred: Prediction) -> bool:
+    """Fallback for rows written before prediction_type column existed."""
     mv = (pred.model_version or "").lower()
     if INPLAY_VERSION_MARKER in mv:
         return True
@@ -46,8 +43,24 @@ def is_inplay_prediction_row(game: Game, pred: Prediction) -> bool:
     return created >= kickoff
 
 
+def resolved_prediction_type(game: Game, pred: Prediction) -> str:
+    """Effective type for trust metrics (explicit column or legacy inference)."""
+    stored = (pred.prediction_type or "").strip().lower()
+    if stored in (PREDICTION_TYPE_PRE_GAME, PREDICTION_TYPE_INPLAY):
+        return stored
+    return PREDICTION_TYPE_INPLAY if _legacy_inplay_heuristic(game, pred) else PREDICTION_TYPE_PRE_GAME
+
+
+def is_inplay_prediction_row(game: Game, pred: Prediction) -> bool:
+    """
+    True when a prediction row reflects live-game refresh (excluded from accuracy rollups).
+    Uses prediction_type when set; otherwise created_at vs kickoff and model_version marker.
+    """
+    return resolved_prediction_type(game, pred) == PREDICTION_TYPE_INPLAY
+
+
 def select_pregame_prediction_for_accuracy(db: Session, game: Game) -> Prediction | None:
-    """First stored prediction before kickoff (pre_game lock for trust metrics)."""
+    """First stored pre_game prediction (C-06 lock for trust metrics)."""
     preds = (
         db.query(Prediction)
         .filter(Prediction.game_id == game.id)
@@ -55,7 +68,7 @@ def select_pregame_prediction_for_accuracy(db: Session, game: Game) -> Predictio
         .all()
     )
     for pred in preds:
-        if not is_inplay_prediction_row(game, pred):
+        if resolved_prediction_type(game, pred) == PREDICTION_TYPE_PRE_GAME:
             return pred
     return None
 
@@ -256,8 +269,8 @@ def methodology_blurb() -> dict[str, str]:
             "Soccer uses 1X2 (home / draw / away); other sports use predicted favorite vs winner."
         ),
         "detail": (
-            "For finished games we compare the first pre-kickoff prediction to the final score "
-            "(live in-play refreshes are excluded). "
+            "For finished games we compare the first pre-kickoff prediction (prediction_type=pre_game) "
+            "to the final score (live in-play refreshes with prediction_type=inplay_v0 are excluded). "
             "Soccer competitions use implied draw probability (residual mass) alongside home and away "
             "so accuracy matches three-way outcomes. Non-soccer games use the higher of home vs away "
             "probability as the predicted side. Confidence buckets group how often each label was "

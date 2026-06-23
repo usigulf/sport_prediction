@@ -5,6 +5,7 @@ from uuid import uuid4
 from app.models.game import Game
 from app.models.prediction import Prediction
 from app.models.team_standing import TeamStanding
+from app.constants.predictions import PREDICTION_TYPE_INPLAY, PREDICTION_TYPE_PRE_GAME
 from app.services.trust_metrics_service import (
     aggregate_accuracy_from_finished,
     aggregate_calibration_from_finished,
@@ -217,6 +218,7 @@ def test_aggregate_uses_pregame_prediction_not_inplay_refresh(db, test_teams):
         id=uuid4(),
         game_id=g.id,
         model_version="heuristic",
+        prediction_type=PREDICTION_TYPE_PRE_GAME,
         home_win_probability=0.72,
         away_win_probability=0.28,
         confidence_level="high",
@@ -226,12 +228,54 @@ def test_aggregate_uses_pregame_prediction_not_inplay_refresh(db, test_teams):
         id=uuid4(),
         game_id=g.id,
         model_version="heuristic_inplay_v0",
+        prediction_type=PREDICTION_TYPE_INPLAY,
         home_win_probability=0.95,
         away_win_probability=0.05,
         confidence_level="high",
         created_at=kickoff + timedelta(minutes=30),
     )
     db.add_all([pre, inplay])
+    db.commit()
+    agg = aggregate_accuracy_from_finished(db)
+    assert agg["total_games"] == 1
+    assert agg["correct"] == 1
+
+
+def test_aggregate_uses_first_pre_game_row_when_multiple_exist(db, test_teams):
+    kickoff = datetime.now(timezone.utc) - timedelta(days=1)
+    g = Game(
+        id=uuid4(),
+        league="nfl",
+        home_team_id=test_teams[0].id,
+        away_team_id=test_teams[1].id,
+        scheduled_time=kickoff,
+        status="finished",
+        home_score=28,
+        away_score=10,
+    )
+    db.add(g)
+    db.flush()
+    first = Prediction(
+        id=uuid4(),
+        game_id=g.id,
+        model_version="heuristic",
+        prediction_type=PREDICTION_TYPE_PRE_GAME,
+        home_win_probability=0.72,
+        away_win_probability=0.28,
+        confidence_level="high",
+        created_at=kickoff - timedelta(hours=4),
+    )
+    second = Prediction(
+        id=uuid4(),
+        game_id=g.id,
+        model_version="heuristic_v2",
+        prediction_type=PREDICTION_TYPE_PRE_GAME,
+        home_win_probability=0.40,
+        away_win_probability=0.60,
+        confidence_level="medium",
+        created_at=kickoff - timedelta(hours=1),
+    )
+    db.add_all([first, second])
     db.commit()
     agg = aggregate_accuracy_from_finished(db)
     assert agg["total_games"] == 1

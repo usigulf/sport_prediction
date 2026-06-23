@@ -14,6 +14,7 @@ class Prediction(Base):
     id = Column(GUID, primary_key=True, default=uuid.uuid4)
     game_id = Column(GUID, ForeignKey("games.id"), nullable=False, index=True)
     model_version = Column(String(50), nullable=False)
+    prediction_type = Column(String(20), nullable=True, index=True)
     home_win_probability = Column(Numeric(5, 4), nullable=False)
     away_win_probability = Column(Numeric(5, 4), nullable=False)
     expected_home_score = Column(Numeric(5, 2))

@@ -8,10 +8,39 @@ from __future__ import annotations
 from datetime import timezone
 from typing import Any, Optional
 
+from app.constants.predictions import PREDICTION_TYPE_INPLAY, PREDICTION_TYPE_PRE_GAME
 from app.models.game import Game
 from app.models.prediction import Prediction
 
 INPLAY_VERSION_MARKER = "inplay_v0"
+
+
+def classify_prediction_type(
+    game: Game,
+    *,
+    created_at,
+    model_version: str | None = None,
+) -> str:
+    """
+    Classify a prediction row at write time.
+    pre_game: stored before kickoff (used for accuracy rollups).
+    inplay_v0: live refresh or any row created at/after kickoff.
+    """
+    mv = (model_version or "").lower()
+    if INPLAY_VERSION_MARKER in mv:
+        return PREDICTION_TYPE_INPLAY
+    if (game.status or "").lower() == "live":
+        return PREDICTION_TYPE_INPLAY
+    kickoff = game.scheduled_time
+    if kickoff and created_at:
+        if kickoff.tzinfo is None:
+            kickoff = kickoff.replace(tzinfo=timezone.utc)
+        created = created_at
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=timezone.utc)
+        if created >= kickoff:
+            return PREDICTION_TYPE_INPLAY
+    return PREDICTION_TYPE_PRE_GAME
 
 
 def tag_inplay_model_version(model_version: str) -> str:

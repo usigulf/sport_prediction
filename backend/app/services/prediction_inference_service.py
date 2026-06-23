@@ -29,7 +29,7 @@ from app.services.ml_artifacts import (
     predict_from_artifacts,
     soccer_three_way_from_home_edge,
 )
-from app.services.live_prediction_service import tag_inplay_model_version
+from app.services.live_prediction_service import classify_prediction_type, tag_inplay_model_version
 from app.services.prediction_service import PredictionService
 
 logger = logging.getLogger(__name__)
@@ -189,10 +189,16 @@ def run_prediction_job(
                 payload["model_version"] = f"{payload['model_version']}_synthetic"[:50]
             rich = build_rich_analysis_dict(game, feat, db=db, feature_source=feat_src)
             created_at = datetime.now(timezone.utc)
+            model_version = str(payload["model_version"])[:50]
             pred = Prediction(
                 id=uuid4(),
                 game_id=game.id,
-                model_version=str(payload["model_version"])[:50],
+                model_version=model_version,
+                prediction_type=classify_prediction_type(
+                    game,
+                    created_at=created_at,
+                    model_version=model_version,
+                ),
                 home_win_probability=payload["home_win_probability"],
                 away_win_probability=payload["away_win_probability"],
                 expected_home_score=payload["expected_home_score"],
