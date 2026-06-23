@@ -110,6 +110,19 @@ def load_metrics_json(model_dir: str) -> dict[str, Any] | None:
         return None
 
 
+def artifacts_publish_ready(model_dir: str | None) -> bool:
+    """
+    H-07: inference and explainability use ML artifacts only when training marked them publish-ready.
+    Missing metrics.json is treated as warming (heuristic fallback).
+    """
+    if not model_dir or not os.path.isdir(model_dir):
+        return False
+    metrics = load_metrics_json(model_dir)
+    if metrics is None:
+        return False
+    return bool(metrics.get("publish_ready"))
+
+
 def _finished_decisive_games(db: Session) -> list[Game]:
     return (
         db.query(Game)

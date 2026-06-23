@@ -1,8 +1,11 @@
 """Batch prediction inference job (writes new Prediction rows, invalidates cache)."""
+from app.config import get_settings
 from app.constants.predictions import PREDICTION_TYPE_PRE_GAME
-from app.services.prediction_inference_service import run_prediction_job
+from app.services.model_training import artifacts_publish_ready, train_and_save
+from app.services.prediction_inference_service import _model_dir, run_prediction_job
 from app.services.prediction_service import PredictionService
 from app.models.prediction import Prediction
+from tests.test_model_training import _seed_separable_nfl_history
 
 
 def test_run_prediction_job_writes_row(db, test_game):
@@ -36,3 +39,27 @@ def test_run_prediction_job_force_second_write(db, test_game):
     run_prediction_job(db, game_ids=[str(test_game.id)], force=True)
     n_after = db.query(Prediction).filter(Prediction.game_id == test_game.id).count()
     assert n_after == n_before + 1
+
+
+def test_inference_ignores_unpublished_artifacts(db, tmp_path, monkeypatch, test_game):
+    _seed_separable_nfl_history(db, n_games=60)
+    out_dir = str(tmp_path / "models")
+    train_and_save(
+        db,
+        out_dir,
+        test_frac=0.2,
+        min_games=10,
+        min_publish_holdout_per_league_group=500,
+        force=True,
+    )
+    assert artifacts_publish_ready(out_dir) is False
+
+    monkeypatch.setenv("MODEL_ARTIFACT_DIR", out_dir)
+    get_settings.cache_clear()
+    assert _model_dir() is None
+
+    r = run_prediction_job(db, game_ids=[str(test_game.id)], force=True)
+    assert r.predictions_written == 1
+    pred = PredictionService(db).get_latest_prediction(str(test_game.id), use_cache=False)
+    assert pred is not None
+    assert "sklearn" not in (pred.model_version or "").lower()

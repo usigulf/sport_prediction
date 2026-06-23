@@ -13,6 +13,7 @@ from app.services.model_training import (
     ARTIFACT_FEATURES,
     ARTIFACT_MODEL,
     FEATURE_COLUMNS,
+    artifacts_publish_ready,
     assess_publish_readiness,
     build_training_frame,
     train_and_save,
@@ -156,3 +157,29 @@ def test_train_and_save_writes_metrics_only_when_publish_blocked(db, tmp_path):
     assert summary["status"] == "warming"
     assert not (tmp_path / "models" / ARTIFACT_MODEL).exists()
     assert (tmp_path / "models" / "metrics.json").exists()
+
+
+def test_artifacts_publish_ready_requires_metrics_flag(tmp_path):
+    out_dir = tmp_path / "models"
+    out_dir.mkdir()
+    assert artifacts_publish_ready(str(out_dir)) is False
+    (out_dir / "metrics.json").write_text('{"publish_ready": false}', encoding="utf-8")
+    assert artifacts_publish_ready(str(out_dir)) is False
+    (out_dir / "metrics.json").write_text('{"publish_ready": true}', encoding="utf-8")
+    assert artifacts_publish_ready(str(out_dir)) is True
+
+
+def test_train_force_writes_pkls_but_publish_ready_stays_false(db, tmp_path):
+    _seed_separable_nfl_history(db, n_games=60)
+    out_dir = str(tmp_path / "models")
+    summary = train_and_save(
+        db,
+        out_dir,
+        test_frac=0.2,
+        min_games=10,
+        min_publish_holdout_per_league_group=500,
+        force=True,
+    )
+    assert summary["publish_ready"] is False
+    assert (tmp_path / "models" / ARTIFACT_MODEL).exists()
+    assert artifacts_publish_ready(out_dir) is False

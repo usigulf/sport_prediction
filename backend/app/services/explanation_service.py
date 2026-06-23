@@ -5,6 +5,8 @@ for the "Why this prediction?" explanation. Falls back to None so the API can us
 import os
 from typing import List, Optional, Tuple
 
+from app.services.model_training import artifacts_publish_ready
+
 # Human-readable descriptions for known feature names (from train_simple_model.py)
 FEATURE_DESCRIPTIONS = {
     "home_team_win_rate": "Home team win rate (season/form)",
@@ -47,6 +49,8 @@ def get_model_feature_importance(model_dir: Optional[str]) -> Optional[List[dict
     {"feature": str, "feature_weight": float, "description": str} sorted by absolute importance.
     Otherwise return None (caller uses stub).
     """
+    if not artifacts_publish_ready(model_dir):
+        return None
     if not model_dir or not os.path.isdir(model_dir):
         return None
     loaded = _load_model_and_features(model_dir)

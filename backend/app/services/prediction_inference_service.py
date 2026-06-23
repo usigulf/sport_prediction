@@ -30,6 +30,7 @@ from app.services.ml_artifacts import (
     soccer_three_way_from_home_edge,
 )
 from app.services.live_prediction_service import classify_prediction_type, tag_inplay_model_version
+from app.services.model_training import artifacts_publish_ready
 from app.services.prediction_service import PredictionService
 
 logger = logging.getLogger(__name__)
@@ -46,7 +47,12 @@ class PredictionJobResult:
 def _model_dir() -> Optional[str]:
     s = get_settings()
     d = s.model_artifact_dir or s.explanation_model_dir
-    return d.strip() if d else None
+    if not d:
+        return None
+    path = d.strip()
+    if not artifacts_publish_ready(path):
+        return None
+    return path
 
 
 def _should_skip(
