@@ -168,11 +168,11 @@ def nfl_matchup_provider_note(game, settings: Settings) -> str | None:
         return None
 
     lines = [
-        f"Sportradar NFL {kind_label} standings (live provider snapshot):",
+        f"Pro football {kind_label} standings (licensed feed snapshot):",
     ]
     if th:
         lines.append(f"• {home.name}: {format_team_standings_line(th)}")
     if ta:
         lines.append(f"• {away.name}: {format_team_standings_line(ta)}")
-    lines.append("Complements your internal league table; subject to Sportradar TTL.")
+    lines.append("Complements your internal league table; refreshed on a provider schedule.")
     return "\n".join(lines)

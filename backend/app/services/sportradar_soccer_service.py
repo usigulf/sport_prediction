@@ -260,13 +260,13 @@ def soccer_matchup_provider_note(game, settings: Settings) -> str | None:
         return None
 
     lines = [
-        f"Sportradar soccer standings (season {season_id}, live provider snapshot):",
+        "Competition standings (licensed feed snapshot):",
     ]
     if th:
         lines.append(f"• {home.name}: {format_soccer_standings_line(th)}")
     if ta:
         lines.append(f"• {away.name}: {format_soccer_standings_line(ta)}")
-    lines.append("Complements your internal league table; subject to Sportradar TTL.")
+    lines.append("Complements your internal league table; refreshed on a provider schedule.")
     return "\n".join(lines)
 
 

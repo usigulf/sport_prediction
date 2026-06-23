@@ -4,6 +4,7 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchExplanation } from '../store/slices/gamesSlice';
 import { theme } from '../constants/theme';
 import { isSoccerLeague } from '../constants/leagues';
+import { sanitizeLicensedFeedCopy } from '../utils/sanitizeProviderCopy';
 import { impliedDrawForSoccer, normalizeThreeWay } from '../utils/predictionDisplay';
 import type {
   H2HMeetingDetail,
@@ -515,8 +516,8 @@ export const ExplanationView: React.FC<ExplanationViewProps> = ({
       ) : null}
 
       {sa?.provider_context_note?.trim() ? (
-        <AnalysisSection title="Live standings">
-          <RichFormattedBody text={sa.provider_context_note.trim()} />
+        <AnalysisSection title="Standings snapshot">
+          <RichFormattedBody text={sanitizeLicensedFeedCopy(sa.provider_context_note.trim())} />
         </AnalysisSection>
       ) : null}
 

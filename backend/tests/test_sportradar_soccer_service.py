@@ -188,7 +188,8 @@ def test_soccer_matchup_provider_note(monkeypatch):
 
     note = soccer_matchup_provider_note(game, settings)
     assert note is not None
-    assert "Sportradar soccer" in note
+    assert "licensed feed snapshot" in note
+    assert "Sportradar" not in note
     assert "Liverpool FC" in note
     assert "Arsenal FC" in note
 

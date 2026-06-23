@@ -65,7 +65,8 @@ def test_nfl_matchup_provider_note_builds_text(monkeypatch):
     assert note
     assert "Kansas City" in note
     assert "Buffalo" in note
-    assert "Sportradar" in note
+    assert "licensed feed snapshot" in note
+    assert "Sportradar" not in note
 
 
 def test_nfl_matchup_skips_non_nfl():
