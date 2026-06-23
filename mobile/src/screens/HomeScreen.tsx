@@ -540,8 +540,8 @@ export const HomeScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Challenge CTA */}
-      {isAuthenticated && (
+      {/* Challenge CTA — only when user already has challenges (avoid empty-state noise) */}
+      {isAuthenticated && hasProAccess(subscriptionTier) && challengeCount > 0 && (
         <View style={styles.section}>
           <TouchableOpacity
             style={styles.challengeCTA}

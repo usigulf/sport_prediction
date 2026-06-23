@@ -19,6 +19,7 @@ import { theme } from '../constants/theme';
 import { useAppSelector } from '../store/hooks';
 import { hasProAccess } from '../utils/subscription';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { PremiumFeatureEmptyState } from '../components/PremiumFeatureEmptyState';
 
 type Period = 'weekly' | 'monthly' | 'all';
 
@@ -40,6 +41,8 @@ export const LeaderboardsScreen: React.FC = () => {
   const pro = hasProAccess(tier);
   const [period, setPeriod] = useState<Period>('monthly');
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [communityWarming, setCommunityWarming] = useState(false);
+  const [minActiveUsers, setMinActiveUsers] = useState(50);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +59,8 @@ export const LeaderboardsScreen: React.FC = () => {
       try {
         const res = await apiService.getLeaderboards({ period, limit: 50 });
         setEntries(res.entries ?? []);
+        setCommunityWarming(Boolean(res.community_warming));
+        setMinActiveUsers(res.min_active_users ?? 50);
       } catch (e) {
         setError(getUserFriendlyMessage(e));
         setEntries([]);
@@ -74,23 +79,19 @@ export const LeaderboardsScreen: React.FC = () => {
   if (!pro) {
     return (
       <View style={styles.container}>
-        <View style={styles.gate}>
-          <Text style={styles.title}>Leaderboard</Text>
-          <Text style={styles.subtitle}>
-            Premium feature — compare accuracy across users who viewed finished games.
-          </Text>
-          <TouchableOpacity
-            style={styles.upgradeBtn}
-            onPress={() =>
-              navigation.navigate('Paywall', {
-                emphasizeTier: 'premium',
-                contextMessage: 'Premium unlocks leaderboards and challenges.',
-              })
-            }
-          >
-            <Text style={styles.upgradeBtnText}>Upgrade to Premium</Text>
-          </TouchableOpacity>
-        </View>
+        <PremiumFeatureEmptyState
+          icon="podium-outline"
+          badge="Premium"
+          title="Leaderboard"
+          message="Compare prediction accuracy with other Premium members who viewed finished games. Upgrade to unlock rankings."
+          primaryLabel="View Premium"
+          onPrimaryPress={() =>
+            navigation.navigate('Paywall', {
+              emphasizeTier: 'premium',
+              contextMessage: 'Premium unlocks leaderboards and challenges.',
+            })
+          }
+        />
       </View>
     );
   }
@@ -149,11 +150,22 @@ export const LeaderboardsScreen: React.FC = () => {
             <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />
           }
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={styles.emptyText}>
-                No leaderboard data yet. View game predictions to appear here.
-              </Text>
-            </View>
+            <PremiumFeatureEmptyState
+              icon="podium-outline"
+              badge="Premium"
+              title={communityWarming ? 'Leaderboard warming up' : 'Be the first on the board'}
+              message={
+                communityWarming
+                  ? `Rankings appear once at least ${minActiveUsers} Premium members have viewed finished games. Open a few game predictions now — you could be #1.`
+                  : 'View predictions on finished games to join the board. Your accuracy is tracked when you open game detail before the final whistle.'
+              }
+              primaryLabel="Browse games"
+              onPrimaryPress={() =>
+                navigation.navigate('MainTabs', { screen: 'Games' } as never)
+              }
+              secondaryLabel="View model accuracy"
+              onSecondaryPress={() => navigation.navigate('Accuracy')}
+            />
           }
         />
       )}

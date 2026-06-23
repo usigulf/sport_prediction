@@ -1,6 +1,84 @@
 # App Store submit checklist (octobetiQ)
 
-## Build upload failures (June 20, 2026 — builds 29, 30, 1.0.2)
+**App ID:** [6762173223](https://appstoreconnect.apple.com/apps/6762173223) · **Bundle:** `com.sportsprediction.app`
+
+---
+
+## Submit today — build **28** on version **1.0.0**
+
+Use the **Complete** TestFlight build already uploaded. Do **not** wait for a new EAS build (quota resets ~July 1, 2026).
+
+| Step | Where in ASC | Action |
+|------|----------------|--------|
+| 1 | [Pricing and Availability](https://appstoreconnect.apple.com/apps/6762173223/distribution/pricing) | Set app price to **Free** ($0). Button must show **GET**, not $29.99. |
+| 2 | [Version 1.0.0](https://appstoreconnect.apple.com/apps/6762173223/distribution/ios/version/inflight) | **Build** → **+** → select **1.0.0 (28)** only. |
+| 3 | Same page → **Screenshots** | Upload from **`mobile/app-store-screenshots/6.5-inch/asc-upload/`** (10 PNGs) and **`ipad-13-inch/asc-upload/`** (10 PNGs). Order in `manifest.json`. |
+| 4 | Same page → **Description / Subtitle / Keywords** | Paste from [APP_STORE_METADATA_COPY.md](./APP_STORE_METADATA_COPY.md) (4.1a-safe — no NFL/NBA/Premier League in marketing). |
+| 5 | Same page → **In-App Purchases** | Attach **Premium Monthly** ($29.99/mo, 7-day trial). Status must be **Ready to Submit**. No separate “Pro” product. |
+| 6 | [App Information](https://appstoreconnect.apple.com/apps/6762173223/distribution/info) | Support `https://octobetiq.com/support` · Privacy `https://octobetiq.com/privacy` · [Content Rights](#2-content-rights-information) |
+| 7 | [App Privacy](https://appstoreconnect.apple.com/apps/6762173223/distribution/privacy) | Complete questionnaire → **Publish** (align with ATT — see [§4](#4-tracking-vs-app-privacy-must-match-binary)) |
+| 8 | Version page → **App Review Information** | Demo: `appstore-review@octobetiq.com` / `AppReview2026!` |
+| 9 | Version page | **Add for Review** → **Submit to App Review** |
+
+### Before you click Submit
+
+- [ ] Price schedule = **Free** (not paid app)
+- [ ] Build **28** on version **1.0.0** (not 1.0.1 — no 1.0.1 binary exists)
+- [ ] iPhone + iPad screenshots from **`asc-upload/`** folders
+- [ ] Metadata matches [APP_STORE_METADATA_COPY.md](./APP_STORE_METADATA_COPY.md)
+- [ ] Keywords use **`sports`** not `ports`
+- [ ] Premium IAP attached on version page
+- [ ] `https://octobetiq.com/support` and `/privacy` return **200**
+- [ ] Description ends with Terms + Privacy URLs (in metadata copy file)
+- [ ] RevenueCat production key `appl_…` in EAS secrets (not Test Store key)
+
+### Resolution Center reply (if resubmitting after 4.1a)
+
+```
+Build 28 removes third-party league names from marketing copy and App Store screenshots.
+In-app labels use generic competition wording (major professional football, basketball, and soccer).
+Screenshots re-uploaded from asc-upload/ (iPhone 6.5" + iPad 13").
+
+App is free to download; Premium is an optional in-app subscription ($29.99/mo).
+
+Demo: appstore-review@octobetiq.com / AppReview2026!
+```
+
+### What's New (version 1.0.0)
+
+```
+Initial App Store release.
+
+• AI win-probability picks across major professional competitions
+• Personalized For You feed, Live hub, and game analysis
+• Tracked model accuracy dashboard
+• Premium subscription: unlimited picks, analysis, live updates, challenges, leaderboards
+• Free tier with limited daily picks
+```
+
+### Notes to reviewer (optional)
+
+```
+Premium features require subscription — use demo account above or sandbox Apple ID.
+Free tier: limited daily picks and ads. Not gambling or real-money betting.
+Account deletion: Profile → Delete account.
+ATT prompt is optional (AdMob). Guest browse: 3 teaser picks without account (in newer builds).
+```
+
+### Code not in build 28 (ship in next update)
+
+These landed in git **after** build 28 — fine for review if not visible, or mention in notes:
+
+- Guest browse (Home/Games without login)
+- Model warming banner
+- Leaderboard/challenge empty states
+- Pre-kickoff accuracy lock (backend — deploy API separately)
+
+**Backend:** Redeploy VPS API so accuracy, feed quality, and `/stats/model` match the app.
+
+---
+
+## Build upload failures (June 2026 — builds 29, 30, 1.0.2)
 
 **Cause:** `eas build:version:set` was used to enter **1.0.1** — EAS stored that as the **build number** (CFBundleVersion), not the marketing version. Apple requires build numbers to be **integers** (28, 29, 31), not semver (1.0.1, 1.0.2). Hence **Failed** in Build Uploads.
 

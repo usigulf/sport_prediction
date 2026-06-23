@@ -16,6 +16,16 @@ from app.models.user_prediction_view import UserPredictionView
 
 router = APIRouter(prefix="/leaderboards", tags=["leaderboards"])
 
+MIN_LEADERBOARD_ACTIVE_USERS = 50
+
+
+def _leaderboard_meta(eligible_users: int) -> dict:
+    return {
+        "eligible_users": eligible_users,
+        "community_warming": eligible_users < MIN_LEADERBOARD_ACTIVE_USERS,
+        "min_active_users": MIN_LEADERBOARD_ACTIVE_USERS,
+    }
+
 
 def _mask_email(email: str) -> str:
     """Mask email for public leaderboard: 'u***@x.com' style."""
@@ -54,7 +64,7 @@ async def get_leaderboards(
     )
     game_ids = {g.id for g in finished_games}
     if not game_ids:
-        return {"period": period, "entries": [], "count": 0}
+        return {"period": period, "entries": [], "count": 0, **_leaderboard_meta(0)}
 
     # Latest prediction per game
     pred_by_game = {}
@@ -97,7 +107,7 @@ async def get_leaderboards(
             user_stats[user_id] = {"correct": correct, "total": total}
 
     if not user_stats:
-        return {"period": period, "entries": [], "count": 0}
+        return {"period": period, "entries": [], "count": 0, **_leaderboard_meta(0)}
 
     # Sort by accuracy_pct desc, then correct desc
     sorted_users = sorted(
@@ -130,4 +140,9 @@ async def get_leaderboards(
         else:
             entries[-1]["is_me"] = False
 
-    return {"period": period, "entries": entries, "count": len(entries)}
+    return {
+        "period": period,
+        "entries": entries,
+        "count": len(entries),
+        **_leaderboard_meta(len(user_stats)),
+    }

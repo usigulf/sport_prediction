@@ -18,6 +18,7 @@ import { apiService } from '../services/api';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { theme } from '../constants/theme';
 import { hasProAccess } from '../utils/subscription';
+import { PremiumFeatureEmptyState } from '../components/PremiumFeatureEmptyState';
 
 type ChallengeItem = {
   id: string;
@@ -93,24 +94,19 @@ export const ChallengesScreen: React.FC = () => {
   if (!hasProAccess(subscriptionTier)) {
     return (
       <View style={styles.container}>
-        <View style={styles.proGate}>
-          <Ionicons name="trophy-outline" size={56} color={theme.colors.accent} />
-          <Text style={styles.proGateTitle}>Challenges are a Premium feature</Text>
-          <Text style={styles.proGateText}>
-            Upgrade to Premium to create multi-game challenges and track how the model performs on your picks.
-          </Text>
-          <TouchableOpacity
-            style={styles.proGateButton}
-            onPress={() =>
-              navigation.navigate('Paywall', {
-                emphasizeTier: 'premium',
-                contextMessage: 'Premium includes challenges, leaderboards, and unlimited picks.',
-              })
-            }
-          >
-            <Text style={styles.proGateButtonText}>View Premium</Text>
-          </TouchableOpacity>
-        </View>
+        <PremiumFeatureEmptyState
+          icon="trophy-outline"
+          badge="Premium"
+          title="Challenges"
+          message="Pick up to 10 games and see how the model performs when they finish. Upgrade to Premium to create and track challenges."
+          primaryLabel="View Premium"
+          onPrimaryPress={() =>
+            navigation.navigate('Paywall', {
+              emphasizeTier: 'premium',
+              contextMessage: 'Premium includes challenges, leaderboards, and unlimited picks.',
+            })
+          }
+        />
       </View>
     );
   }
@@ -168,19 +164,16 @@ export const ChallengesScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
       ) : challenges.length === 0 ? (
-        <View style={styles.empty}>
-          <Ionicons name="trophy-outline" size={64} color={theme.colors.textMuted} />
-          <Text style={styles.emptyTitle}>No challenges yet</Text>
-          <Text style={styles.emptyText}>
-            Create a challenge by selecting up to 10 games. When they all finish, we'll show how many the model got right.
-          </Text>
-          <TouchableOpacity
-            style={styles.createBtnLarge}
-            onPress={() => navigation.navigate('CreateChallenge')}
-          >
-            <Text style={styles.createBtnText}>Create your first challenge</Text>
-          </TouchableOpacity>
-        </View>
+        <PremiumFeatureEmptyState
+          icon="trophy-outline"
+          badge="Beta"
+          title="Start your first challenge"
+          message="Select up to 10 upcoming games. When they all finish, we score how many the model got right — great for tracking a slate or rivalry weekend."
+          primaryLabel="Create challenge"
+          onPrimaryPress={() => navigation.navigate('CreateChallenge')}
+          secondaryLabel="Browse games"
+          onSecondaryPress={() => navigation.navigate('MainTabs', { screen: 'Games' } as never)}
+        />
       ) : (
         challenges.map((c) => (
           <TouchableOpacity

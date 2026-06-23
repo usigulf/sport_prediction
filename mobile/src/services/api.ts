@@ -714,6 +714,9 @@ class ApiService {
         is_me?: boolean;
       }>;
       count: number;
+      eligible_users?: number;
+      community_warming?: boolean;
+      min_active_users?: number;
     }>(`/leaderboards${query ? `?${query}` : ''}`, { requireAuth: true });
   }
 
