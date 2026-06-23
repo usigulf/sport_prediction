@@ -30,6 +30,18 @@ export const MARKETING_SCOPE_LINE =
 export const MARKETING_SCOPE_SHORT =
   'AI-powered predictions and analytics across major North American and international sports competitions';
 
+export const ONBOARDING_WELCOME_TITLE = 'Welcome to octobetiQ';
+export const ONBOARDING_WELCOME_BODY = BETA_SOCCER_ONLY
+  ? `AI win probabilities for ${SOCCER_COMPETITIONS_DISPLAY}. Browse schedules, daily picks, and live updates — informational only, not betting advice.`
+  : `${MARKETING_SCOPE_SHORT}. Browse schedules, daily picks, and live updates — informational only, not betting advice.`;
+
+export const ONBOARDING_TRUST_TITLE = 'Accuracy you can verify';
+export const ONBOARDING_TRUST_BODY =
+  'We lock predictions before kickoff and track results in the Accuracy tab. See methodology, sample size, and when the model is still warming up.';
+
+export const ONBOARDING_PUSH_HINT =
+  'Optional alerts for high-confidence picks and game reminders. Change anytime in Settings.';
+
 /** @deprecated Use MARKETING_SCOPE_LINE — kept for imports */
 export const APP_STORE_LEAGUES_LINE = MARKETING_SCOPE_LINE;
 
