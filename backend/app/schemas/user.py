@@ -55,3 +55,9 @@ class RefreshTokenRequest(BaseModel):
 class LogoutRequest(BaseModel):
     refresh_token: Optional[str] = None
     access_token: Optional[str] = None
+
+
+class AppleSignInRequest(BaseModel):
+    identity_token: str
+    email: Optional[EmailStr] = None
+    full_name: Optional[str] = None

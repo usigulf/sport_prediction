@@ -140,6 +140,9 @@ class Settings(BaseSettings):
     revenuecat_entitlement_pro: str = "pro"
     revenuecat_entitlement_premium: str = "premium"
 
+    # Sign in with Apple — iOS bundle id / Services ID used as JWT `aud`.
+    apple_client_id: str = "com.sportsprediction.app"
+
     @model_validator(mode="after")
     def validate_production_config(self) -> "Settings":
         env = (self.environment or "").lower()

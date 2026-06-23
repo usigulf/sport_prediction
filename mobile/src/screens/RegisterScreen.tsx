@@ -22,6 +22,7 @@ import { theme } from '../constants/theme';
 import { AUTH_SCREEN_TAGLINE } from '../constants/leagues';
 import { OctobetiQWordmark } from '../components/OctobetiQWordmark';
 import { AuthTrustLinks } from '../components/AuthTrustLinks';
+import { AppleSignInButton, AuthMethodDivider } from '../components/AppleSignInButton';
 
 type RegisterScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -32,6 +33,8 @@ export const RegisterScreen: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [appleBusy, setAppleBusy] = useState(false);
+  const formDisabled = loading || appleBusy;
 
   const handleRegister = async () => {
     if (!email || !password || !confirmPassword) {
@@ -75,6 +78,9 @@ export const RegisterScreen: React.FC = () => {
           <Text style={styles.subtitle}>{AUTH_SCREEN_TAGLINE}</Text>
 
           <View style={styles.form}>
+            <AppleSignInButton disabled={formDisabled} onBusyChange={setAppleBusy} />
+            <AuthMethodDivider />
+
             <TextInput
               style={styles.input}
               placeholder="Email"
@@ -114,7 +120,7 @@ export const RegisterScreen: React.FC = () => {
                 pressed && !loading && styles.buttonPressed,
               ]}
               onPress={handleRegister}
-              disabled={loading}
+              disabled={formDisabled}
             >
               {loading ? (
                 <ActivityIndicator color={theme.colors.background} />

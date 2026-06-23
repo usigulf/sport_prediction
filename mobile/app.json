@@ -71,6 +71,7 @@
         }
       ],
       "expo-font",
+      "expo-apple-authentication",
       [
         "expo-build-properties",
         {

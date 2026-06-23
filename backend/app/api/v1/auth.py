@@ -1,6 +1,7 @@
 """
 Authentication endpoints
 """
+import secrets
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -15,6 +16,7 @@ from app.schemas.user import (
     Token,
     RefreshTokenRequest,
     LogoutRequest,
+    AppleSignInRequest,
 )
 from app.models.user import User
 from app.core.security import (
@@ -27,6 +29,7 @@ from app.core.security import (
     revoke_token_by_payload,
 )
 from app.config import get_settings
+from app.services.apple_auth_service import AppleAuthError, verify_apple_identity_token
 
 router = APIRouter()
 settings = get_settings()
@@ -92,6 +95,82 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    return _token_pair_for_user(user)
+
+
+def _oauth_only_password_hash() -> str:
+    """Random bcrypt hash — Apple-only accounts cannot password-login."""
+    return get_password_hash(secrets.token_urlsafe(48))
+
+
+@router.post("/apple", response_model=Token)
+async def sign_in_with_apple(
+    body: AppleSignInRequest,
+    db: Session = Depends(get_db),
+    _: None = Depends(rate_limit_auth),
+):
+    """Exchange a verified Apple identity token for app JWTs."""
+    try:
+        claims = verify_apple_identity_token(
+            body.identity_token.strip(),
+            audience=settings.apple_client_id,
+        )
+    except AppleAuthError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Apple sign-in token",
+        )
+
+    apple_sub = claims.get("sub")
+    if not apple_sub or not isinstance(apple_sub, str):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Apple sign-in token",
+        )
+
+    token_email = claims.get("email")
+    if isinstance(token_email, str):
+        token_email = token_email.strip().lower()
+    else:
+        token_email = None
+
+    email = (body.email or token_email or "").strip().lower()
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Apple did not provide an email. Enable email sharing or use email sign-in.",
+        )
+
+    user = db.query(User).filter(User.apple_sub == apple_sub).first()
+    if user:
+        if user.email != email and token_email and user.email != token_email:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Apple account email mismatch. Contact support.",
+            )
+        return _token_pair_for_user(user)
+
+    existing = db.query(User).filter(User.email == email).first()
+    if existing:
+        if existing.apple_sub and existing.apple_sub != apple_sub:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Email already registered with a different Apple ID",
+            )
+        existing.apple_sub = apple_sub
+        db.commit()
+        db.refresh(existing)
+        return _token_pair_for_user(existing)
+
+    user = User(
+        email=email,
+        password_hash=_oauth_only_password_hash(),
+        apple_sub=apple_sub,
+        subscription_tier="free",
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
     return _token_pair_for_user(user)
 
 

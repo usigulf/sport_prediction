@@ -21,6 +21,7 @@ import { theme } from '../constants/theme';
 import { AUTH_SCREEN_TAGLINE } from '../constants/leagues';
 import { OctobetiQWordmark } from '../components/OctobetiQWordmark';
 import { AuthTrustLinks } from '../components/AuthTrustLinks';
+import { AppleSignInButton, AuthMethodDivider } from '../components/AppleSignInButton';
 
 type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -30,6 +31,8 @@ export const LoginScreen: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [appleBusy, setAppleBusy] = useState(false);
+  const formDisabled = loading || appleBusy;
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -66,6 +69,9 @@ export const LoginScreen: React.FC = () => {
         <Text style={styles.subtitle}>{AUTH_SCREEN_TAGLINE}</Text>
 
         <View style={styles.form}>
+          <AppleSignInButton disabled={formDisabled} onBusyChange={setAppleBusy} />
+          <AuthMethodDivider />
+
           <TextInput
             style={styles.input}
             placeholder="Email"
@@ -95,7 +101,7 @@ export const LoginScreen: React.FC = () => {
               pressed && !loading && styles.buttonPressed,
             ]}
             onPress={handleLogin}
-            disabled={loading}
+            disabled={formDisabled}
           >
             {loading ? (
               <ActivityIndicator color={theme.colors.background} />

@@ -331,7 +331,8 @@ class ApiService {
           endpoint.startsWith('/auth/refresh') ||
           endpoint.startsWith('/auth/logout') ||
           endpoint.startsWith('/auth/login') ||
-          endpoint.startsWith('/auth/register');
+          endpoint.startsWith('/auth/register') ||
+          endpoint.startsWith('/auth/apple');
         if (!isRetryAfterRefresh && !isAuthSessionEndpoint) {
           try {
             const stored = await getStoredAuth();
@@ -431,6 +432,21 @@ class ApiService {
     return this.request<User>('/auth/register', {
       method: 'POST',
       body: { email, password },
+    });
+  }
+
+  async loginWithApple(body: {
+    identity_token: string;
+    email?: string;
+    full_name?: string;
+  }) {
+    return this.request<{
+      access_token: string;
+      refresh_token: string;
+      token_type: string;
+    }>('/auth/apple', {
+      method: 'POST',
+      body,
     });
   }
 

@@ -14,12 +14,52 @@ export async function completeSignIn(
   password: string,
 ): Promise<void> {
   const response = await apiService.login(email, password);
-  setAuthToken(response.access_token);
-  dispatch(setUser({ email, token: response.access_token }));
+  await applyAuthSession(dispatch, email, response.access_token, response.refresh_token);
+}
+
+export type AppleSignInPayload = {
+  identityToken: string;
+  email?: string;
+  fullName?: string;
+};
+
+export async function completeAppleSignIn(
+  dispatch: AppDispatch,
+  payload: AppleSignInPayload,
+): Promise<void> {
+  const response = await apiService.loginWithApple({
+    identity_token: payload.identityToken,
+    email: payload.email,
+    full_name: payload.fullName,
+  });
+  await applyAuthSession(
+    dispatch,
+    payload.email,
+    response.access_token,
+    response.refresh_token,
+  );
+}
+
+async function applyAuthSession(
+  dispatch: AppDispatch,
+  emailHint: string | undefined,
+  accessToken: string,
+  refreshToken: string,
+): Promise<void> {
+  setAuthToken(accessToken);
+  let email = emailHint;
+  if (!email) {
+    try {
+      email = (await apiService.getCurrentUser()).email;
+    } catch {
+      email = 'user@octobetiq.com';
+    }
+  }
+  dispatch(setUser({ email, token: accessToken }));
   try {
     await setStoredAuth({
-      accessToken: response.access_token,
-      refreshToken: response.refresh_token,
+      accessToken,
+      refreshToken,
       email,
     });
   } catch {
