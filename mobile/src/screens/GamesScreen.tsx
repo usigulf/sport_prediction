@@ -221,19 +221,21 @@ export const GamesScreen: React.FC = () => {
     setRefreshing(false);
   };
 
-  /** Tap game → bottom sheet with prediction + full analysis; CTA opens Game Detail for props / live / share. */
-  const useBottomSheetPreview = true;
+  /** Tap → Game Detail; long-press → quick preview sheet (M-08). */
+  const openPreviewSheet = (game: { id: string }) => {
+    setPreviewHydrated(null);
+    setPreviewExplanation(null);
+    setPreviewExplanationError(null);
+    setPreviewExplanationLoading(true);
+    setPreviewGame(game);
+  };
 
-  const handleGamePress = (game: any) => {
-    if (useBottomSheetPreview) {
-      setPreviewHydrated(null);
-      setPreviewExplanation(null);
-      setPreviewExplanationError(null);
-      setPreviewExplanationLoading(true);
-      setPreviewGame(game);
-    } else {
-      navigation.navigate('GameDetail', { gameId: game.id });
-    }
+  const handleGamePress = (game: { id: string }) => {
+    navigation.navigate('GameDetail', { gameId: game.id });
+  };
+
+  const handleGameLongPress = (game: { id: string }) => {
+    openPreviewSheet(game);
   };
 
   const closePreview = () => {
@@ -291,20 +293,26 @@ export const GamesScreen: React.FC = () => {
   };
 
   const renderGame = ({ item }: { item: any }) => (
-    <GameCard game={item} onPress={() => handleGamePress(item)} />
+    <GameCard
+      game={item}
+      onPress={() => handleGamePress(item)}
+      onLongPress={() => handleGameLongPress(item)}
+    />
   );
 
   const renderTrendingItem = ({ item }: { item: any }) => (
-    <TouchableOpacity onPress={() => handleGamePress(item)} activeOpacity={1}>
-      <View style={styles.trendingCard}>
-        <GameCard game={item} onPress={() => handleGamePress(item)} />
-        {item.prediction && (
-          <View style={styles.trendingPrediction}>
-            <PredictionCard prediction={item.prediction} league={item.league} />
-          </View>
-        )}
-      </View>
-    </TouchableOpacity>
+    <View style={styles.trendingCard}>
+      <GameCard
+        game={item}
+        onPress={() => handleGamePress(item)}
+        onLongPress={() => handleGameLongPress(item)}
+      />
+      {item.prediction && (
+        <View style={styles.trendingPrediction}>
+          <PredictionCard prediction={item.prediction} league={item.league} />
+        </View>
+      )}
+    </View>
   );
 
   const subTabs: { key: GamesViewType; label: string }[] = [
@@ -563,7 +571,7 @@ export const GamesScreen: React.FC = () => {
             {previewSheetGame && (
               <View style={styles.sheetInner}>
                 <View style={styles.sheetHeader}>
-                  <Text style={styles.sheetTitle}>Game preview</Text>
+                  <Text style={styles.sheetTitle}>Quick preview</Text>
                   <TouchableOpacity onPress={closePreview} hitSlop={12} style={styles.sheetClose}>
                     <Ionicons name="close" size={24} color={theme.colors.textMuted} />
                   </TouchableOpacity>
@@ -624,7 +632,7 @@ export const GamesScreen: React.FC = () => {
                       <Ionicons name="arrow-forward" size={20} color={theme.colors.background} />
                     </TouchableOpacity>
                     <Text style={styles.sheetHint}>
-                      Player props, live updates & share — detail page
+                      Long-press a game for this preview · props, live & share on detail
                     </Text>
                   </View>
                 </View>

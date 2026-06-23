@@ -9,6 +9,7 @@ import { TeamCrestImage } from './TeamCrestImage';
 interface GameCardProps {
   game: Game;
   onPress?: () => void;
+  onLongPress?: () => void;
 }
 
 function CrestOrInitial(props: {
@@ -22,7 +23,7 @@ function CrestOrInitial(props: {
   );
 }
 
-export const GameCard: React.FC<GameCardProps> = ({ game, onPress }) => {
+export const GameCard: React.FC<GameCardProps> = ({ game, onPress, onLongPress }) => {
   const formatDate = (date: string) => {
     const d = new Date(date);
     return d.toLocaleDateString('en-US', {
@@ -54,7 +55,9 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onPress }) => {
     <TouchableOpacity
       style={styles.card}
       onPress={onPress}
-      disabled={!onPress}
+      onLongPress={onLongPress}
+      delayLongPress={400}
+      disabled={!onPress && !onLongPress}
       activeOpacity={onPress ? 0.7 : 1}
     >
       <View style={styles.header}>
