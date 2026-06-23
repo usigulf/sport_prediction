@@ -332,10 +332,10 @@ export const GamesScreen: React.FC = () => {
           <Text style={styles.headerSubtitle}>
             {selectedLeague === 'soccer'
               ? 'Pick a day — all soccer competitions for that date'
-                : selectedLeague === 'nfl'
-                ? 'NFL schedule from ClearSports · picks from trained model + recent results'
+              : selectedLeague === 'nfl'
+                ? 'NFL schedules and AI picks for the week'
                 : selectedLeague === 'nba'
-                  ? 'NBA schedule from ClearSports · picks from trained model + recent results'
+                  ? 'NBA schedules and AI picks for the week'
                   : selectedLeague == null
                     ? GAMES_ALL_SPORTS_SUBTITLE
                     : 'Pick a sport, then a view'}
@@ -492,7 +492,8 @@ export const GamesScreen: React.FC = () => {
               {gamesView === 'props' ? (
                 <View style={styles.propsTabHint}>
                   <Text style={styles.propsTabHintText}>
-                    Model-projected props on game detail (Premium). Named players when spotlights are synced; otherwise team estimates — not sportsbook lines.
+                    Model-projected props on game detail (Premium). Player names when available;
+                    otherwise team-level estimates — not sportsbook lines.
                   </Text>
                 </View>
               ) : null}
@@ -517,7 +518,7 @@ export const GamesScreen: React.FC = () => {
                 {loading
                   ? 'Loading games...'
                   : selectedLeague === 'soccer'
-                    ? 'No games for this day in the app. Try the week arrows — or sync schedules on the server (see note above).'
+                    ? 'No games scheduled for this day. Try another day with the week arrows.'
                     : 'No games found'}
               </Text>
             </View>

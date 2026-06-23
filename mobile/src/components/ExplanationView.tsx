@@ -223,8 +223,7 @@ function StructuredMetricsBlock({
         </Text>
       ) : null}
       <Text style={styles.metricsDisclaimer}>
-        Row footnotes describe each input. Soccer uses standings and last-5 league results in the DB when
-        synced.
+        Footnotes describe each input. Soccer analysis uses recent standings and form when available.
       </Text>
     </AnalysisSection>
   );
