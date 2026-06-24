@@ -58,7 +58,7 @@ function formatWindowStart(iso: string): string {
   }
 }
 
-function formatLastUpdated(iso: string | null): string | null {
+function formatLastUpdated(iso: string | null | undefined): string | null {
   if (!iso) return null;
   try {
     const d = new Date(iso);

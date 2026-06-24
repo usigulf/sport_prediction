@@ -19,7 +19,7 @@ def test_normalize_schedule_row_basic():
     row = {
         "sport_event": {
             "id": "sr:sport_event:999",
-            "start_time": "2026-03-30T15:00:00+00:00",
+            "start_time": "2030-03-30T15:00:00+00:00",
             "venue": {"name": "Anfield"},
             "competitors": [
                 {"qualifier": "home", "name": "Liverpool FC", "abbreviation": "LIV"},
@@ -44,7 +44,7 @@ def test_normalize_schedule_row_live():
     row = {
         "sport_event": {
             "id": "sr:sport_event:1",
-            "start_time": "2026-03-30T15:00:00+00:00",
+            "start_time": "2030-03-30T15:00:00+00:00",
             "competitors": [
                 {"qualifier": "home", "name": "A", "abbreviation": "AA"},
                 {"qualifier": "away", "name": "B", "abbreviation": "BB"},
@@ -79,7 +79,7 @@ def test_normalize_schedule_row_skips_virtual():
     row = {
         "sport_event": {
             "id": "sr:sport_event:v",
-            "start_time": "2026-03-30T15:00:00+00:00",
+            "start_time": "2030-03-30T15:00:00+00:00",
             "competitors": [
                 {"qualifier": "home", "name": "TBD", "virtual": True},
                 {"qualifier": "away", "name": "B", "abbreviation": "BB"},
@@ -103,7 +103,7 @@ def test_sync_soccer_schedule_integration(db, monkeypatch):
             {
                 "sport_event": {
                     "id": "sr:sport_event:sync1",
-                    "start_time": "2026-04-01T12:00:00+00:00",
+                    "start_time": "2030-04-01T12:00:00+00:00",
                     "competitors": [
                         {"qualifier": "home", "name": "Alpha FC", "abbreviation": "ALP"},
                         {"qualifier": "away", "name": "Beta FC", "abbreviation": "BET"},

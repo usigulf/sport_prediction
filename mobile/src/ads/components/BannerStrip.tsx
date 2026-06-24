@@ -74,7 +74,7 @@ export const BannerStrip: React.FC<Props> = ({ screen }) => {
         onAdLoaded={() => {
           void engine.trackEvent(screen, 'impression', 'banner');
         }}
-        onAdFailedToLoad={(err) => {
+        onAdFailedToLoad={(err: unknown) => {
           console.warn('[AdMob] banner failed', screen, err);
           setFailed(true);
         }}

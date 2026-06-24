@@ -17,7 +17,12 @@ function formatAmericanLine(value: number | null | undefined): string | null {
 }
 
 function edgeBadge(
-  label: MarketOddsResponse['model_comparison'] extends { edge_label?: infer E } ? E : never,
+  label:
+    | 'model_leans_home'
+    | 'model_leans_away'
+    | 'aligned'
+    | 'unavailable'
+    | undefined,
   edgePct: number | null | undefined,
   homeName: string,
   awayName: string,

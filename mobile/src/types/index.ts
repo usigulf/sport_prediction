@@ -150,14 +150,28 @@ export interface PlayerProp {
 }
 
 export interface TopPick {
-  game_id: string;
+  id: string;
   league: string;
-  home_team_name: string;
-  away_team_name: string;
-  home_win_probability: number;
-  away_win_probability: number;
-  confidence_level: string;
+  home_team?: { name?: string; logo_url?: string | null; abbreviation?: string | null } | null;
+  away_team?: { name?: string; logo_url?: string | null; abbreviation?: string | null } | null;
   scheduled_time?: string;
+  status?: string;
+  home_score?: number | null;
+  away_score?: number | null;
+  venue?: string | null;
+  prediction?: {
+    home_win_probability: number;
+    away_win_probability: number;
+    confidence_level?: string;
+  } | null;
+  guest_locked?: boolean;
+  /** @deprecated flat shape — prefer nested home_team / prediction */
+  game_id?: string;
+  home_team_name?: string;
+  away_team_name?: string;
+  home_win_probability?: number;
+  away_win_probability?: number;
+  confidence_level?: string;
 }
 
 export interface ChallengeSummary {
