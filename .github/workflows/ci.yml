@@ -41,10 +41,7 @@ jobs:
           ENVIRONMENT: test
           RATE_LIMIT_AUTH_PER_MINUTE: "1000"
           RATE_LIMIT_PREDICTIONS_PER_MINUTE: "1000"
-          PYTHONPATH: backend
-        run: |
-          cd ..
-          pytest backend/tests -c pytest.ini --cov-fail-under=45
+        run: pytest tests -c ../pytest.ini --cov-fail-under=45
 
   mobile-typecheck:
     runs-on: ubuntu-latest
