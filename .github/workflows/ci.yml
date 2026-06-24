@@ -35,7 +35,7 @@ jobs:
 
       - name: Pytest with coverage
         env:
-          DATABASE_URL: sqlite:///:memory:
+          DATABASE_URL: "sqlite:///:memory:"
           REDIS_URL: disabled
           JWT_SECRET: ci-test-jwt-secret-minimum-32-characters-long
           ENVIRONMENT: test
