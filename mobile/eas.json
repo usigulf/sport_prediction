@@ -29,6 +29,7 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.octobetiq.com/api/v1",
         "EXPO_PUBLIC_BETA_SOCCER_ONLY": "false",
+        "EXPO_PUBLIC_ODDS_DISPLAY_ENABLED": "true",
         "EXPO_PUBLIC_ADMOB_PRODUCTION": "true",
         "EXPO_PUBLIC_ADMOB_APP_ID_IOS": "ca-app-pub-1914108971892809~4005514565",
         "EXPO_PUBLIC_ADMOB_BANNER_IOS": "ca-app-pub-1914108971892809/8186017901",
