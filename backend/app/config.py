@@ -67,6 +67,13 @@ class Settings(BaseSettings):
     model_artifact_dir: Optional[str] = None
     # Gate explanations / rich output when computed quality is below threshold.
     min_data_quality_score: float = 0.45
+    # The Odds API (M-01 spike — optional override). When unset, market odds reuse CLEARSPORTS_API_KEY.
+    odds_api_key: str = ""
+    odds_api_base_url: str = "https://api.the-odds-api.com/v4"
+    odds_api_regions: str = "us"
+    odds_api_markets: str = "h2h,spreads,totals"
+    odds_api_timeout_seconds: int = 15
+    odds_cache_ttl_seconds: int = 300
     # Unauthenticated feed: max picks with prediction payloads per response.
     guest_teaser_pick_limit: int = 3
     # Block writing sklearn pickles until each league group has enough holdout decisive games.

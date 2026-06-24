@@ -32,6 +32,8 @@ from app.services.feature_builder import build_game_features
 from app.services.analysis_context_service import enrich_rich_analysis, build_structured_game_analysis
 from app.services.data_quality_service import compute_prediction_quality, league_standings_last_updated_iso
 from app.services.share_image_service import generate_share_image
+from app.services.odds_service import get_market_odds_for_game, load_game_for_odds
+from app.schemas.odds import MarketOddsResponse
 from app.config import get_settings
 
 router = APIRouter()
@@ -474,6 +476,22 @@ async def get_game_player_props(
 
     prediction = PredictionService(db).get_latest_prediction(game_id)
     return build_game_player_props(db, game, prediction)
+
+
+@router.get("/{game_id}/market-odds", response_model=MarketOddsResponse)
+async def get_market_odds(
+    game_id: str,
+    db: Session = Depends(get_db),
+    _: None = Depends(rate_limit_predictions),
+):
+    """
+    Read-only consensus sportsbook lines for model comparison (M-01 spike).
+    Requires CLEARSPORTS_API_KEY (or optional ODDS_API_KEY). Informational only — not betting advice.
+    """
+    game = load_game_for_odds(db, game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    return get_market_odds_for_game(db, game)
 
 
 @router.get("/{game_id}/live-predictions")

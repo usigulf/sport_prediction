@@ -250,6 +250,37 @@ export interface CalibrationResponse {
   methodology?: string;
 }
 
+export interface MarketOddsConsensus {
+  home_moneyline?: number | null;
+  away_moneyline?: number | null;
+  home_implied_prob?: number | null;
+  away_implied_prob?: number | null;
+  spread_home?: number | null;
+  spread_home_price?: number | null;
+  total_points?: number | null;
+  over_price?: number | null;
+}
+
+export interface MarketOddsModelComparison {
+  model_home_win_prob?: number | null;
+  market_home_implied_prob?: number | null;
+  home_edge_pct?: number | null;
+  edge_label?: 'model_leans_home' | 'model_leans_away' | 'aligned' | 'unavailable';
+}
+
+/** GET /games/:id/market-odds — consensus sportsbook lines (M-01, display only). */
+export interface MarketOddsResponse {
+  available: boolean;
+  reason?: string | null;
+  provider?: string | null;
+  sport_key?: string | null;
+  book_count?: number;
+  consensus?: MarketOddsConsensus | null;
+  model_comparison?: MarketOddsModelComparison | null;
+  disclaimer?: string | null;
+  fetched_at_iso?: string | null;
+}
+
 /** GET /stats/model — sklearn publish readiness (warming vs ready). */
 export interface ModelStatusResponse {
   status: 'warming' | 'ready' | 'forced' | string;
@@ -515,6 +546,13 @@ class ApiService {
 
   async getGame(gameId: string) {
     return this.request<Game>(`/games/${gameId}`, {
+      requireAuth: false,
+      sendAuthIfPresent: true,
+    });
+  }
+
+  async getMarketOdds(gameId: string) {
+    return this.request<MarketOddsResponse>(`/games/${gameId}/market-odds`, {
       requireAuth: false,
       sendAuthIfPresent: true,
     });

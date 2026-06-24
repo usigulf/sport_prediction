@@ -16,6 +16,7 @@ import * as Sharing from 'expo-sharing';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { PredictionCard } from '../components/PredictionCard';
+import { MarketOddsCard } from '../components/MarketOddsCard';
 import { ExplanationView } from '../components/ExplanationView';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
@@ -25,12 +26,13 @@ import {
   clearPredictionForGameChange,
 } from '../store/slices/gamesSlice';
 import { apiService } from '../services/api';
+import type { MarketOddsResponse } from '../services/api';
 import { Game } from '../types';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useLiveUpdates } from '../hooks/useLiveUpdates';
 import { theme } from '../constants/theme';
-import { PLAYER_PROPS_ENABLED } from '../constants/featureFlags';
+import { PLAYER_PROPS_ENABLED, ODDS_DISPLAY_ENABLED } from '../constants/featureFlags';
 import { PREMIUM_PROPS_UNLOCK_CONTEXT } from '../constants/premiumCopy';
 import { GuestSignupCard } from '../components/GuestSignupCard';
 import { formatLeagueLabel } from '../utils/predictionDisplay';
@@ -86,6 +88,7 @@ export const GameDetailScreen: React.FC = () => {
   const [playerPropsError, setPlayerPropsError] = useState<string | null>(null);
   const [playerPropsDisclaimer, setPlayerPropsDisclaimer] = useState<string | null>(null);
   const [playerPropsNamed, setPlayerPropsNamed] = useState(false);
+  const [marketOdds, setMarketOdds] = useState<MarketOddsResponse | null>(null);
 
   const isPremium = hasPremiumAccess(subscriptionTier);
   const unlockedByAd = rewardedUnlock.isUnlockedForGame(gameId);
@@ -154,6 +157,23 @@ export const GameDetailScreen: React.FC = () => {
     return () => { cancelled = true; };
   }, [gameId, subscriptionTier]);
 
+  useEffect(() => {
+    if (!ODDS_DISPLAY_ENABLED) {
+      setMarketOdds(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiService.getMarketOdds(gameId);
+        if (!cancelled) setMarketOdds(res);
+      } catch {
+        if (!cancelled) setMarketOdds(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [gameId]);
+
   /** When the server writes a new prediction (WS signals), refresh game + prediction so analysis text matches. */
   useEffect(() => {
     if (!isPremium || !lastUpdate?.prediction_updated_at) return;
@@ -178,6 +198,14 @@ export const GameDetailScreen: React.FC = () => {
     setRefreshing(true);
     try {
       await loadGameData();
+      if (ODDS_DISPLAY_ENABLED) {
+        try {
+          const res = await apiService.getMarketOdds(gameId);
+          setMarketOdds(res);
+        } catch {
+          setMarketOdds(null);
+        }
+      }
       if (showExplanation && currentPrediction?.id && isPremium) {
         await dispatch(
           fetchExplanation({ gameId, predictionId: currentPrediction.id })
@@ -396,6 +424,13 @@ export const GameDetailScreen: React.FC = () => {
             <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
               <Text style={styles.shareButtonText}>Share this pick</Text>
             </TouchableOpacity>
+            {ODDS_DISPLAY_ENABLED && marketOdds?.available ? (
+              <MarketOddsCard
+                homeTeamName={homeName}
+                awayTeamName={awayName}
+                payload={marketOdds}
+              />
+            ) : null}
             <NativeFeedAdCard surface="game_detail" screenLabel="GameDetailNative" />
             {showExplanation && advancedLockedFree ? (
               <RewardedUnlockCTA
