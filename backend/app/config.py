@@ -76,7 +76,7 @@ class Settings(BaseSettings):
     odds_cache_ttl_seconds: int = 300
     # Unauthenticated feed: max picks with prediction payloads per response.
     guest_teaser_pick_limit: int = 3
-    # Block writing sklearn pickles until each league group has enough holdout decisive games.
+    # Block writing sklearn pickles until each league group has enough corpus decisive games.
     min_publish_holdout_per_league_group: int = 500
     
     # External APIs

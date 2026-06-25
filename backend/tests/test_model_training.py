@@ -95,13 +95,13 @@ def test_train_and_save_learns_signal_and_roundtrips(db, tmp_path):
         db, out_dir, test_frac=0.2, min_games=10, min_publish_holdout_per_league_group=5, force=True
     )
 
-    assert summary["games"] == 60
-    assert (tmp_path / "models" / ARTIFACT_MODEL).exists()
-    assert (tmp_path / "models" / ARTIFACT_FEATURES).exists()
-    # Separable signal → strong holdout accuracy.
-    assert summary["eval"]["accuracy"] >= 0.8
-    # A trained model should beat the constant baseline's Brier score.
-    assert summary["eval"]["brier"] <= summary["eval"]["baseline_brier"] + 1e-9
+    football = summary["groups"]["football"]
+    assert football["games"] == 60
+    football_dir = tmp_path / "models" / "football"
+    assert (football_dir / ARTIFACT_MODEL).exists()
+    assert (football_dir / ARTIFACT_FEATURES).exists()
+    assert football["eval"]["accuracy"] >= 0.8
+    assert football["eval"]["brier"] <= football["eval"]["baseline_brier"] + 1e-9
 
     # Inference loader consumes the artifacts and favors the strong home side.
     strong_home = {
@@ -115,9 +115,9 @@ def test_train_and_save_learns_signal_and_roundtrips(db, tmp_path):
         "rest_days_home": 7,
         "rest_days_away": 7,
     }
-    out = predict_from_artifacts(out_dir, strong_home)
+    out = predict_from_artifacts(str(football_dir), strong_home)
     assert out is not None
-    assert out["model_version"] == "sklearn_simple"
+    assert out["model_version"] == "sklearn_football"
     assert out["home_win_probability"] > 0.6
 
 
@@ -130,15 +130,27 @@ def test_train_and_save_aborts_on_tiny_dataset(db):
         assert "min_games" in str(e)
 
 
-def test_assess_publish_readiness_blocks_small_holdout():
+def test_assess_publish_readiness_blocks_small_corpus():
     leagues = ["nfl"] * 60
     ready, reasons, corpus, holdout = assess_publish_readiness(
         leagues, n=60, test_frac=0.2, min_holdout_per_group=500
     )
     assert ready is False
     assert reasons
+    assert "corpus has 60" in reasons[0]
     assert corpus["football"] == 60
     assert holdout["football"] == 12
+
+
+def test_assess_publish_readiness_passes_when_corpus_meets_threshold():
+    leagues = ["nba"] * 600
+    ready, reasons, corpus, holdout = assess_publish_readiness(
+        leagues, n=600, test_frac=0.2, min_holdout_per_group=500
+    )
+    assert ready is True
+    assert not reasons
+    assert corpus["basketball"] == 600
+    assert holdout["basketball"] == 120
 
 
 def test_train_and_save_writes_metrics_only_when_publish_blocked(db, tmp_path):
@@ -155,7 +167,7 @@ def test_train_and_save_writes_metrics_only_when_publish_blocked(db, tmp_path):
     assert summary["publish_ready"] is False
     assert summary["artifacts_written"] is False
     assert summary["status"] == "warming"
-    assert not (tmp_path / "models" / ARTIFACT_MODEL).exists()
+    assert not (tmp_path / "models" / "football" / ARTIFACT_MODEL).exists()
     assert (tmp_path / "models" / "metrics.json").exists()
 
 
@@ -180,6 +192,7 @@ def test_train_force_writes_pkls_but_publish_ready_stays_false(db, tmp_path):
         min_publish_holdout_per_league_group=500,
         force=True,
     )
-    assert summary["publish_ready"] is False
-    assert (tmp_path / "models" / ARTIFACT_MODEL).exists()
-    assert artifacts_publish_ready(out_dir) is False
+    football = summary["groups"]["football"]
+    assert football["publish_ready"] is False
+    assert (tmp_path / "models" / "football" / ARTIFACT_MODEL).exists()
+    assert artifacts_publish_ready(str(tmp_path / "models" / "football")) is False

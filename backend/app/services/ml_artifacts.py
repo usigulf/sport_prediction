@@ -60,6 +60,19 @@ def predict_from_artifacts(
     if not hasattr(model, "predict_proba"):
         return None
 
+    model_version = "sklearn_simple"
+    metrics_path = os.path.join(model_dir, "metrics.json")
+    if os.path.isfile(metrics_path):
+        try:
+            import json
+
+            with open(metrics_path, encoding="utf-8") as mf:
+                metrics = json.load(mf)
+            if isinstance(metrics, dict) and metrics.get("model_version"):
+                model_version = str(metrics["model_version"])
+        except Exception:
+            pass
+
     row: dict[str, Any] = dict(features)
     for col in feature_columns:
         if col not in row:
@@ -84,7 +97,7 @@ def predict_from_artifacts(
         "home_win_probability": round(home_win, 4),
         "away_win_probability": round(away_win, 4),
         "confidence_level": confidence,
-        "model_version": "sklearn_simple",
+        "model_version": model_version,
     }
 
 

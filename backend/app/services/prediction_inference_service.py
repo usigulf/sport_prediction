@@ -30,7 +30,7 @@ from app.services.ml_artifacts import (
     soccer_three_way_from_home_edge,
 )
 from app.services.live_prediction_service import classify_prediction_type, tag_inplay_model_version
-from app.services.model_training import artifacts_publish_ready
+from app.services.model_training import artifacts_publish_ready, resolve_model_dir_for_league
 from app.services.prediction_service import PredictionService
 
 logger = logging.getLogger(__name__)
@@ -53,6 +53,19 @@ def _model_dir() -> Optional[str]:
     if not artifacts_publish_ready(path):
         return None
     return path
+
+
+def _model_version_for_dir(model_dir: str) -> str:
+    metrics = None
+    try:
+        from app.services.model_training import load_metrics_json
+
+        metrics = load_metrics_json(model_dir)
+    except Exception:
+        pass
+    if metrics and metrics.get("model_version"):
+        return str(metrics["model_version"])
+    return "sklearn_simple"
 
 
 def _should_skip(
@@ -84,8 +97,13 @@ def _predict_for_game(
     game: Game, db: Session
 ) -> tuple[dict[str, Any], dict[str, float | int], FeatureSource]:
     features, feat_src = build_game_features(game, db)
-    model_dir = _model_dir()
-    out = predict_from_artifacts(model_dir, features) if model_dir else None
+    base_dir = _model_dir()
+    model_dir = resolve_model_dir_for_league(base_dir, game.league or "") if base_dir else None
+    out = None
+    if model_dir:
+        out = predict_from_artifacts(model_dir, features)
+        if out and model_dir != base_dir:
+            out = {**out, "model_version": _model_version_for_dir(model_dir)}
     if not out:
         out = heuristic_predict(features, get_settings().ml_model_version)
 

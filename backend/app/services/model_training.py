@@ -78,8 +78,11 @@ def assess_publish_readiness(
     min_holdout_per_group: int,
 ) -> tuple[bool, list[str], dict[str, int], dict[str, int]]:
     """
-    Require each represented league group to have enough decisive games in the
-    chronological holdout slice before publishing sklearn artifacts.
+    Require each represented league group to have enough decisive games in the full
+    training corpus before publishing sklearn artifacts (H-07 / M-07).
+
+    ``min_holdout_per_group`` is the minimum **corpus** size per league group (legacy
+    env name). A small chronological holdout slice is still computed for eval metrics.
     """
     n_test = max(1, int(round(n * test_frac))) if n >= 10 else 0
     holdout_leagues = leagues[n - n_test :] if n_test else []
@@ -88,11 +91,11 @@ def assess_publish_readiness(
 
     reasons: list[str] = []
     for group, total in sorted(corpus_counts.items()):
-        holdout_n = holdout_counts.get(group, 0)
-        if holdout_n < min_holdout_per_group:
+        if total < min_holdout_per_group:
+            holdout_n = holdout_counts.get(group, 0)
             reasons.append(
-                f"{group}: holdout has {holdout_n} decisive games "
-                f"(< {min_holdout_per_group}; corpus={total})."
+                f"{group}: corpus has {total} decisive games "
+                f"(< {min_holdout_per_group}; holdout={holdout_n})."
             )
     return len(reasons) == 0, reasons, dict(corpus_counts), dict(holdout_counts)
 
@@ -110,6 +113,22 @@ def load_metrics_json(model_dir: str) -> dict[str, Any] | None:
         return None
 
 
+def resolve_model_dir_for_league(base_dir: str, league: str) -> str | None:
+    """Pick per-group artifact dir when published; supports legacy flat layout."""
+    if not base_dir:
+        return None
+    group = league_group(league)
+    sub = os.path.join(base_dir, group)
+    sub_metrics = load_metrics_json(sub)
+    if sub_metrics and sub_metrics.get("publish_ready"):
+        return sub
+    root_metrics = load_metrics_json(base_dir)
+    if root_metrics and root_metrics.get("mode") != "per_league_group":
+        if root_metrics.get("publish_ready") and os.path.isfile(os.path.join(base_dir, ARTIFACT_MODEL)):
+            return base_dir
+    return None
+
+
 def artifacts_publish_ready(model_dir: str | None) -> bool:
     """
     H-07: inference and explainability use ML artifacts only when training marked them publish-ready.
@@ -120,7 +139,15 @@ def artifacts_publish_ready(model_dir: str | None) -> bool:
     metrics = load_metrics_json(model_dir)
     if metrics is None:
         return False
-    return bool(metrics.get("publish_ready"))
+    if metrics.get("publish_ready"):
+        return True
+    if metrics.get("mode") == "per_league_group":
+        for group in LEAGUE_GROUP_ORDER:
+            sub = os.path.join(model_dir, group)
+            sub_metrics = load_metrics_json(sub)
+            if sub_metrics and sub_metrics.get("publish_ready"):
+                return True
+    return False
 
 
 def _finished_decisive_games(db: Session) -> list[Game]:
@@ -136,11 +163,16 @@ def _finished_decisive_games(db: Session) -> list[Game]:
     )
 
 
-def build_training_frame(db: Session):
+LEAGUE_GROUP_ORDER: tuple[str, ...] = ("basketball", "football", "soccer")
+
+
+def build_training_frame(db: Session, *, group: str | None = None):
     """Return (X DataFrame, y Series of home-win labels, leagues, kickoff times)."""
     import pandas as pd
 
     games = _finished_decisive_games(db)
+    if group:
+        games = [g for g in games if league_group(g.league or "") == group]
     pit_cache = PitStandingsCache.from_games(db, games)
     rows: list[list[float]] = []
     labels: list[int] = []
@@ -208,28 +240,32 @@ def train_and_save(
     min_publish_holdout_per_league_group: int | None = None,
     force: bool = False,
 ) -> dict:
-    from app.config import get_settings
+    """Train one sklearn model per league group (M-02) into ``out_dir/{group}/``."""
+    return train_all_league_groups(
+        db,
+        out_dir,
+        test_frac=test_frac,
+        min_games=min_games,
+        min_publish_holdout_per_league_group=min_publish_holdout_per_league_group,
+        force=force,
+    )
 
+
+def _train_single_group(
+    X,
+    y,
+    leagues: list[str],
+    out_dir: str,
+    *,
+    group: str,
+    test_frac: float,
+    min_publish_holdout_per_league_group: int,
+    force: bool,
+) -> dict:
     import numpy as np
     from sklearn.metrics import accuracy_score, brier_score_loss, log_loss
 
-    if min_publish_holdout_per_league_group is None:
-        min_publish_holdout_per_league_group = int(
-            get_settings().min_publish_holdout_per_league_group
-        )
-
-    X, y, leagues, _times = build_training_frame(db)
     n = len(X)
-    if n == 0:
-        raise ValueError("No finished decisive games found to train on.")
-    if y.nunique() < 2:
-        raise ValueError("Training data has only one class (all home or all away wins).")
-    if n < min_games and not force:
-        raise ValueError(
-            f"Only {n} usable games (< min_games={min_games}). "
-            "Re-run with force=True to train anyway."
-        )
-
     eval_metrics: dict = {}
     n_test = max(1, int(round(n * test_frac))) if n >= 10 else 0
     if n_test > 0 and n - n_test >= 5:
@@ -252,7 +288,6 @@ def train_and_save(
                     "calibrated": bool(calibrated),
                 }
 
-    # Final model is fit on all available data for production use.
     final, calibrated_full = _fit_safely(_should_calibrate(y), X, y)
 
     publish_ready, publish_block_reasons, corpus_by_group, holdout_by_group = assess_publish_readiness(
@@ -276,6 +311,7 @@ def train_and_save(
                 os.remove(path)
 
     summary = {
+        "league_group": group,
         "games": int(n),
         "out_dir": os.path.abspath(out_dir),
         "feature_columns": FEATURE_COLUMNS,
@@ -290,6 +326,7 @@ def train_and_save(
         "publish_block_reasons": publish_block_reasons,
         "min_publish_holdout_per_league_group": int(min_publish_holdout_per_league_group),
         "artifacts_written": bool(write_artifacts),
+        "model_version": f"sklearn_{group}",
         "note": (
             "Predicts P(home | decisive); draws excluded from training. Standings "
             "features are point-in-time from finished league games before kickoff "
@@ -299,7 +336,8 @@ def train_and_save(
     if not publish_ready and not force:
         summary["status"] = "warming"
         summary["note"] += (
-            " Model artifacts were not published — collecting more decisive games per league group."
+            f" Model artifacts were not published — need ≥{min_publish_holdout_per_league_group} "
+            f"decisive games in the {group} corpus."
         )
     elif publish_ready:
         summary["status"] = "ready"
@@ -309,10 +347,105 @@ def train_and_save(
         json.dump(summary, f, indent=2, default=str)
     if not write_artifacts:
         logger.warning(
-            "Training complete but publish blocked (%s); metrics only in %s",
+            "Training %s blocked (%s); metrics only in %s",
+            group,
             "; ".join(publish_block_reasons),
             out_dir,
         )
     else:
-        logger.info("Wrote model artifacts to %s (games=%d)", out_dir, n)
+        logger.info("Wrote %s model artifacts to %s (games=%d)", group, out_dir, n)
     return summary
+
+
+def train_all_league_groups(
+    db: Session,
+    out_dir: str,
+    *,
+    test_frac: float = 0.2,
+    min_games: int = 60,
+    min_publish_holdout_per_league_group: int | None = None,
+    force: bool = False,
+) -> dict:
+    from app.config import get_settings
+
+    if min_publish_holdout_per_league_group is None:
+        min_publish_holdout_per_league_group = int(
+            get_settings().min_publish_holdout_per_league_group
+        )
+
+    groups_summary: dict[str, Any] = {}
+    total_games = 0
+    any_ready = False
+    any_written = False
+
+    for group in LEAGUE_GROUP_ORDER:
+        X, y, leagues, _times = build_training_frame(db, group=group)
+        n = len(X)
+        total_games += n
+        sub_dir = os.path.join(out_dir, group)
+        if n == 0:
+            groups_summary[group] = {
+                "league_group": group,
+                "status": "no_data",
+                "games": 0,
+                "publish_ready": False,
+                "artifacts_written": False,
+            }
+            continue
+        if n < min_games and not force:
+            groups_summary[group] = {
+                "league_group": group,
+                "status": "skipped",
+                "games": int(n),
+                "publish_ready": False,
+                "artifacts_written": False,
+                "reason": f"< min_games={min_games}",
+            }
+            continue
+        if y.nunique() < 2:
+            groups_summary[group] = {
+                "league_group": group,
+                "status": "skipped",
+                "games": int(n),
+                "publish_ready": False,
+                "artifacts_written": False,
+                "reason": "single class in labels",
+            }
+            continue
+        summary = _train_single_group(
+            X,
+            y,
+            leagues,
+            sub_dir,
+            group=group,
+            test_frac=test_frac,
+            min_publish_holdout_per_league_group=min_publish_holdout_per_league_group,
+            force=force,
+        )
+        groups_summary[group] = summary
+        any_ready = any_ready or bool(summary.get("publish_ready"))
+        any_written = any_written or bool(summary.get("artifacts_written"))
+
+    if total_games == 0:
+        raise ValueError("No finished decisive games found to train on.")
+    if not any_written and total_games < min_games and not force:
+        raise ValueError(
+            f"Only {total_games} usable games (< min_games={min_games}). "
+            "Re-run with force=True to train anyway."
+        )
+
+    index = {
+        "mode": "per_league_group",
+        "games": total_games,
+        "out_dir": os.path.abspath(out_dir),
+        "groups": groups_summary,
+        "trained_at": datetime.now(timezone.utc).isoformat(),
+        "publish_ready": any_ready,
+        "artifacts_written": any_written,
+        "min_publish_holdout_per_league_group": int(min_publish_holdout_per_league_group),
+        "status": "ready" if any_ready else ("forced" if any_written else "warming"),
+    }
+    os.makedirs(out_dir, exist_ok=True)
+    with open(os.path.join(out_dir, ARTIFACT_METRICS), "w") as f:
+        json.dump(index, f, indent=2, default=str)
+    return index
