@@ -65,6 +65,7 @@ export const GamesScreen: React.FC = () => {
   const route = useRoute<RouteProp<MainTabParamList, 'Games'>>();
   const dispatch = useAppDispatch();
   const { upcomingGames, loading, cachedAt } = useAppSelector((state) => state.games);
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedLeague, setSelectedLeague] = useState<string | null>(null);
 
@@ -118,18 +119,22 @@ export const GamesScreen: React.FC = () => {
     const opts = { limit: 50, signal };
     try {
       if (selectedLeague === MY_LEAGUES_ID) {
-        try {
-          const favs = (await apiService.getFavorites()) as { leagues?: { id: string }[] };
-          const leagueIds = favs.leagues?.map((l) => l.id) ?? [];
-          await dispatch(
-            fetchUpcomingGames({
-              ...opts,
-              leagues: leagueIds.length > 0 ? leagueIds.join(',') : undefined,
-            })
-          ).unwrap();
-        } catch (e) {
-          if ((e as Error)?.name === 'AbortError') return;
+        if (!isAuthenticated) {
           await dispatch(fetchUpcomingGames(opts)).unwrap();
+        } else {
+          try {
+            const favs = (await apiService.getFavorites()) as { leagues?: { id: string }[] };
+            const leagueIds = favs.leagues?.map((l) => l.id) ?? [];
+            await dispatch(
+              fetchUpcomingGames({
+                ...opts,
+                leagues: leagueIds.length > 0 ? leagueIds.join(',') : undefined,
+              })
+            ).unwrap();
+          } catch (e) {
+            if ((e as Error)?.name === 'AbortError') return;
+            await dispatch(fetchUpcomingGames(opts)).unwrap();
+          }
         }
       } else if (selectedLeague === 'soccer') {
         const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;

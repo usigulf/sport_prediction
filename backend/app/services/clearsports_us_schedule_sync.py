@@ -28,10 +28,15 @@ logger = logging.getLogger(__name__)
 
 
 def sync_clearsports_us_schedule_for_league(
-    db: Session, league: UsLeague, settings: Settings
+    db: Session,
+    league: UsLeague,
+    settings: Settings,
+    *,
+    season: str | None = None,
+    include_today: bool = True,
 ) -> SoccerScheduleSyncResult:
     slug = CLEARSPORTS_US_LEAGUE_SLUG[league]
-    season = clearsports_us_season_for_league(league, settings)
+    season = (season or clearsports_us_season_for_league(league, settings)).strip()
     out = SoccerScheduleSyncResult(app_league=league, season_id=season)
     if not (settings.clearsports_api_key or "").strip():
         out.errors.append("CLEARSPORTS_API_KEY not set")
@@ -39,11 +44,11 @@ def sync_clearsports_us_schedule_for_league(
 
     seen: set[str] = set()
     rows: list[dict[str, Any]] = []
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    for batch in (
-        fetch_clearsports_us_games(settings, league, season=season),
-        fetch_clearsports_us_games(settings, league, season=season, date=today),
-    ):
+    batches: list[list[dict[str, Any]]] = [fetch_clearsports_us_games(settings, league, season=season)]
+    if include_today:
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        batches.append(fetch_clearsports_us_games(settings, league, season=season, date=today))
+    for batch in batches:
         for g in batch:
             eid = _game_external_id(g)
             if not eid or eid in seen:

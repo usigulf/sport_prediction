@@ -255,8 +255,14 @@ def sync_us_schedule(
     settings: Settings,
     *,
     season_type: str = "REG",
+    season_year: int | None = None,
 ) -> UsScheduleSyncResult:
-    year = nfl_season_year(settings) if league == "nfl" else nba_season_year(settings)
+    if season_year is not None:
+        year = int(season_year)
+    elif league == "nfl":
+        year = nfl_season_year(settings)
+    else:
+        year = nba_season_year(settings)
     out = UsScheduleSyncResult(league=league, season_year=year, season_type=season_type)
     if not (settings.sportradar_api_key or "").strip():
         out.errors.append("SPORTRADAR_API_KEY not set")

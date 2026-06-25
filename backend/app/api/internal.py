@@ -26,6 +26,7 @@ from app.services.clearsports_soccer_service import clearsports_soccer_health_pr
 from app.services.live_sync_service import run_live_sync_pipeline
 from app.services.us_sports_sync_dispatch import sync_all_us_schedules, us_sync_result_payload
 from app.services.clearsports_us_service import clearsports_us_health_probe
+from app.services.historical_backfill_service import backfill_result_payload, run_historical_backfill
 
 router = APIRouter(prefix="/internal", tags=["internal"])
 
@@ -78,6 +79,37 @@ class TrainModelBody(BaseModel):
         description="Min decisive holdout games per league group before writing pickles (default from settings).",
     )
     force: bool = Field(False, description="Train even when usable games < min_games.")
+
+
+class HistoricalBackfillBody(BaseModel):
+    """M-07: ingest prior seasons of finished games for training / backtest."""
+
+    seasons_back: int = Field(
+        2,
+        ge=1,
+        le=5,
+        description="Number of prior seasons to sync in addition to the current season (e.g. 2 → 3 seasons total).",
+    )
+    leagues: Optional[list[str]] = Field(
+        None,
+        description="Optional league filter (e.g. ['nfl','nba','premier_league']). Default: all configured leagues.",
+    )
+    min_decisive_target: int = Field(
+        500,
+        ge=50,
+        le=5000,
+        description="Report leagues with at least this many decisive finished games in DB.",
+    )
+    run_predictions: bool = Field(
+        False,
+        description="After sync, run prediction job on recently finished games (see include_recent_finished_days).",
+    )
+    include_recent_finished_days: int = Field(
+        365,
+        ge=0,
+        le=730,
+        description="When run_predictions=true, backfill predictions for finished games in the last N days.",
+    )
 
 
 def _request_ip_for_internal(request: Request) -> str:
@@ -336,6 +368,42 @@ async def us_sports_sync_schedules(
     settings = get_settings()
     results = sync_all_us_schedules(db, settings)
     return {"results": [us_sync_result_payload(r) for r in results]}
+
+
+@router.post("/historical-backfill/run")
+async def historical_backfill_run(
+    db: Session = Depends(get_db),
+    _: None = Depends(_require_cron_secret),
+    body: HistoricalBackfillBody = Body(default_factory=HistoricalBackfillBody),
+):
+    """
+    M-07: Sync 2+ seasons per league from ClearSports (or Sportradar for NFL/NBA fallback).
+    Idempotent upserts; returns decisive finished-game counts per league.
+    Schedule weekly or run once after deploy. Optionally chain predictions for backtest labels.
+    """
+    settings = get_settings()
+    result = run_historical_backfill(
+        db,
+        settings,
+        seasons_back=body.seasons_back,
+        leagues=body.leagues,
+        min_decisive_target=body.min_decisive_target,
+    )
+    payload = backfill_result_payload(result)
+    if body.run_predictions and body.include_recent_finished_days > 0:
+        pred = run_prediction_job(
+            db,
+            force=True,
+            include_recent_finished_days=body.include_recent_finished_days,
+            leagues=body.leagues,
+        )
+        payload["predictions"] = {
+            "created": pred.created,
+            "updated": pred.updated,
+            "skipped_cooldown": pred.skipped_cooldown,
+            "errors": pred.errors,
+        }
+    return payload
 
 
 @router.get("/health/sportradar")

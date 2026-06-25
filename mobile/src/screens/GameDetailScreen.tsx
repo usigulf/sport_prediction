@@ -99,9 +99,13 @@ export const GameDetailScreen: React.FC = () => {
     setShowExplanation(false);
     dispatch(clearPredictionForGameChange());
     loadGameData();
-  }, [gameId]);
+  }, [gameId, isAuthenticated]);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setFavoriteTeamIds(new Set());
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {
@@ -110,13 +114,17 @@ export const GameDetailScreen: React.FC = () => {
           setFavoriteTeamIds(new Set(favs.teams.map((t) => t.id)));
         }
       } catch (_) {
-        // ignore (e.g. not logged in)
+        // ignore
       }
     })();
     return () => { cancelled = true; };
-  }, [gameId]);
+  }, [gameId, isAuthenticated]);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setSubscriptionTier('free');
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {
@@ -129,7 +137,7 @@ export const GameDetailScreen: React.FC = () => {
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!PLAYER_PROPS_ENABLED || !hasPremiumAccess(subscriptionTier)) return;
@@ -183,10 +191,11 @@ export const GameDetailScreen: React.FC = () => {
 
   const loadGameData = async () => {
     try {
-      await Promise.all([
-        dispatch(fetchGameDetails(gameId)),
-        dispatch(fetchPrediction(gameId)),
-      ]);
+      const tasks: Promise<unknown>[] = [dispatch(fetchGameDetails(gameId))];
+      if (isAuthenticated) {
+        tasks.push(dispatch(fetchPrediction(gameId)));
+      }
+      await Promise.all(tasks);
     } catch (error) {
       console.error('Error loading game data:', error);
     }

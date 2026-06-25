@@ -44,3 +44,6 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # Retrain win-probability model weekly (Sunday 05:15 UTC) after weekend results land.
 # Or install idempotently: ./scripts/setup_weekly_train_cron.sh
 15 5 * * 0 /root/sport_prediction/scripts/cron/internal_train_model.sh >> /tmp/sport-prediction-cron.log 2>&1
+
+# M-07 historical backfill: prior seasons for training corpus (Sunday 04:00 UTC, monthly-ish load)
+0 4 1 * * /root/sport_prediction/scripts/cron/internal_historical_backfill.sh >> /tmp/sport-prediction-cron.log 2>&1

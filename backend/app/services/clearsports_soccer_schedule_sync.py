@@ -255,10 +255,15 @@ def _upsert_game_clearsports(
 
 
 def sync_clearsports_soccer_schedule_for_league(
-    db: Session, app_league: str, settings: Settings
+    db: Session,
+    app_league: str,
+    settings: Settings,
+    *,
+    season: str | None = None,
+    include_today: bool = True,
 ) -> SoccerScheduleSyncResult:
     slug = clearsports_league_slug(app_league)
-    season = (clearsports_season_for_league(app_league, settings) or "").strip()
+    season = (season or clearsports_season_for_league(app_league, settings) or "").strip()
     out = SoccerScheduleSyncResult(app_league=app_league, season_id=season or slug or "")
     if not slug:
         out.errors.append("league not supported on ClearSports")
@@ -272,14 +277,16 @@ def sync_clearsports_soccer_schedule_for_league(
 
     seen: set[str] = set()
     rows: list[dict[str, Any]] = []
-    for batch in (
-        fetch_clearsports_games(settings, app_league, season=season),
-        fetch_clearsports_games(
-            settings,
-            app_league,
-            date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-        ),
-    ):
+    batches: list[list[dict[str, Any]]] = [fetch_clearsports_games(settings, app_league, season=season)]
+    if include_today:
+        batches.append(
+            fetch_clearsports_games(
+                settings,
+                app_league,
+                date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            )
+        )
+    for batch in batches:
         for g in batch:
             eid = _game_external_id(g)
             if not eid or eid in seen:

@@ -320,6 +320,11 @@ class ApiService {
 
     const token = this.getStoredToken();
     const tokenAtRequestStart = token;
+    if (requireAuth && !token) {
+      const err = new Error('Not authenticated') as Error & { status?: number };
+      err.status = 401;
+      throw err;
+    }
     if (requireAuth || sendAuthIfPresent) {
       if (token) {
         requestHeaders['Authorization'] = `Bearer ${token}`;
@@ -377,6 +382,9 @@ class ApiService {
     } catch (error: any) {
       clearTimeout(timeoutId);
       if (error?.status === 401) {
+        if (requireAuth && !tokenAtRequestStart) {
+          throw error;
+        }
         const isAuthSessionEndpoint =
           endpoint.startsWith('/auth/refresh') ||
           endpoint.startsWith('/auth/logout') ||
