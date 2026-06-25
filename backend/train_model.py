@@ -77,13 +77,28 @@ def main() -> int:
         db.close()
 
     print(json.dumps(summary, indent=2, default=str))
-    ev = summary.get("eval") or {}
-    print(f"\nGames trained on: {summary['games']} | home-win rate: {summary['home_win_rate']:.3f}")
-    if ev:
-        print(
-            f"Holdout — accuracy: {ev['accuracy']:.3f} | log_loss: {ev['log_loss']:.3f} | "
-            f"brier: {ev['brier']:.3f} (constant-baseline brier: {ev['baseline_brier']:.3f})"
-        )
+    print(f"\nGames trained on: {summary.get('games', 0)}")
+    if summary.get("mode") == "per_league_group":
+        for group, info in (summary.get("groups") or {}).items():
+            if not isinstance(info, dict):
+                continue
+            ev = info.get("eval") or {}
+            status = info.get("status", "?")
+            ready = info.get("publish_ready", False)
+            print(
+                f"  {group}: {info.get('games', 0)} games | status={status} | "
+                f"publish_ready={ready}"
+                + (f" | holdout accuracy={ev['accuracy']:.3f}" if ev.get("accuracy") is not None else "")
+            )
+    else:
+        ev = summary.get("eval") or {}
+        if summary.get("home_win_rate") is not None:
+            print(f"Home-win rate: {summary['home_win_rate']:.3f}")
+        if ev:
+            print(
+                f"Holdout — accuracy: {ev['accuracy']:.3f} | log_loss: {ev['log_loss']:.3f} | "
+                f"brier: {ev['brier']:.3f} (constant-baseline brier: {ev['baseline_brier']:.3f})"
+            )
     print(f"Artifacts: {summary['out_dir']}")
     print(f"Enable: set MODEL_ARTIFACT_DIR={summary['out_dir']} and restart the API.")
     return 0
