@@ -22,6 +22,7 @@ from app.services.feature_builder import (
     build_rich_analysis_dict,
     expected_scores_for_league,
 )
+from app.constants.predictions import PREDICTION_TYPE_PRE_GAME
 from app.constants.soccer import SOCCER_LEAGUES_SET
 from app.services.ml_artifacts import (
     confidence_from_three_way,
@@ -32,6 +33,7 @@ from app.services.ml_artifacts import (
 from app.services.live_prediction_service import classify_prediction_type, tag_inplay_model_version
 from app.services.model_training import artifacts_publish_ready, resolve_model_dir_for_league
 from app.services.prediction_service import PredictionService
+from app.services.trust_metrics_service import select_pregame_prediction_for_accuracy
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +55,20 @@ def _model_dir() -> Optional[str]:
     if not artifacts_publish_ready(path):
         return None
     return path
+
+
+def _pregame_backfill_timestamp(game: Game) -> datetime | None:
+    """Synthetic pre-kickoff time for accuracy/calibration backfill on finished games."""
+    kickoff = game.scheduled_time
+    if not kickoff:
+        return None
+    if kickoff.tzinfo is None:
+        kickoff = kickoff.replace(tzinfo=timezone.utc)
+    return kickoff - timedelta(hours=2)
+
+
+def _is_finished_status(status: str | None) -> bool:
+    return (status or "").lower() in ("finished", "final")
 
 
 def _model_version_for_dir(model_dir: str) -> str:
@@ -197,7 +213,12 @@ def run_prediction_job(
 
     for game in games:
         try:
-            if _should_skip(
+            finished = _is_finished_status(game.status)
+            if finished:
+                if select_pregame_prediction_for_accuracy(db, game) is not None:
+                    result.skipped_cooldown += 1
+                    continue
+            elif _should_skip(
                 db,
                 game,
                 force=force,
@@ -212,17 +233,23 @@ def run_prediction_job(
             if feat_src == "synthetic" and "_synthetic" not in str(payload["model_version"]):
                 payload["model_version"] = f"{payload['model_version']}_synthetic"[:50]
             rich = build_rich_analysis_dict(game, feat, db=db, feature_source=feat_src)
-            created_at = datetime.now(timezone.utc)
+            if finished:
+                created_at = _pregame_backfill_timestamp(game) or datetime.now(timezone.utc)
+                prediction_type = PREDICTION_TYPE_PRE_GAME
+            else:
+                created_at = datetime.now(timezone.utc)
+                model_version_preview = str(payload["model_version"])[:50]
+                prediction_type = classify_prediction_type(
+                    game,
+                    created_at=created_at,
+                    model_version=model_version_preview,
+                )
             model_version = str(payload["model_version"])[:50]
             pred = Prediction(
                 id=uuid4(),
                 game_id=game.id,
                 model_version=model_version,
-                prediction_type=classify_prediction_type(
-                    game,
-                    created_at=created_at,
-                    model_version=model_version,
-                ),
+                prediction_type=prediction_type,
                 home_win_probability=payload["home_win_probability"],
                 away_win_probability=payload["away_win_probability"],
                 expected_home_score=payload["expected_home_score"],

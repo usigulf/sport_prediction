@@ -39,8 +39,8 @@ class PredictionRunBody(BaseModel):
     include_recent_finished_days: int = Field(
         0,
         ge=0,
-        le=90,
-        description="Also predict finished games in the last N days (soccer beta backfill / top-picks).",
+        le=365,
+        description="Backfill pre-kickoff predictions on finished games in the last N days (accuracy/calibration).",
     )
     leagues: Optional[list[str]] = Field(
         None,
@@ -76,7 +76,7 @@ class TrainModelBody(BaseModel):
         None,
         ge=1,
         le=10000,
-        description="Min decisive holdout games per league group before writing pickles (default from settings).",
+        description="Min decisive corpus games per league group before writing pickles (default from settings).",
     )
     force: bool = Field(False, description="Train even when usable games < min_games.")
 
