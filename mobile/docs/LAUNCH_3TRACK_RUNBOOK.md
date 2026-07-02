@@ -26,46 +26,50 @@ Full detail: [APP_STORE_SUBMIT_CHECKLIST.md](./APP_STORE_SUBMIT_CHECKLIST.md)
 
 ---
 
-## Track B — EAS production build **31** (version **1.0.1**)
+## Track B — EAS production build **1.0.1** (iOS build **34+**)
 
-Includes: M-01 odds UI, calibration chart, Live Picks labels, review prompt, methodology copy.
+Includes: M-01 odds UI, calibration chart, Live Picks labels, review prompt, methodology copy, guest auth in binary.
 
-### 1. Set remote iOS build number (integer only)
+**Runtime:** `1.0.1` (OTA for this binary is separate from build 28’s `1.0.0` runtime).
 
-EAS remote is currently **33** (auto-incremented after a quota-blocked attempt). Next successful build will be **1.0.1 (33)** unless you reset:
+### 1. Remote iOS build number (integer only)
+
+EAS remote is **34** (`autoIncrement: true` in `eas.json`). Next successful build → **1.0.1 (34)**.
+
+To change before building:
 
 ```bash
 cd mobile
-npx eas-cli build:version:set --platform ios --profile production
-# Enter desired integer build number (e.g. 31 or 33 — never 1.0.1)
+EAS_NO_VCS=1 npx eas-cli build:version:set --platform ios --profile production
+# Enter integer only (e.g. 34) — never 1.0.1
 ```
 
-**Quota:** Free iOS builds reset **~July 1, 2026**. If build fails with quota error, wait or upgrade EAS plan.
+**Quota:** Free iOS builds reset **~July 1, 2026**.
 
-### 2. Confirm `eas.json` production env
-
-Already set in repo:
-
-- `EXPO_PUBLIC_ODDS_DISPLAY_ENABLED=true`
-- `EXPO_PUBLIC_API_URL=https://api.octobetiq.com/api/v1`
-
-Verify EAS secret `EXPO_PUBLIC_REVENUECAT_IOS_KEY` = `appl_…` (not test).
-
-### 3. Build
+### 2. Build (July 1)
 
 ```bash
 cd mobile
 npm run eas:build:ios
-# or: EAS_NO_VCS=1 npx eas-cli build --platform ios --profile production
 ```
 
-Expected artifact: **1.0.1 (33)** (or whatever integer you set). After upload, create ASC version **1.0.1**, attach the new build, refresh screenshots if UI changed.
+### 3. After build completes — OTA for 1.0.1 runtime
 
-### 4. Optional: submit to TestFlight
+Build 28 users stay on runtime `1.0.0`. Publish a matching OTA for the new binary:
+
+```bash
+cd mobile
+EAS_NO_VCS=1 npx eas-cli update --channel production --environment production \
+  --runtime-version 1.0.1 --message "1.0.1 launch bundle"
+```
+
+### 4. TestFlight + ASC 1.0.1
 
 ```bash
 npm run eas:submit:ios
 ```
+
+Create ASC version **1.0.1**, attach **1.0.1 (34)**, refresh screenshots if UI changed.
 
 ---
 
