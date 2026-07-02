@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# Verify Sportradar + soccer season config and GET /internal/health/sportradar (prod or staging).
+# Verify Sportradar + soccer season config (DEPRECATED — use verify_clearsports_prod.sh).
+#
+# Sportradar is no longer the active provider. This script exits 0 with a skip
+# message when SPORTRADAR_API_KEY is unset.
 #
 # Usage (from repo root, on the host where API runs or can reach it):
 #   ./scripts/verify_sportradar_prod.sh                    # loads .env.production
@@ -35,8 +38,8 @@ mask() {
 
 echo "=== Env file: $ENV_FILE ==="
 if [[ -z "${SPORTRADAR_API_KEY:-}" ]]; then
-  echo "FAIL SPORTRADAR_API_KEY is empty — Sportradar calls will not work."
-  exit 1
+  echo "SKIP SPORTRADAR_API_KEY unset — project uses ClearSports (./scripts/verify_clearsports_prod.sh)"
+  exit 0
 fi
 echo "OK  SPORTRADAR_API_KEY $(mask "$SPORTRADAR_API_KEY")"
 
