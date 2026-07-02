@@ -4,9 +4,27 @@
 
 ---
 
-## Submit today — build **28** on version **1.0.0**
+## Submit July 1 — build **28** on version **1.0.0**
 
 Use the **Complete** TestFlight build already uploaded. Do **not** wait for a new EAS build (quota resets ~July 1, 2026).
+
+### Production ready (automated verify — run before Submit)
+
+```bash
+./scripts/verify_pre_asc_prod.sh
+# On VPS (push + ClearSports): ./scripts/verify_pre_asc_prod.sh .env.production
+```
+
+| Item | Status |
+|------|--------|
+| API health, legal URLs, demo login | ✅ `verify_pre_asc_prod.sh` |
+| ML models (NBA/NFL/soccer) | ✅ `publish_ready`, 2,890 games |
+| Calibration chart data | ✅ 3,388 scored, `min_sample_met` |
+| ClearSports provider | ✅ NFL/NBA/soccer |
+| Push cron | ✅ every 15 min on VPS |
+| OTA (build 28, runtime 1.0.0) | ✅ production channel — force-quit ×2 on device to load |
+
+**Manual before Submit:** iPad demo login, push on physical device (see [LAUNCH_3TRACK_RUNBOOK.md](./LAUNCH_3TRACK_RUNBOOK.md) Track C).
 
 | Step | Where in ASC | Action |
 |------|----------------|--------|
@@ -65,16 +83,16 @@ Account deletion: Profile → Delete account.
 ATT prompt is optional (AdMob). Guest browse: 3 teaser picks without account (in newer builds).
 ```
 
-### Code not in build 28 (ship in next update)
+### Code not in build 28 binary (OTA or v1.0.1 later)
 
-These landed in git **after** build 28 — fine for review if not visible, or mention in notes:
+These may arrive via **OTA** (build 28, runtime 1.0.0) or the post–July 1 binary:
 
-- Guest browse (Home/Games without login)
-- Model warming banner
-- Leaderboard/challenge empty states
-- Pre-kickoff accuracy lock (backend — deploy API separately)
+- Guest auth gating (no 401 spam) — **OTA published**
+- Calibration chart + accuracy API — **OTA + API live**
+- NFL `sklearn_football` picks — **API live** (OTA shows picks without demo banner when model loads)
+- Guest browse on Home — may need v1.0.1 binary for full native flow
 
-**Backend:** Redeploy VPS API so accuracy, feed quality, and `/stats/model` match the app.
+**Backend:** Deployed on VPS through `7736b64`+ — run `./scripts/verify_pre_asc_prod.sh` before Submit.
 
 ---
 
