@@ -362,8 +362,8 @@ async def us_sports_sync_schedules(
     _: None = Depends(_require_cron_secret),
 ):
     """
-    Import NFL and NBA schedules. Uses ClearSports when CLEARSPORTS_API_KEY is set;
-    otherwise Sportradar (SPORTRADAR_API_KEY). Then POST /internal/predictions/run.
+    Import NFL and NBA schedules from ClearSports (CLEARSPORTS_API_KEY required).
+    Then POST /internal/predictions/run.
     """
     settings = get_settings()
     results = sync_all_us_schedules(db, settings)
@@ -377,7 +377,7 @@ async def historical_backfill_run(
     body: HistoricalBackfillBody = Body(default_factory=HistoricalBackfillBody),
 ):
     """
-    M-07: Sync 2+ seasons per league from ClearSports (or Sportradar for NFL/NBA fallback).
+    M-07: Sync 2+ seasons per league from ClearSports (CLEARSPORTS_API_KEY).
     Idempotent upserts; returns decisive finished-game counts per league.
     Schedule weekly or run once after deploy. Optionally chain predictions for backtest labels.
     """

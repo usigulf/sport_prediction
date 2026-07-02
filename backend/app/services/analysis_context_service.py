@@ -567,16 +567,20 @@ def build_structured_game_analysis(db: Session, game: Game | None) -> Structured
         data_coverage_note=cov_note,
     )
     league_l = (game.league or "").lower()
-    if league_l == "nfl":
+    settings = get_settings()
+    from app.services.clearsports_us_service import use_clearsports_us
+    from app.services.soccer_data_provider import use_clearsports_soccer
+
+    if league_l == "nfl" and not use_clearsports_us(settings):
         from app.services.sportradar_nfl_service import nfl_matchup_provider_note
 
-        pn = nfl_matchup_provider_note(game, get_settings())
+        pn = nfl_matchup_provider_note(game, settings)
         if pn:
             out = out.model_copy(update={"provider_context_note": pn})
-    elif soccer_season_id_for_league(league_l, get_settings()):
+    elif not use_clearsports_soccer(settings) and soccer_season_id_for_league(league_l, settings):
         from app.services.sportradar_soccer_service import soccer_matchup_provider_note
 
-        pn = soccer_matchup_provider_note(game, get_settings())
+        pn = soccer_matchup_provider_note(game, settings)
         if pn:
             out = out.model_copy(update={"provider_context_note": pn})
     return out

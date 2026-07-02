@@ -87,7 +87,11 @@ def test_soccer_features_use_standings_and_recent_games(db):
 
 
 def test_soccer_features_fallback_to_sportradar_api_without_team_standings(db, monkeypatch):
-    """If team_standings rows are missing, use cached Sportradar standings fetch."""
+    """Legacy: Sportradar standings fetch when ClearSports is not configured."""
+    monkeypatch.setattr(
+        "app.services.soccer_data_provider.use_clearsports_soccer",
+        lambda _settings: False,
+    )
     monkeypatch.setenv("SPORTRADAR_API_KEY", "test-key")
     monkeypatch.setenv("SPORTRADAR_SOCCER_SEASON_PREMIER_LEAGUE", "sr:season:api_test")
     get_settings.cache_clear()

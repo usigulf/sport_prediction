@@ -1,4 +1,4 @@
-"""Route NFL/NBA schedule sync to ClearSports or Sportradar."""
+"""Route NFL/NBA schedule sync to ClearSports (primary) or legacy Sportradar."""
 from __future__ import annotations
 
 from typing import Any

@@ -5,14 +5,12 @@ from uuid import uuid4
 from app.models.game import Game
 from app.services.historical_backfill_service import (
     SeasonSyncSummary,
-    _prefer_sportradar_for_us_historical_season,
     count_decisive_finished_games,
     run_historical_backfill,
     soccer_season_labels,
     us_season_years,
 )
 from app.config import Settings
-from app.services.clearsports_us_service import default_us_season_year
 
 
 def test_soccer_season_labels_august():
@@ -28,24 +26,6 @@ def test_soccer_season_labels_january():
 def test_us_season_years_nfl():
     years = us_season_years("nfl", 2, now=datetime(2026, 10, 1, tzinfo=timezone.utc))
     assert years == ["2026", "2025", "2024"]
-
-
-def test_prefer_sportradar_for_prior_us_season():
-    settings = Settings(clearsports_api_key="cs", sportradar_api_key="sr")
-    now = datetime(2026, 10, 1, tzinfo=timezone.utc)
-    assert _prefer_sportradar_for_us_historical_season("nfl", "2025", settings, now=now) is True
-    assert _prefer_sportradar_for_us_historical_season("nfl", "2026", settings, now=now) is False
-    assert (
-        _prefer_sportradar_for_us_historical_season(
-            "nfl", str(default_us_season_year("nfl", now)), settings, now=now
-        )
-        is False
-    )
-
-
-def test_prefer_sportradar_requires_api_key():
-    settings = Settings(clearsports_api_key="cs", sportradar_api_key="")
-    assert _prefer_sportradar_for_us_historical_season("nfl", "2024", settings) is False
 
 
 def test_count_decisive_finished_games(db, test_teams):

@@ -1,8 +1,7 @@
 """
 M-07: Ingest prior seasons of finished games for training and backtest.
 
-Uses ClearSports season feeds when configured; otherwise Sportradar for NFL/NBA.
-Soccer historical seasons require ClearSports (Sportradar needs per-season UUID in env).
+Uses ClearSports season feeds when CLEARSPORTS_API_KEY is set (NFL, NBA, soccer).
 """
 from __future__ import annotations
 
@@ -82,65 +81,30 @@ def decisive_counts_by_league(db: Session, leagues: list[str]) -> dict[str, int]
     return {lg: count_decisive_finished_games(db, lg) for lg in leagues}
 
 
-def _sync_us_season_sportradar(
+def _sync_us_season(
     db: Session, league: UsLeagueCode, season: str, settings: Settings
 ) -> SeasonSyncSummary:
-    from app.services.sportradar_us_schedule_sync import sync_us_schedule
-
-    try:
-        year = int(season)
-    except ValueError:
+    if not use_clearsports_us(settings):
         return SeasonSyncSummary(
             league=league,
             season=season,
-            provider="sportradar",
-            errors=[f"invalid season year: {season}"],
+            provider="clearsports",
+            errors=["historical US backfill requires CLEARSPORTS_API_KEY"],
         )
-    r = sync_us_schedule(db, league, settings, season_year=year)
+    from app.services.clearsports_us_schedule_sync import sync_clearsports_us_schedule_for_league
+
+    r = sync_clearsports_us_schedule_for_league(
+        db, league, settings, season=season, include_today=False
+    )
     return SeasonSyncSummary(
         league=league,
         season=season,
-        provider="sportradar",
+        provider="clearsports",
         rows_fetched=r.rows_fetched,
         games_upserted=r.games_upserted,
         rows_skipped=r.rows_skipped,
         errors=list(r.errors),
     )
-
-
-def _prefer_sportradar_for_us_historical_season(
-    league: UsLeagueCode, season: str, settings: Settings, *, now: datetime | None = None
-) -> bool:
-    """ClearSports often ignores ?season= on lower tiers — use Sportradar for prior years."""
-    if not (settings.sportradar_api_key or "").strip():
-        return False
-    current = str(default_us_season_year(league, now))  # type: ignore[arg-type]
-    return season != current
-
-
-def _sync_us_season(
-    db: Session, league: UsLeagueCode, season: str, settings: Settings
-) -> SeasonSyncSummary:
-    if _prefer_sportradar_for_us_historical_season(league, season, settings):
-        return _sync_us_season_sportradar(db, league, season, settings)
-
-    if use_clearsports_us(settings):
-        from app.services.clearsports_us_schedule_sync import sync_clearsports_us_schedule_for_league
-
-        r = sync_clearsports_us_schedule_for_league(
-            db, league, settings, season=season, include_today=False
-        )
-        return SeasonSyncSummary(
-            league=league,
-            season=season,
-            provider="clearsports",
-            rows_fetched=r.rows_fetched,
-            games_upserted=r.games_upserted,
-            rows_skipped=r.rows_skipped,
-            errors=list(r.errors),
-        )
-
-    return _sync_us_season_sportradar(db, league, season, settings)
 
 
 def _sync_soccer_season(
@@ -150,8 +114,8 @@ def _sync_soccer_season(
         return SeasonSyncSummary(
             league=app_league,
             season=season,
-            provider="sportradar",
-            errors=["historical soccer backfill requires CLEARSPORTS_API_KEY (Sportradar needs per-season UUID in env)"],
+            provider="clearsports",
+            errors=["historical soccer backfill requires CLEARSPORTS_API_KEY"],
         )
     from app.services.clearsports_soccer_schedule_sync import sync_clearsports_soccer_schedule_for_league
 
@@ -173,7 +137,7 @@ def _leagues_to_backfill(settings: Settings, leagues: list[str] | None) -> list[
     if leagues:
         return [lg.strip().lower() for lg in leagues if lg and lg.strip()]
     out: list[str] = []
-    if use_clearsports_us(settings) or (settings.sportradar_api_key or "").strip():
+    if use_clearsports_us(settings):
         out.extend(["nfl", "nba"])
     out.extend(configured_soccer_league_codes(settings))
     # Preserve order, dedupe
@@ -204,7 +168,7 @@ def run_historical_backfill(
     )
     target_leagues = _leagues_to_backfill(settings, leagues)
     if not target_leagues:
-        out.errors.append("no leagues configured for backfill (set CLEARSPORTS_API_KEY or SPORTRADAR_API_KEY)")
+        out.errors.append("no leagues configured for backfill (set CLEARSPORTS_API_KEY)")
         return out
 
     us_set = {"nfl", "nba"}

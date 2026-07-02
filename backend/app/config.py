@@ -29,6 +29,8 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
+        # Compose may inject KEY="" from project-root .env and mask .env.production values.
+        env_ignore_empty=True,
     )
     # Database: default SQLite (no install needed). For PostgreSQL set DATABASE_URL.
     database_url: str = "sqlite:///./app.db"
@@ -79,12 +81,12 @@ class Settings(BaseSettings):
     # Block writing sklearn pickles until each league group has enough corpus decisive games.
     min_publish_holdout_per_league_group: int = 500
     
-    # External APIs
-    sportradar_api_key: str = ""
-    sportradar_api_url: str = "https://api.sportradar.com"
-    # ClearSports (clearsportsapi.com): Bearer auth; not a drop-in for Sportradar URLs — use for new integrations / probes.
+    # External APIs — ClearSports is the active provider (NFL, NBA, soccer schedules/standings).
     clearsports_api_key: str = ""
     clearsports_api_base_url: str = "https://api.clearsportsapi.com"
+    # Legacy Sportradar (deprecated — leave SPORTRADAR_API_KEY unset when using ClearSports).
+    sportradar_api_key: str = ""
+    sportradar_api_url: str = "https://api.sportradar.com"
     # Season string for ClearSports soccer feeds (e.g. 2024-2025). Mirrors SPORTRADAR_SOCCER_SEASON_* when set.
     clearsports_soccer_season_premier_league: Optional[str] = None
     clearsports_soccer_season_la_liga: Optional[str] = None

@@ -631,12 +631,15 @@ def build_game_features(
             from app.config import get_settings
 
             settings = get_settings()
+            from app.services.soccer_data_provider import use_clearsports_soccer
+
             soccer = _soccer_features_from_clearsports_api(db, game, settings)
             if soccer is not None:
                 return soccer, "soccer_sportradar_api"
-            soccer = _soccer_features_from_sportradar_api(db, game, settings)
-            if soccer is not None:
-                return soccer, "soccer_sportradar_api"
+            if not use_clearsports_soccer(settings):
+                soccer = _soccer_features_from_sportradar_api(db, game, settings)
+                if soccer is not None:
+                    return soccer, "soccer_sportradar_api"
         elif league in US_SPORTS_SET and game.home_team and game.away_team:
             us_pit = _us_sports_features_from_pit(db, game, pit_cache)
             if us_pit is not None:
