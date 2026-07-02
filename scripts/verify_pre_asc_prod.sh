@@ -87,7 +87,7 @@ if [[ -n "$ENV_FILE" && -f "$ENV_FILE" ]]; then
   echo "--- Internal (from $ENV_FILE) ---"
   _read_env_var() {
     local key="$1" file="$2"
-    grep -E "^${key}=" "$file" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d '\r'
+    grep -E "^${key}=" "$file" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d '\r' || true
   }
   PUSH_CRON_SECRET="$(_read_env_var PUSH_CRON_SECRET "$ENV_FILE")"
   CLEARSPORTS_API_KEY="$(_read_env_var CLEARSPORTS_API_KEY "$ENV_FILE")"

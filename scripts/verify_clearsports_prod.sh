@@ -17,7 +17,7 @@ fi
 
 _read_env_var() {
   local key="$1"
-  grep -E "^${key}=" "$ENV_FILE" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d '\r'
+  grep -E "^${key}=" "$ENV_FILE" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d '\r' || true
 }
 
 CLEARSPORTS_API_KEY="${CLEARSPORTS_API_KEY:-$(_read_env_var CLEARSPORTS_API_KEY)}"
