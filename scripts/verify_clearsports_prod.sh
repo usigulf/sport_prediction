@@ -15,10 +15,14 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
-set -a
-# shellcheck source=/dev/null
-source "$ENV_FILE"
-set +a
+_read_env_var() {
+  local key="$1"
+  grep -E "^${key}=" "$ENV_FILE" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d '\r'
+}
+
+CLEARSPORTS_API_KEY="${CLEARSPORTS_API_KEY:-$(_read_env_var CLEARSPORTS_API_KEY)}"
+PUSH_CRON_SECRET="${PUSH_CRON_SECRET:-$(_read_env_var PUSH_CRON_SECRET)}"
+CLEARSPORTS_SOCCER_SEASON_PREMIER_LEAGUE="${CLEARSPORTS_SOCCER_SEASON_PREMIER_LEAGUE:-$(_read_env_var CLEARSPORTS_SOCCER_SEASON_PREMIER_LEAGUE)}"
 
 mask() {
   local s="${1:-}"

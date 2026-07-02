@@ -85,10 +85,12 @@ fi
 ENV_FILE="${1:-}"
 if [[ -n "$ENV_FILE" && -f "$ENV_FILE" ]]; then
   echo "--- Internal (from $ENV_FILE) ---"
-  set -a
-  # shellcheck source=/dev/null
-  source "$ENV_FILE"
-  set +a
+  _read_env_var() {
+    local key="$1" file="$2"
+    grep -E "^${key}=" "$file" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d '\r'
+  }
+  PUSH_CRON_SECRET="$(_read_env_var PUSH_CRON_SECRET "$ENV_FILE")"
+  CLEARSPORTS_API_KEY="$(_read_env_var CLEARSPORTS_API_KEY "$ENV_FILE")"
   BASE="${VERIFY_API_BASE:-http://127.0.0.1:8000}"
   BASE="${BASE%/}"
   if [[ -z "${PUSH_CRON_SECRET// }" ]]; then
@@ -113,7 +115,8 @@ else:
 PY
 
     if [[ -n "${CLEARSPORTS_API_KEY:-}" ]]; then
-      "$REPO_ROOT/scripts/verify_clearsports_prod.sh" "$ENV_FILE" || failures=$((failures + 1))
+      VERIFY_API_BASE="$BASE" PUSH_CRON_SECRET="$PUSH_CRON_SECRET" CLEARSPORTS_API_KEY="$CLEARSPORTS_API_KEY" \
+        "$REPO_ROOT/scripts/verify_clearsports_prod.sh" "$ENV_FILE" || failures=$((failures + 1))
     else
       warn "CLEARSPORTS_API_KEY unset in env file"
     fi
