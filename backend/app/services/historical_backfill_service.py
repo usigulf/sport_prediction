@@ -82,25 +82,9 @@ def decisive_counts_by_league(db: Session, leagues: list[str]) -> dict[str, int]
     return {lg: count_decisive_finished_games(db, lg) for lg in leagues}
 
 
-def _sync_us_season(
+def _sync_us_season_sportradar(
     db: Session, league: UsLeagueCode, season: str, settings: Settings
 ) -> SeasonSyncSummary:
-    if use_clearsports_us(settings):
-        from app.services.clearsports_us_schedule_sync import sync_clearsports_us_schedule_for_league
-
-        r = sync_clearsports_us_schedule_for_league(
-            db, league, settings, season=season, include_today=False
-        )
-        return SeasonSyncSummary(
-            league=league,
-            season=season,
-            provider="clearsports",
-            rows_fetched=r.rows_fetched,
-            games_upserted=r.games_upserted,
-            rows_skipped=r.rows_skipped,
-            errors=list(r.errors),
-        )
-
     from app.services.sportradar_us_schedule_sync import sync_us_schedule
 
     try:
@@ -122,6 +106,41 @@ def _sync_us_season(
         rows_skipped=r.rows_skipped,
         errors=list(r.errors),
     )
+
+
+def _prefer_sportradar_for_us_historical_season(
+    league: UsLeagueCode, season: str, settings: Settings, *, now: datetime | None = None
+) -> bool:
+    """ClearSports often ignores ?season= on lower tiers — use Sportradar for prior years."""
+    if not (settings.sportradar_api_key or "").strip():
+        return False
+    current = str(default_us_season_year(league, now))  # type: ignore[arg-type]
+    return season != current
+
+
+def _sync_us_season(
+    db: Session, league: UsLeagueCode, season: str, settings: Settings
+) -> SeasonSyncSummary:
+    if _prefer_sportradar_for_us_historical_season(league, season, settings):
+        return _sync_us_season_sportradar(db, league, season, settings)
+
+    if use_clearsports_us(settings):
+        from app.services.clearsports_us_schedule_sync import sync_clearsports_us_schedule_for_league
+
+        r = sync_clearsports_us_schedule_for_league(
+            db, league, settings, season=season, include_today=False
+        )
+        return SeasonSyncSummary(
+            league=league,
+            season=season,
+            provider="clearsports",
+            rows_fetched=r.rows_fetched,
+            games_upserted=r.games_upserted,
+            rows_skipped=r.rows_skipped,
+            errors=list(r.errors),
+        )
+
+    return _sync_us_season_sportradar(db, league, season, settings)
 
 
 def _sync_soccer_season(
