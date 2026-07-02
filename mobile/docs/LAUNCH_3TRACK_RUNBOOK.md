@@ -60,8 +60,10 @@ Build 28 users stay on runtime `1.0.0`. Publish a matching OTA for the new binar
 ```bash
 cd mobile
 EAS_NO_VCS=1 npx eas-cli update --channel production --environment production \
-  --runtime-version 1.0.1 --message "1.0.1 launch bundle"
+  --non-interactive --message "1.0.1 launch bundle"
 ```
+
+Uses `runtimeVersion` from `app.json` (currently `1.0.1`).
 
 ### 4. TestFlight + ASC 1.0.1
 
