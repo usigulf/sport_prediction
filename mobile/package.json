@@ -12,7 +12,7 @@
     "ios:pod-install": "cd ios && bundle install && bundle exec pod install",
     "web": "expo start --web",
     "postinstall": "node scripts/fix-hermesc-macos.js",
-    "update:production": "npx eas-cli update --channel production --non-interactive",
+    "update:production": "EAS_NO_VCS=1 npx eas-cli update --channel production --environment production --non-interactive",
     "update:preview": "npx eas-cli update --channel preview --non-interactive",
     "eas:build:ios": "EAS_NO_VCS=1 npx eas-cli build --platform ios --profile production",
     "eas:build:android": "EAS_NO_VCS=1 npx eas-cli build --platform android --profile production",
