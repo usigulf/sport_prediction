@@ -80,6 +80,8 @@ class Settings(BaseSettings):
     guest_teaser_pick_limit: int = 3
     # Block writing sklearn pickles until each league group has enough corpus decisive games.
     min_publish_holdout_per_league_group: int = 500
+    # NFL regular season is ~272 decisive games; one season cannot reach 500 without multi-year data.
+    min_publish_corpus_football: int = 275
     
     # External APIs — ClearSports is the active provider (NFL, NBA, soccer schedules/standings).
     clearsports_api_key: str = ""

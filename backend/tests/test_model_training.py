@@ -16,6 +16,7 @@ from app.services.model_training import (
     artifacts_publish_ready,
     assess_publish_readiness,
     build_training_frame,
+    publish_corpus_min_for_group,
     train_and_save,
 )
 
@@ -151,6 +152,28 @@ def test_assess_publish_readiness_passes_when_corpus_meets_threshold():
     assert not reasons
     assert corpus["basketball"] == 600
     assert holdout["basketball"] == 120
+
+
+def test_publish_corpus_min_football_lower_than_default():
+    assert publish_corpus_min_for_group("football", default=500, football_min=275) == 275
+    assert publish_corpus_min_for_group("basketball", default=500, football_min=275) == 500
+
+
+def test_football_publishes_at_single_season_corpus(db, tmp_path):
+    _seed_separable_nfl_history(db, n_games=300)
+    out_dir = str(tmp_path / "models")
+    summary = train_and_save(
+        db,
+        out_dir,
+        test_frac=0.2,
+        min_games=10,
+        min_publish_holdout_per_league_group=500,
+        force=False,
+    )
+    football = summary["groups"]["football"]
+    assert football["publish_ready"] is True
+    assert football["min_publish_corpus_required"] == 275
+    assert (tmp_path / "models" / "football" / ARTIFACT_MODEL).exists()
 
 
 def test_train_and_save_writes_metrics_only_when_publish_blocked(db, tmp_path):

@@ -166,6 +166,13 @@ def _finished_decisive_games(db: Session) -> list[Game]:
 LEAGUE_GROUP_ORDER: tuple[str, ...] = ("basketball", "football", "soccer")
 
 
+def publish_corpus_min_for_group(group: str, *, default: int, football_min: int) -> int:
+    """Per-group publish gate; football uses a lower bar (single NFL season cap)."""
+    if (group or "").strip().lower() == "football":
+        return max(1, int(football_min))
+    return max(1, int(default))
+
+
 def build_training_frame(db: Session, *, group: str | None = None):
     """Return (X DataFrame, y Series of home-win labels, leagues, kickoff times)."""
     import pandas as pd
@@ -260,6 +267,7 @@ def _train_single_group(
     group: str,
     test_frac: float,
     min_publish_holdout_per_league_group: int,
+    min_publish_corpus_football: int,
     force: bool,
 ) -> dict:
     import numpy as np
@@ -290,11 +298,16 @@ def _train_single_group(
 
     final, calibrated_full = _fit_safely(_should_calibrate(y), X, y)
 
+    corpus_min = publish_corpus_min_for_group(
+        group,
+        default=min_publish_holdout_per_league_group,
+        football_min=min_publish_corpus_football,
+    )
     publish_ready, publish_block_reasons, corpus_by_group, holdout_by_group = assess_publish_readiness(
         leagues,
         n=n,
         test_frac=test_frac,
-        min_holdout_per_group=min_publish_holdout_per_league_group,
+        min_holdout_per_group=corpus_min,
     )
     write_artifacts = publish_ready or force
 
@@ -325,6 +338,7 @@ def _train_single_group(
         "publish_ready": bool(publish_ready),
         "publish_block_reasons": publish_block_reasons,
         "min_publish_holdout_per_league_group": int(min_publish_holdout_per_league_group),
+        "min_publish_corpus_required": int(corpus_min),
         "artifacts_written": bool(write_artifacts),
         "model_version": f"sklearn_{group}",
         "note": (
@@ -336,7 +350,7 @@ def _train_single_group(
     if not publish_ready and not force:
         summary["status"] = "warming"
         summary["note"] += (
-            f" Model artifacts were not published — need ≥{min_publish_holdout_per_league_group} "
+            f" Model artifacts were not published — need ≥{corpus_min} "
             f"decisive games in the {group} corpus."
         )
     elif publish_ready:
@@ -372,6 +386,7 @@ def train_all_league_groups(
         min_publish_holdout_per_league_group = int(
             get_settings().min_publish_holdout_per_league_group
         )
+    min_publish_corpus_football = int(get_settings().min_publish_corpus_football)
 
     groups_summary: dict[str, Any] = {}
     total_games = 0
@@ -420,6 +435,7 @@ def train_all_league_groups(
             group=group,
             test_frac=test_frac,
             min_publish_holdout_per_league_group=min_publish_holdout_per_league_group,
+            min_publish_corpus_football=min_publish_corpus_football,
             force=force,
         )
         groups_summary[group] = summary
