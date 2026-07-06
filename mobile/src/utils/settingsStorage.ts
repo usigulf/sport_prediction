@@ -8,10 +8,10 @@ const PUSH_ENABLED_KEY = '@sport_prediction_push_enabled';
 export async function getPushNotificationsEnabled(): Promise<boolean> {
   try {
     const raw = await AsyncStorage.getItem(PUSH_ENABLED_KEY);
-    if (raw === null) return true;
+    if (raw === null) return false;
     return raw === 'true';
   } catch {
-    return true;
+    return false;
   }
 }
 

@@ -1,7 +1,6 @@
 """Odds service unit tests (no live HTTP)."""
 from datetime import datetime, timezone
 from types import SimpleNamespace
-from uuid import uuid4
 
 import pytest
 

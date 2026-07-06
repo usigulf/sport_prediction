@@ -40,8 +40,9 @@ if [[ "$missing" -eq 1 ]]; then
   echo "Capture raw screenshots first:"
   echo "  cd mobile"
   echo "  EXPO_PUBLIC_HIDE_DEV_UI=true EXPO_PUBLIC_APP_STORE_CAPTURE=true \\"
-  echo "  EXPO_PUBLIC_CAPTURE_LOGIN_EMAIL=appstore-review@octobetiq.com \\"
-  echo "  EXPO_PUBLIC_CAPTURE_LOGIN_PASSWORD='AppReview2026!' \\"
+  echo "  set -a && source secrets/app_review_demo.env && set +a"
+  echo "  EXPO_PUBLIC_CAPTURE_LOGIN_EMAIL=\"\$VERIFY_DEMO_EMAIL\" \\"
+  echo "  EXPO_PUBLIC_CAPTURE_LOGIN_PASSWORD=\"\$VERIFY_DEMO_PASSWORD\" \\"
   echo "  npx expo start --dev-client"
   echo "  ./scripts/capture-app-store-screenshots.sh auth-auto"
   exit 1

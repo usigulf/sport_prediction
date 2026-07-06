@@ -1,7 +1,6 @@
 """
 Tests for user favorites endpoints (teams and leagues)
 """
-import pytest
 from fastapi import status
 
 

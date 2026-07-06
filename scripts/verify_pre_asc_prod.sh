@@ -10,11 +10,19 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
+# Optional gitignored credentials (see docs/APP_REVIEW_DEMO_ACCOUNT.md)
+if [[ -f "${REPO_ROOT}/secrets/app_review_demo.env" ]]; then
+  set -a
+  # shellcheck source=/dev/null
+  source "${REPO_ROOT}/secrets/app_review_demo.env"
+  set +a
+fi
+
 API_PUBLIC="${VERIFY_API_PUBLIC:-https://api.octobetiq.com/api/v1}"
 API_PUBLIC="${API_PUBLIC%/}"
 API_ORIGIN="${API_PUBLIC%/api/v1}"
 DEMO_EMAIL="${VERIFY_DEMO_EMAIL:-appstore-review@octobetiq.com}"
-DEMO_PASSWORD="${VERIFY_DEMO_PASSWORD:-AppReview2026!}"
+DEMO_PASSWORD="${VERIFY_DEMO_PASSWORD:-}"
 
 failures=0
 ok() { echo "OK  $*"; }
@@ -70,16 +78,30 @@ else:
     sys.exit(1)
 PY
 
-echo "--- Demo account login ---"
-login_code=$(curl -sS -o /tmp/pre_asc_login.json -w "%{http_code}" \
-  -X POST "${API_PUBLIC}/auth/login" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=${DEMO_EMAIL}&password=${DEMO_PASSWORD}" || echo "000")
-if [[ "$login_code" == "200" ]] && python3 -c "import json; j=json.load(open('/tmp/pre_asc_login.json')); exit(0 if j.get('access_token') else 1)" 2>/dev/null; then
-  ok "demo login ${DEMO_EMAIL}"
+echo "--- Public /internal must be blocked at nginx ---"
+internal_code=$(curl -sS -o /dev/null -w "%{http_code}" -X POST \
+  "${API_ORIGIN}/internal/predictions/run" \
+  -H "Content-Type: application/json" -d '{}' || echo "000")
+if [[ "$internal_code" == "403" ]]; then
+  ok "public /internal blocked (HTTP 403)"
 else
-  fail "demo login HTTP $login_code"
-  cat /tmp/pre_asc_login.json 2>/dev/null || true
+  fail "public /internal should be 403 at nginx, got HTTP $internal_code"
+fi
+
+echo "--- Demo account login ---"
+if [[ -z "${DEMO_PASSWORD}" ]]; then
+  warn "VERIFY_DEMO_PASSWORD unset — skipping demo login (see docs/APP_REVIEW_DEMO_ACCOUNT.md)"
+else
+  login_code=$(curl -sS -o /tmp/pre_asc_login.json -w "%{http_code}" \
+    -X POST "${API_PUBLIC}/auth/login" \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    -d "username=${DEMO_EMAIL}&password=${DEMO_PASSWORD}" || echo "000")
+  if [[ "$login_code" == "200" ]] && python3 -c "import json; j=json.load(open('/tmp/pre_asc_login.json')); exit(0 if j.get('access_token') else 1)" 2>/dev/null; then
+    ok "demo login ${DEMO_EMAIL}"
+  else
+    fail "demo login HTTP $login_code"
+    cat /tmp/pre_asc_login.json 2>/dev/null || true
+  fi
 fi
 
 ENV_FILE="${1:-}"

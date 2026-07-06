@@ -208,10 +208,10 @@ def find_soccer_standing_row(
 def format_soccer_standings_line(row: dict[str, Any]) -> str:
     comp = row.get("competitor") if isinstance(row.get("competitor"), dict) else {}
     ab = comp.get("abbreviation") or "?"
-    w, d, l = row.get("win"), row.get("draw"), row.get("loss")
+    w, d, losses = row.get("win"), row.get("draw"), row.get("loss")
     rec = ""
-    if w is not None and d is not None and l is not None:
-        rec = f"{w}-{d}-{l}"
+    if w is not None and d is not None and losses is not None:
+        rec = f"{w}-{d}-{losses}"
     rk = row.get("rank")
     pts = row.get("points")
     gf, ga = row.get("goals_for"), row.get("goals_against")

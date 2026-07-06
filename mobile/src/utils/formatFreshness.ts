@@ -30,6 +30,7 @@ export function formatModelVersionLabel(version: string | null | undefined): str
 
 export function buildPredictionFreshnessLabel(prediction: {
   model_version?: string | null;
+  prediction_source?: string | null;
   standings_last_updated_iso?: string | null;
   created_at?: string | null;
 }): string | null {
@@ -38,8 +39,10 @@ export function buildPredictionFreshnessLabel(prediction: {
   if (standingsAgo) {
     parts.push(`Standings updated ${standingsAgo}`);
   }
-  const model = formatModelVersionLabel(prediction.model_version);
-  if (model) parts.push(model);
+  if (!prediction.prediction_source) {
+    const model = formatModelVersionLabel(prediction.model_version);
+    if (model) parts.push(model);
+  }
   if (parts.length === 0) {
     const pickAgo = formatRelativeTimeAgo(prediction.created_at);
     if (pickAgo) parts.push(`Pick ${pickAgo}`);

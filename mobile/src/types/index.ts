@@ -36,6 +36,7 @@ export interface Prediction {
   id: string;
   game_id: string;
   model_version: string;
+  prediction_source?: 'sklearn' | 'heuristic' | 'warming' | 'synthetic' | 'inplay' | string;
   home_win_probability: number;
   away_win_probability: number;
   expected_home_score?: number;

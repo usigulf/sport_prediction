@@ -7,6 +7,7 @@ import { clearStoredAuth, getStoredAuth, type StoredAuth } from './authStorage';
 import { logOutPurchases } from '../services/purchases';
 import { logout } from '../store/slices/authSlice';
 import type { AppDispatch } from '../store/store';
+import { resetAnalyticsIdentity } from '../services/productAnalytics';
 
 let signOutInProgress = false;
 
@@ -40,6 +41,7 @@ export async function signOut(dispatch: AppDispatch): Promise<void> {
     }
     setAuthToken(null);
     dispatch(logout());
+    void resetAnalyticsIdentity();
     void clearStoredAuth().catch(() => {});
     void revokeRemoteSession(stored);
   } finally {

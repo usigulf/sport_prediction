@@ -1,20 +1,15 @@
 /**
- * Redux slice for games and predictions
+ * Redux slice for game detail, predictions, and explanations.
+ * Upcoming games lists use React Query (useUpcomingGamesQuery).
  */
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService } from '../../services/api';
 import { Game, Prediction, PredictionExplanation } from '../../types';
 
-/** Bump when API shape changes (e.g. team logos) so stale offline cache is not reused forever. */
-const GAMES_CACHE_KEY = '@sport_prediction_games_cache_v5';
-
 interface GamesState {
-  upcomingGames: Game[];
   currentGame: Game | null;
   currentPrediction: Prediction | null;
   explanation: PredictionExplanation | null;
-  cachedAt: string | null;
   loading: boolean;
   loadingPrediction: boolean;
   loadingExplanation: boolean;
@@ -22,66 +17,14 @@ interface GamesState {
 }
 
 const initialState: GamesState = {
-  upcomingGames: [],
   currentGame: null,
   currentPrediction: null,
   explanation: null,
-  cachedAt: null,
   loading: false,
   loadingPrediction: false,
   loadingExplanation: false,
   error: null,
 };
-
-export interface GamesCachePayload {
-  games: Game[];
-  updatedAt: string;
-}
-
-// Async thunks
-export const fetchUpcomingGames = createAsyncThunk<
-  GamesCachePayload,
-  | {
-      league?: string;
-      leagues?: string;
-      date?: string;
-      time_zone?: string;
-      limit?: number;
-      signal?: AbortSignal;
-    }
-  | undefined
->(
-  'games/fetchUpcoming',
-  async (params) => {
-    const response = await apiService.getUpcomingGames(params);
-    const games = (response.games ?? []) as Game[];
-    const updatedAt = new Date().toISOString();
-    try {
-      await AsyncStorage.setItem(
-        GAMES_CACHE_KEY,
-        JSON.stringify({ games, updatedAt })
-      );
-    } catch {
-      // ignore cache write errors
-    }
-    return { games, updatedAt };
-  }
-);
-
-export const restoreGamesFromCache = createAsyncThunk<GamesCachePayload | null>(
-  'games/restoreFromCache',
-  async () => {
-    try {
-      const raw = await AsyncStorage.getItem(GAMES_CACHE_KEY);
-      if (!raw) return null;
-      const data = JSON.parse(raw) as { games?: Game[]; updatedAt?: string };
-      if (!data.games || !Array.isArray(data.games) || !data.updatedAt) return null;
-      return { games: data.games, updatedAt: data.updatedAt };
-    } catch {
-      return null;
-    }
-  }
-);
 
 export const fetchGameDetails = createAsyncThunk<Game, string>(
   'games/fetchDetails',
@@ -132,31 +75,6 @@ const gamesSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // Fetch upcoming games
-    builder
-      .addCase(fetchUpcomingGames.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(fetchUpcomingGames.fulfilled, (state, action) => {
-        state.loading = false;
-        state.upcomingGames = action.payload?.games ?? [];
-        state.cachedAt = action.payload?.updatedAt ?? null;
-      })
-      .addCase(fetchUpcomingGames.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.error.message || 'Failed to fetch games';
-      });
-
-    // Restore from cache (offline / cold start)
-    builder.addCase(restoreGamesFromCache.fulfilled, (state, action) => {
-      if (action.payload) {
-        state.upcomingGames = action.payload.games;
-        state.cachedAt = action.payload.updatedAt;
-      }
-    });
-
-    // Fetch game details
     builder
       .addCase(fetchGameDetails.pending, (state) => {
         state.loading = true;
@@ -171,7 +89,6 @@ const gamesSlice = createSlice({
         state.error = action.error.message || 'Failed to fetch game details';
       });
 
-    // Fetch prediction
     builder
       .addCase(fetchPrediction.pending, (state) => {
         state.loadingPrediction = true;
@@ -190,7 +107,6 @@ const gamesSlice = createSlice({
           'Failed to fetch prediction';
       });
 
-    // Fetch explanation
     builder
       .addCase(fetchExplanation.pending, (state) => {
         state.loadingExplanation = true;

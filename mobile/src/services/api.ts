@@ -390,7 +390,9 @@ class ApiService {
           endpoint.startsWith('/auth/logout') ||
           endpoint.startsWith('/auth/login') ||
           endpoint.startsWith('/auth/register') ||
-          endpoint.startsWith('/auth/apple');
+          endpoint.startsWith('/auth/apple') ||
+          endpoint.startsWith('/auth/forgot-password') ||
+          endpoint.startsWith('/auth/reset-password');
         if (!isRetryAfterRefresh && !isAuthSessionEndpoint) {
           try {
             const stored = await getStoredAuth();
@@ -490,6 +492,24 @@ class ApiService {
     return this.request<User>('/auth/register', {
       method: 'POST',
       body: { email, password },
+    });
+  }
+
+  async forgotPassword(email: string) {
+    return this.request<{ message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: { email },
+    });
+  }
+
+  async resetPassword(token: string, password: string) {
+    return this.request<{
+      access_token: string;
+      refresh_token: string;
+      token_type: string;
+    }>('/auth/reset-password', {
+      method: 'POST',
+      body: { token, password },
     });
   }
 
@@ -837,12 +857,23 @@ class ApiService {
     });
   }
 
-  // Share pick (returns message + optional image_base64 PNG for share graphic)
+  // Share pick (message + referral URL + optional image_base64 PNG)
   async sharePick(gameId: string) {
-    return this.request<{ share_url: string | null; message: string; image_base64?: string | null }>(
-      `/games/${encodeURIComponent(gameId)}/share`,
-      { method: 'POST', requireAuth: false }
-    );
+    return this.request<{
+      share_url: string;
+      deep_link: string;
+      message: string;
+      image_base64?: string | null;
+      card?: {
+        home_name: string;
+        away_name: string;
+        league?: string | null;
+        confidence?: string | null;
+        favored_team?: string | null;
+        pick_probability_pct?: number | null;
+        referral_code?: string | null;
+      };
+    }>(`/games/${encodeURIComponent(gameId)}/share`, { method: 'POST', requireAuth: false });
   }
 }
 

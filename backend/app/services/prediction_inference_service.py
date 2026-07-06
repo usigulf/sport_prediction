@@ -26,6 +26,7 @@ from app.constants.predictions import PREDICTION_TYPE_PRE_GAME
 from app.constants.soccer import SOCCER_LEAGUES_SET
 from app.services.ml_artifacts import (
     confidence_from_three_way,
+    decisive_home_edge_from_1x2,
     heuristic_predict,
     predict_from_artifacts,
     soccer_three_way_from_home_edge,
@@ -123,9 +124,14 @@ def _predict_for_game(
     if not out:
         out = heuristic_predict(features, get_settings().ml_model_version)
 
-    # The model emits a two-way (home-vs-away) probability. Expected scores use
-    # this true edge before any 1X2 reshaping.
-    home_two_way = float(out["home_win_probability"])
+    native_1x2 = bool(out.get("native_1x2"))
+    if native_1x2:
+        home_two_way = decisive_home_edge_from_1x2(
+            float(out["home_win_probability"]),
+            float(out["away_win_probability"]),
+        )
+    else:
+        home_two_way = float(out["home_win_probability"])
     exp_h, exp_a = expected_scores_for_league(
         game.league,
         home_two_way,
@@ -137,10 +143,8 @@ def _predict_for_game(
         else None,
     )
 
-    # Soccer is a 3-outcome market: carve out a real draw arm so the stored
-    # home/away pair sums to (1 − draw). Downstream code derives draw as
-    # 1 − home − away, so this is what makes a draw pick possible at all.
-    if (game.league or "").lower() in SOCCER_LEAGUES_SET:
+    # Soccer without a native 1X2 artifact: carve draw mass from a two-way edge.
+    if (game.league or "").lower() in SOCCER_LEAGUES_SET and not native_1x2:
         home_p, draw_p, away_p = soccer_three_way_from_home_edge(home_two_way)
         out["home_win_probability"] = home_p
         out["away_win_probability"] = away_p

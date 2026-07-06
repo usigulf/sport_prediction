@@ -17,12 +17,13 @@ Use this checklist before deploying the API and app to production.
 ### Recommended
 
 - [ ] **API docs** – Disable Swagger/ReDoc in production: set `OPENAPI_DOCS_ENABLED=false` in `.env` to avoid exposing `/docs` and `/redoc`.
-- [ ] **Redis** – Use Redis for rate limiting and cache in production. Set `REDIS_URL`. If Redis is down, the app falls back to in-memory (per-instance); for multi-instance deployments Redis is recommended.
+- [ ] **Redis** – Use Redis for rate limiting and cache in production. Set `REDIS_URL` and `REDIS_PASSWORD` (min 16 chars; Redis runs with `--requirepass`). Generate on the server: `./scripts/setup_redis_password.sh`. If Redis is down, the app falls back to in-memory (per-instance); for multi-instance deployments Redis is recommended.
 - [ ] **Stripe** – For premium subscriptions set `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID_PREMIUM`, and `STRIPE_WEBHOOK_SECRET`. Configure the webhook in Stripe to point to `https://your-api.com/api/v1/subscription/webhook` (event: `checkout.session.completed`).
 - [ ] **Internal cron** – If using the internal push-triggers endpoint, set `PUSH_CRON_SECRET` and pass it in the `X-Cron-Secret` header.
 - [ ] **Soccer schedules** – Cron: `scripts/cron/internal_soccer_sync_schedules.sh` → `POST /internal/soccer/sync-schedules` (ClearSports or Sportradar season ids).
 - [ ] **NFL & NBA schedules** – With `CLEARSPORTS_API_KEY`, cron `scripts/cron/internal_us_sports_sync_schedules.sh` calls `POST /internal/us-sports/sync-schedules` (ClearSports `/v1/nfl/games` and `/v1/nba/games`). Optional: `CLEARSPORTS_NFL_SEASON`, `CLEARSPORTS_NBA_SEASON`. Sportradar is only used if ClearSports is not configured. Then run predictions cron.
-- [ ] **Internal endpoint CIDR allowlist** – Optional but recommended: set `INTERNAL_ALLOWED_CIDRS` (e.g. `127.0.0.1/32,10.0.0.0/8`) so `/internal/*` is reachable only from trusted networks, even with a leaked cron secret.
+- [ ] **Internal endpoint CIDR allowlist** – Set `INTERNAL_ALLOWED_CIDRS=127.0.0.1/32,172.16.0.0/12` in `.env.production` (127.0.0.1 for loopback; 172.16.0.0/12 for host cron → Docker port forward). Nginx must deny public `/internal` first (see `scripts/deploy_nginx_deny_internal.sh`).
+- [ ] **Database backups** – Install daily cron: `./scripts/setup_db_backup_cron.sh`. Verify `/root/backups/sportsprediction-*.dump` and configure offsite copy per `docs/DATABASE_BACKUP.md`.
 - [ ] **Monitoring** – Set `SENTRY_DSN` for error tracking. Use `LOG_LEVEL=WARNING` or `ERROR` in production if you prefer less verbose logs.
 - [ ] **Explanation model** – Optional: set `EXPLANATION_MODEL_DIR` to the path containing `simple_model.pkl` and `feature_columns.pkl` for real “Why this prediction?” factors.
 

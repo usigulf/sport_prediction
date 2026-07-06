@@ -1,13 +1,18 @@
 """
-Explanation service: when a trained model is available, returns real feature importance
-for the "Why this prediction?" explanation. Falls back to None so the API can use a stub.
+Explanation service: when a trained model is available, returns logistic-regression
+feature weights (calibrated coefficients) for the "Why this prediction?" explanation.
+Falls back to None so the API can use matchup-specific or stub factors.
 """
+from __future__ import annotations
+
 import os
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
-from app.services.model_training import artifacts_publish_ready
+import numpy as np
 
-# Human-readable descriptions for known feature names (from train_simple_model.py)
+from app.services.model_training import artifacts_publish_ready, resolve_model_dir_for_league
+
+# Human-readable descriptions for known feature names (from FEATURE_COLUMNS in model_training)
 FEATURE_DESCRIPTIONS = {
     "home_team_win_rate": "Home team win rate (season/form)",
     "away_team_win_rate": "Away team win rate (season/form)",
@@ -22,7 +27,7 @@ FEATURE_DESCRIPTIONS = {
 
 
 def _load_model_and_features(model_dir: str) -> Optional[Tuple[object, List[str]]]:
-    """Load simple_model.pkl and feature_columns.pkl from model_dir. Returns (model, feature_columns) or None."""
+    """Load simple_model.pkl and feature_columns.pkl from model_dir."""
     try:
         import pickle
     except ImportError:
@@ -36,38 +41,98 @@ def _load_model_and_features(model_dir: str) -> Optional[Tuple[object, List[str]
             model = pickle.load(f)
         with open(feature_path, "rb") as f:
             feature_columns = pickle.load(f)
-        if not hasattr(model, "feature_importances_"):
-            return None
         return model, list(feature_columns)
     except Exception:
         return None
 
 
-def get_model_feature_importance(model_dir: Optional[str]) -> Optional[List[dict]]:
-    """
-    If model_dir is set and contains the simple model, return a list of
-    {"feature": str, "feature_weight": float, "description": str} sorted by absolute importance.
-    Otherwise return None (caller uses stub).
-    """
-    if not artifacts_publish_ready(model_dir):
+def _coef_vector_from_fitted(estimator: Any) -> Optional[np.ndarray]:
+    """Absolute logistic coefficients per feature (handles Pipeline + multiclass)."""
+    from sklearn.pipeline import Pipeline
+
+    clf = estimator
+    if isinstance(estimator, Pipeline):
+        clf = estimator.named_steps.get("clf")
+    if clf is None or not hasattr(clf, "coef_"):
         return None
-    if not model_dir or not os.path.isdir(model_dir):
+    coef = np.asarray(clf.coef_, dtype=float)
+    if coef.ndim == 1:
+        return np.abs(coef)
+    return np.mean(np.abs(coef), axis=0)
+
+
+def extract_calibrated_feature_weights(model: Any) -> Optional[np.ndarray]:
+    """
+    Mean |coef| per feature from a calibrated sklearn logistic model.
+
+    CalibratedClassifierCV stores one fitted pipeline per CV fold; we average
+    coefficient magnitudes across folds for a stable global explanation.
+    """
+    from sklearn.calibration import CalibratedClassifierCV
+
+    if isinstance(model, CalibratedClassifierCV):
+        parts: list[np.ndarray] = []
+        for cc in getattr(model, "calibrated_classifiers_", []):
+            inner = getattr(cc, "estimator", None)
+            if inner is None:
+                continue
+            vec = _coef_vector_from_fitted(inner)
+            if vec is not None:
+                parts.append(vec)
+        if not parts:
+            return None
+        return np.mean(parts, axis=0)
+
+    return _coef_vector_from_fitted(model)
+
+
+def resolve_explanation_model_dir(base_dir: str | None, league: str | None) -> str | None:
+    """Pick per-league-group artifact dir (football/basketball/soccer) when published."""
+    if not base_dir or not str(base_dir).strip():
         return None
-    loaded = _load_model_and_features(model_dir)
+    base = str(base_dir).strip()
+    if not league:
+        return base if artifacts_publish_ready(base) else None
+    resolved = resolve_model_dir_for_league(base, league)
+    return resolved
+
+
+def get_model_feature_importance(
+    model_dir: Optional[str],
+    *,
+    league: str | None = None,
+    base_model_dir: str | None = None,
+) -> Optional[List[dict]]:
+    """
+    Return sorted feature weights from the trained logistic model for this league group.
+
+    When ``base_model_dir`` and ``league`` are set, resolves ``{base}/football`` etc.
+    Weights are mean absolute calibrated logistic coefficients — not SHAP values.
+    """
+    resolved = model_dir
+    if base_model_dir and league:
+        resolved = resolve_explanation_model_dir(base_model_dir, league)
+    elif league and model_dir:
+        resolved = resolve_explanation_model_dir(model_dir, league) or model_dir
+
+    if not artifacts_publish_ready(resolved):
+        return None
+    if not resolved or not os.path.isdir(resolved):
+        return None
+    loaded = _load_model_and_features(resolved)
     if not loaded:
         return None
     model, feature_columns = loaded
-    importances = getattr(model, "feature_importances_", None)
-    if importances is None or len(importances) != len(feature_columns):
+    weights = extract_calibrated_feature_weights(model)
+    if weights is None or len(weights) != len(feature_columns):
         return None
-    # Build list of (feature_name, importance), sort by abs(importance) desc
-    pairs = list(zip(feature_columns, importances.tolist()))
+    pairs = list(zip(feature_columns, weights.tolist()))
     pairs.sort(key=lambda x: abs(x[1]), reverse=True)
     return [
         {
             "feature": name.replace("_", " ").title(),
-            "feature_weight": round(float(imp), 4),
+            "feature_weight": round(float(weight), 4),
             "description": FEATURE_DESCRIPTIONS.get(name, f"Model factor: {name}"),
         }
-        for name, imp in pairs
+        for name, weight in pairs
     ]

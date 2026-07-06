@@ -38,6 +38,8 @@ Every pick scored against real results. Explore daily AI forecasts, favorites, c
 
 ## Keywords (100 characters max, comma-separated, no spaces after commas)
 
+**Canonical source:** [`../app-store-metadata/keywords.txt`](../app-store-metadata/keywords.txt) — paste into ASC (must start with `sports`, not `ports`).
+
 ```
 sports,predictions,soccer,football,basketball,AI,picks,forecast,analytics,accuracy,stats,insights
 ```
@@ -113,7 +115,7 @@ Welcome to octobetiQ on the App Store!
 ```
 Informational picks only — not a sportsbook. No real-money wagering.
 Premium: $29.99/mo, 7-day trial, com.octobetiq.premium.monthly
-Demo: appstore-review@octobetiq.com / AppReview2026!
+Demo: `appstore-review@octobetiq.com` — password in App Store Connect only ([docs/APP_REVIEW_DEMO_ACCOUNT.md](../../docs/APP_REVIEW_DEMO_ACCOUNT.md))
 ```
 
 ---

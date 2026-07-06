@@ -5,7 +5,6 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, desc
 from typing import Optional
 from datetime import datetime, timezone
 from app.database import get_db
@@ -30,11 +29,19 @@ from app.services.player_props_service import build_game_player_props
 from app.services.explanation_service import get_model_feature_importance
 from app.services.feature_builder import build_game_features
 from app.services.analysis_context_service import enrich_rich_analysis, build_structured_game_analysis
-from app.services.data_quality_service import compute_prediction_quality, league_standings_last_updated_iso
+from app.services.data_quality_service import compute_prediction_quality
+from app.services.prediction_payload import build_prediction_api_payload
+from app.utils.prediction_source import apply_prediction_source_production_gate
 from app.services.share_image_service import generate_share_image
+from app.services.share_referral_service import (
+    build_share_card,
+    build_share_deep_link,
+    build_share_web_url,
+)
 from app.services.odds_service import get_market_odds_for_game, load_game_for_odds
 from app.schemas.odds import MarketOddsResponse
 from app.config import get_settings
+from app.utils.subscription_tiers import is_free_tier_user
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -142,37 +149,7 @@ def _team_to_response(team):
 
 
 def _prediction_payload(db: Session, game: Game, prediction: Prediction) -> dict:
-    settings = get_settings()
-    quality = compute_prediction_quality(
-        db,
-        game,
-        prediction,
-        threshold=float(settings.min_data_quality_score),
-    )
-    expected_home = float(prediction.expected_home_score) if prediction.expected_home_score else None
-    expected_away = float(prediction.expected_away_score) if prediction.expected_away_score else None
-    confidence_level = prediction.confidence_level
-    if quality["quality_gate_applied"]:
-        # Do not present detailed scoreline when source quality is low.
-        expected_home = None
-        expected_away = None
-        confidence_level = "low"
-    return {
-        "id": str(prediction.id),
-        "game_id": str(prediction.game_id),
-        "model_version": prediction.model_version,
-        "home_win_probability": float(prediction.home_win_probability),
-        "away_win_probability": float(prediction.away_win_probability),
-        "expected_home_score": expected_home,
-        "expected_away_score": expected_away,
-        "confidence_level": confidence_level,
-        "data_quality_score": quality["data_quality_score"],
-        "data_quality_label": quality["data_quality_label"],
-        "quality_gate_applied": quality["quality_gate_applied"],
-        "quality_reasons": quality["quality_reasons"],
-        "created_at": prediction.created_at,
-        "standings_last_updated_iso": league_standings_last_updated_iso(db, game.league),
-    }
+    return build_prediction_api_payload(db, game, prediction)
 
 
 @router.get("/upcoming", response_model=GameListResponse)
@@ -227,11 +204,8 @@ async def get_upcoming_games(
         .all()
     )
     
-    # Guests see schedules only; signed-in free tier uses daily prediction cap.
+    # Guests see schedules only; signed-in users get predictions subject to free-tier quota.
     include_predictions = current_user is not None
-    if current_user and current_user.subscription_tier == "free":
-        if prediction_service.has_exceeded_daily_limit(current_user.id):
-            include_predictions = False
     
     games_data = []
     for game in games:
@@ -252,7 +226,9 @@ async def get_upcoming_games(
         
         if include_predictions:
             prediction = prediction_service.get_latest_prediction(str(game.id))
-            if prediction:
+            if prediction and prediction_service.grant_free_tier_prediction_view(
+                current_user, game.id
+            ):
                 game_dict["prediction"] = _prediction_payload(db, game, prediction)
         
         games_data.append(game_dict)
@@ -290,11 +266,9 @@ async def get_game(
     prediction = None
     if current_user:
         prediction_service = PredictionService(db)
-        if current_user.subscription_tier in ["premium", "premium_plus"]:
-            prediction = prediction_service.get_latest_prediction(game_id)
-        elif current_user.subscription_tier == "free":
-            if not prediction_service.has_exceeded_daily_limit(current_user.id):
-                prediction = prediction_service.get_latest_prediction(game_id)
+        latest = prediction_service.get_latest_prediction(game_id)
+        if latest and prediction_service.grant_free_tier_prediction_view(current_user, game.id):
+            prediction = latest
     
     game_dict = {
         "id": str(game.id),
@@ -330,29 +304,39 @@ async def get_prediction_explanation(
     """Get explainability for the latest prediction (top factors, confidence, model info)."""
     from uuid import UUID
     try:
-        game_uuid = UUID(game_id)
+        UUID(game_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid game ID format")
     prediction_service = PredictionService(db)
-    if current_user.subscription_tier == "free" and prediction_service.has_exceeded_daily_limit(current_user.id):
-        raise HTTPException(
-            status_code=403,
-            detail="Daily prediction limit reached. Upgrade to premium for full explanations."
-        )
     prediction = prediction_service.get_latest_prediction(game_id)
     if not prediction:
         raise HTTPException(status_code=404, detail="Prediction not found")
+    if is_free_tier_user(current_user):
+        if not prediction_service.grant_free_tier_prediction_view(
+            current_user, prediction.game_id
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Daily prediction limit reached. Upgrade to premium for full explanations."
+            )
     game = (
         db.query(Game)
         .options(joinedload(Game.home_team), joinedload(Game.away_team))
         .filter(Game.id == prediction.game_id)
         .first()
     )
+    settings = get_settings()
     quality = compute_prediction_quality(
         db,
         game,
         prediction,
-        threshold=float(get_settings().min_data_quality_score),
+        threshold=float(settings.min_data_quality_score),
+    )
+    quality, prediction_source = apply_prediction_source_production_gate(
+        quality,
+        prediction.model_version,
+        environment=settings.environment,
+        default_model_version=settings.ml_model_version,
     )
 
     # Record view for prediction history
@@ -364,8 +348,12 @@ async def get_prediction_explanation(
     db.add(view)
     db.commit()
 
-    settings = get_settings()
-    model_factors = get_model_feature_importance(settings.explanation_model_dir)
+    model_factors = get_model_feature_importance(
+        None,
+        league=game.league if game else None,
+        base_model_dir=(settings.model_artifact_dir or settings.explanation_model_dir or "").strip()
+        or None,
+    )
 
     if quality["quality_gate_applied"]:
         top_features = []
@@ -392,7 +380,8 @@ async def get_prediction_explanation(
             ]
             confidence_explanation = (
                 f"This prediction has {prediction.confidence_level} confidence. "
-                "Factors below are the model's global feature importance (what drives predictions overall)."
+                "Factors below are global logistic-regression weights from the trained "
+                f"{(game.league or 'league').replace('_', ' ')} model."
             )
         else:
             home_prob = float(prediction.home_win_probability)
@@ -444,6 +433,7 @@ async def get_prediction_explanation(
         top_features=top_features,
         confidence_explanation=confidence_explanation,
         model_version=prediction.model_version,
+        prediction_source=prediction_source,
         accuracy=None,
         data_quality_score=quality["data_quality_score"],
         data_quality_label=quality["data_quality_label"],
@@ -462,7 +452,7 @@ async def get_game_player_props(
     _: None = Depends(rate_limit_predictions),
 ):
     """Model-projected player props for a game. Premium only; not sportsbook lines."""
-    if current_user.subscription_tier == "free":
+    if is_free_tier_user(current_user):
         raise HTTPException(
             status_code=403,
             detail="Player props require a premium subscription."
@@ -502,7 +492,7 @@ async def get_live_predictions(
     _: None = Depends(rate_limit_predictions),
 ):
     """Live win-probability for premium users. In-play v0 when game is live and model was refreshed after kickoff."""
-    if current_user.subscription_tier == "free":
+    if is_free_tier_user(current_user):
         raise HTTPException(
             status_code=403,
             detail="Live predictions require a premium subscription."
@@ -527,19 +517,19 @@ async def get_prediction(
 ):
     """Get prediction for a game (requires authentication)"""
     prediction_service = PredictionService(db)
-    
-    # Check subscription tier
-    if current_user.subscription_tier == "free":
-        if prediction_service.has_exceeded_daily_limit(current_user.id):
+
+    prediction = prediction_service.get_latest_prediction(game_id)
+    if not prediction:
+        raise HTTPException(status_code=404, detail="Prediction not found")
+
+    if is_free_tier_user(current_user):
+        if not prediction_service.grant_free_tier_prediction_view(
+            current_user, prediction.game_id
+        ):
             raise HTTPException(
                 status_code=403,
                 detail="Daily prediction limit reached. Upgrade to premium for unlimited predictions."
             )
-        prediction_service.increment_daily_prediction_count(current_user.id)
-    
-    prediction = prediction_service.get_latest_prediction(game_id)
-    if not prediction:
-        raise HTTPException(status_code=404, detail="Prediction not found")
 
     # Record view for prediction history
     view = UserPredictionView(
@@ -558,32 +548,82 @@ async def get_prediction(
 async def share_pick(
     game_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user_optional),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ):
     """
     Generate share content for this game's pick: text message and optional share graphic (base64 PNG).
+    Pick confidence is only included when the caller is allowed to view that prediction
+    (signed-in + free-tier quota, or premium).
     """
+    try:
+        from uuid import UUID
+
+        game_uuid = UUID(game_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid game ID format")
+
     game = (
         db.query(Game)
         .options(joinedload(Game.home_team), joinedload(Game.away_team))
-        .filter(Game.id == game_id)
+        .filter(Game.id == game_uuid)
         .first()
     )
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
-    pred = PredictionService(db).get_latest_prediction(game_id)
+
+    prediction_service = PredictionService(db)
+    pred = prediction_service.get_latest_prediction(game_id)
     home_name = game.home_team.name if game.home_team else "Home"
     away_name = game.away_team.name if game.away_team else "Away"
-    confidence = pred.confidence_level if pred else None
     league = getattr(game, "league", None)
+
+    confidence = None
+    home_prob = None
+    away_prob = None
+    if current_user and pred:
+        if not prediction_service.grant_free_tier_prediction_view(current_user, game_uuid):
+            raise HTTPException(
+                status_code=403,
+                detail="Daily prediction limit reached. Upgrade to premium for unlimited predictions.",
+            )
+        confidence = pred.confidence_level
+        home_prob = float(pred.home_win_probability)
+        away_prob = float(pred.away_win_probability)
+
+    referrer_id = current_user.id if current_user else None
+    share_url = build_share_web_url(game_uuid, referrer_id)
+    deep_link = build_share_deep_link(game_uuid, referrer_id)
+    card = build_share_card(
+        home_name=home_name,
+        away_name=away_name,
+        league=league,
+        confidence=confidence,
+        home_win_probability=home_prob,
+        away_win_probability=away_prob,
+        referrer_id=referrer_id,
+    )
+
     message = f"Octobet pick: {home_name} vs {away_name}"
     if confidence:
         message += f" ({confidence} confidence)"
+    if card.get("favored_team") and card.get("pick_probability_pct") is not None:
+        message += f" — {card['favored_team']} ({card['pick_probability_pct']}%)"
     message += " — Get picks in the app."
+    message += f"\n{share_url}"
+
     image_base64 = generate_share_image(
         home_name=home_name,
         away_name=away_name,
         confidence=confidence,
         league=league,
+        favored_team=card.get("favored_team"),
+        pick_probability_pct=card.get("pick_probability_pct"),
+        share_url=share_url,
     )
-    return {"share_url": None, "message": message, "image_base64": image_base64}
+    return {
+        "share_url": share_url,
+        "deep_link": deep_link,
+        "message": message,
+        "image_base64": image_base64,
+        "card": card,
+    }

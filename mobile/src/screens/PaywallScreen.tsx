@@ -30,12 +30,15 @@ import { normalizeSubscriptionTier, type NormalizedTier } from '../utils/subscri
 import {
   isPurchasesAvailable,
   getOfferingPackages,
+  getLastOfferingsError,
   purchasePackage,
   restorePurchases,
   type OfferingPackage,
 } from '../services/purchases';
 import { SubscriptionLegalFooter } from '../components/SubscriptionLegalFooter';
 import { captureRoutesEnabled } from '../navigation/screenshotNavigation';
+import { openIosManageSubscriptions } from '../utils/manageSubscriptions';
+import { trackSubscriptionActivated } from '../services/productAnalytics';
 
 const CHECKOUT_TIMEOUT_MS = 20000;
 
@@ -91,6 +94,7 @@ export const PaywallScreen: React.FC = () => {
   const [checkoutLoadingTier, setCheckoutLoadingTier] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [packages, setPackages] = useState<OfferingPackage[]>([]);
+  const [offeringsError, setOfferingsError] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -99,23 +103,37 @@ export const PaywallScreen: React.FC = () => {
   // fall back to web (Stripe) checkout.
   const storeBillingReady = isPurchasesAvailable() && packages.length > 0;
 
-  useEffect(() => {
-    if (!isPurchasesAvailable()) return;
-    let active = true;
-    void getOfferingPackages()
-      .then((pkgs) => {
-        if (active) setPackages(pkgs.filter((p) => p.tier === 'premium'));
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
+  const loadOfferings = useCallback(async () => {
+    if (!isPurchasesAvailable()) {
+      setOfferingsError('In-app purchases are not configured in this build.');
+      setPackages([]);
+      return;
+    }
+    const pkgs = await getOfferingPackages();
+    setPackages(pkgs.filter((p) => p.tier === 'premium'));
+    setOfferingsError(pkgs.length ? null : getLastOfferingsError());
   }, []);
 
+  useEffect(() => {
+    if (!isPurchasesAvailable()) return;
+    void loadOfferings();
+  }, [loadOfferings]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isPurchasesAvailable() && packages.length === 0) {
+        void loadOfferings();
+      }
+    }, [loadOfferings, packages.length]),
+  );
+
   const applyTier = useCallback(
-    (tier: NormalizedTier) => {
+    (tier: NormalizedTier, source: 'iap' | 'restore' | 'stripe' = 'iap') => {
       dispatch(setSubscriptionTier(tier));
       setCurrentTier(tier);
+      if (tier !== 'free') {
+        void trackSubscriptionActivated(tier, source);
+      }
       void dispatch(fetchUserProfile())
         .unwrap()
         .then((info) => setCurrentTier(normalizeSubscriptionTier(info.subscription_tier)))
@@ -176,7 +194,7 @@ export const PaywallScreen: React.FC = () => {
       const res = await purchasePackage(pkg.raw);
       if (res.cancelled) return true;
       if (res.tier !== 'free') {
-        applyTier(res.tier);
+        applyTier(res.tier, 'iap');
       } else {
         Alert.alert(
           'Purchase',
@@ -187,6 +205,23 @@ export const PaywallScreen: React.FC = () => {
     },
     [packages, applyTier],
   );
+
+  const handleRestore = useCallback(async () => {
+    setRestoring(true);
+    try {
+      const tier = await restorePurchases();
+      if (tier !== 'free') {
+        applyTier(tier, 'restore');
+        Alert.alert('Restored', 'Your subscription has been restored.');
+      } else {
+        Alert.alert('Restore purchases', 'No active subscription found for this account.');
+      }
+    } catch (e) {
+      Alert.alert('Restore purchases', getUserFriendlyMessage(e));
+    } finally {
+      setRestoring(false);
+    }
+  }, [applyTier]);
 
   const handleSubscribe = useCallback(
     async (tierId: string) => {
@@ -199,9 +234,17 @@ export const PaywallScreen: React.FC = () => {
           if (handled) return;
         }
         if (Platform.OS === 'ios') {
+          const detail = offeringsError
+            ? `\n\n${offeringsError}`
+            : '\n\nSubscription plans could not be loaded from the App Store. Confirm Premium Monthly is Ready to Submit in App Store Connect and linked in RevenueCat.';
           Alert.alert(
             'Subscriptions',
-            'In-app purchase is not available right now. Check your connection and try Restore purchases.',
+            `In-app purchase is not available right now. Check your connection and try Restore purchases.${detail}`,
+            [
+              { text: 'Restore purchases', onPress: () => void handleRestore() },
+              { text: 'Retry', onPress: () => void loadOfferings() },
+              { text: 'OK', style: 'cancel' },
+            ],
           );
           return;
         }
@@ -217,32 +260,19 @@ export const PaywallScreen: React.FC = () => {
         setCheckoutLoadingTier(null);
         await WebBrowser.openBrowserAsync(url);
         const info = await dispatch(fetchUserProfile()).unwrap();
-        setCurrentTier(normalizeSubscriptionTier(info.subscription_tier));
+        const tier = normalizeSubscriptionTier(info.subscription_tier);
+        setCurrentTier(tier);
+        if (tier !== 'free') {
+          void trackSubscriptionActivated(tier, 'stripe');
+        }
       } catch (e) {
         Alert.alert('Checkout', getUserFriendlyMessage(e));
       } finally {
         setCheckoutLoadingTier(null);
       }
     },
-    [storeBillingReady, purchaseViaStore, dispatch],
+    [storeBillingReady, purchaseViaStore, dispatch, offeringsError, loadOfferings, handleRestore],
   );
-
-  const handleRestore = useCallback(async () => {
-    setRestoring(true);
-    try {
-      const tier = await restorePurchases();
-      if (tier !== 'free') {
-        applyTier(tier);
-        Alert.alert('Restored', 'Your subscription has been restored.');
-      } else {
-        Alert.alert('Restore purchases', 'No active subscription found for this account.');
-      }
-    } catch (e) {
-      Alert.alert('Restore purchases', getUserFriendlyMessage(e));
-    } finally {
-      setRestoring(false);
-    }
-  }, [applyTier]);
 
   if (loading) {
     return (
@@ -379,6 +409,17 @@ export const PaywallScreen: React.FC = () => {
           ) : (
             <Text style={styles.restoreButtonText}>Restore purchases</Text>
           )}
+        </TouchableOpacity>
+      ) : null}
+
+      {Platform.OS === 'ios' && currentTier !== 'free' ? (
+        <TouchableOpacity
+          style={styles.manageButton}
+          onPress={() => void openIosManageSubscriptions()}
+          accessibilityRole="button"
+          accessibilityLabel="Manage subscription in App Store"
+        >
+          <Text style={styles.manageButtonText}>Manage subscription in App Store</Text>
         </TouchableOpacity>
       ) : null}
 
@@ -578,6 +619,19 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: theme.colors.accent,
+  },
+  manageButton: {
+    alignSelf: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    minHeight: theme.minTouchSize,
+    justifyContent: 'center',
+  },
+  manageButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+    textDecorationLine: 'underline',
   },
   footer: {
     fontSize: 13,

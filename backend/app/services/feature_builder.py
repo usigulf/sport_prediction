@@ -1,7 +1,8 @@
 """
 Build model feature vectors from DB game rows.
-Soccer: when `team_standings` rows exist for both sides, features use table + recent results.
-Other sports: synthetic random features with time-bucket drift for demo refreshes.
+Soccer/US: prefer point-in-time standings rebuilt from finished games before kickoff.
+In production, inference uses PIT only — current standings snapshots and provider
+APIs are skipped so features never leak future results.
 """
 from __future__ import annotations
 
@@ -30,6 +31,13 @@ FeatureSource = Literal[
 ]
 
 US_SPORTS_SET = frozenset({"nfl", "nba"})
+
+
+def _inference_pit_only() -> bool:
+    """Production inference must not fall back to current standings snapshots."""
+    from app.config import get_settings
+
+    return (get_settings().environment or "").lower() == "production"
 
 
 def _seed_from_uuid(game_id: UUID) -> int:
@@ -142,7 +150,7 @@ def format_recent_wdl_for_matchup(db: Session, game: Game) -> str | None:
         past = _recent_finished_league_games_for_team(db, team_id, league, kickoff, 5)
         if not past:
             continue
-        w = d = l = 0
+        w = d = losses = 0
         for g in past:
             hs, aws = g.home_score or 0, g.away_score or 0
             if hs == aws:
@@ -150,9 +158,9 @@ def format_recent_wdl_for_matchup(db: Session, game: Game) -> str | None:
             elif (g.home_team_id == team_id and hs > aws) or (g.away_team_id == team_id and aws > hs):
                 w += 1
             else:
-                l += 1
+                losses += 1
         n = len(past)
-        lines.append(f"• {name}: {w}W-{d}D-{l}L (last {n} league match(es) in DB)")
+        lines.append(f"• {name}: {w}W-{d}D-{losses}L (last {n} league match(es) in DB)")
     if not lines:
         return None
     lines.append("")
@@ -202,7 +210,7 @@ def _rec_from_sportradar_row(row: dict) -> SoccerTableRec | None:
     try:
         w = int(row.get("win") if row.get("win") is not None else 0)
         d = int(row.get("draw") if row.get("draw") is not None else 0)
-        l = int(row.get("loss") if row.get("loss") is not None else 0)
+        losses = int(row.get("loss") if row.get("loss") is not None else 0)
     except (TypeError, ValueError):
         return None
     rk_raw = row.get("rank")
@@ -223,7 +231,7 @@ def _rec_from_sportradar_row(row: dict) -> SoccerTableRec | None:
     return SoccerTableRec(
         wins=w,
         draws=d,
-        losses=l,
+        losses=losses,
         goals_for=gf,
         goals_against=ga,
         league_rank=league_rank,
@@ -338,10 +346,10 @@ def _rec_from_clearsports_stats_row(row: dict) -> SoccerTableRec | None:
     try:
         w = int(row.get("wins") or row.get("win") or 0)
         d = int(row.get("draws") or row.get("draw") or 0)
-        l = int(row.get("losses") or row.get("loss") or 0)
+        losses = int(row.get("losses") or row.get("loss") or 0)
     except (TypeError, ValueError):
         return None
-    if w + d + l <= 0 and row.get("points") is None:
+    if w + d + losses <= 0 and row.get("points") is None:
         return None
     rk_raw = row.get("rank") or row.get("position")
     try:
@@ -359,7 +367,7 @@ def _rec_from_clearsports_stats_row(row: dict) -> SoccerTableRec | None:
     except (TypeError, ValueError):
         points = 3 * w + d
     return SoccerTableRec(
-        wins=w, draws=d, losses=l, goals_for=gf, goals_against=ga, league_rank=league_rank, points=points
+        wins=w, draws=d, losses=losses, goals_for=gf, goals_against=ga, league_rank=league_rank, points=points
     )
 
 
@@ -620,11 +628,14 @@ def build_game_features(
     pit_cache: PitStandingsCache | None = None,
 ) -> tuple[dict[str, float | int], FeatureSource]:
     if db is not None:
+        pit_only = _inference_pit_only()
         league = (game.league or "").lower()
         if league in SOCCER_LEAGUES_SET and game.home_team and game.away_team:
             soccer = _soccer_features_from_pit(db, game, pit_cache)
             if soccer is not None:
                 return soccer, "soccer_pit_standings"
+            if pit_only:
+                return _neutral_feature_dict(game), "neutral_baseline"
             soccer = _soccer_features_from_standings(db, game)
             if soccer is not None:
                 return soccer, "soccer_db_standings"
@@ -644,6 +655,8 @@ def build_game_features(
             us_pit = _us_sports_features_from_pit(db, game, pit_cache)
             if us_pit is not None:
                 return us_pit, "us_pit_standings"
+            if pit_only:
+                return _neutral_feature_dict(game), "neutral_baseline"
             us = _us_sports_features(db, game)
             if us is not None:
                 return us

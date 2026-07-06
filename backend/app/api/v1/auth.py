@@ -17,6 +17,9 @@ from app.schemas.user import (
     RefreshTokenRequest,
     LogoutRequest,
     AppleSignInRequest,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
+    MessageResponse,
 )
 from app.models.user import User
 from app.core.security import (
@@ -30,6 +33,12 @@ from app.core.security import (
 )
 from app.config import get_settings
 from app.services.apple_auth_service import AppleAuthError, verify_apple_identity_token
+from app.services.password_reset_service import (
+    FORGOT_PASSWORD_MESSAGE,
+    PasswordResetError,
+    request_password_reset,
+    reset_password_with_token,
+)
 
 router = APIRouter()
 settings = get_settings()
@@ -224,6 +233,34 @@ async def logout(
             if payload and str(payload.get("user_id")) == str(current_user.id):
                 revoke_token_by_payload(payload)
     return {"message": "Successfully logged out"}
+
+
+@router.post("/forgot-password", response_model=MessageResponse)
+async def forgot_password(
+    body: ForgotPasswordRequest,
+    db: Session = Depends(get_db),
+    _: None = Depends(rate_limit_auth),
+):
+    """Request a password reset email. Always returns the same message (anti-enumeration)."""
+    request_password_reset(db, body.email)
+    return MessageResponse(message=FORGOT_PASSWORD_MESSAGE)
+
+
+@router.post("/reset-password", response_model=Token)
+async def reset_password(
+    body: ResetPasswordRequest,
+    db: Session = Depends(get_db),
+    _: None = Depends(rate_limit_auth),
+):
+    """Set a new password using a single-use reset token."""
+    try:
+        user = reset_password_with_token(db, body.token, body.password)
+    except PasswordResetError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token",
+        )
+    return _token_pair_for_user(user)
 
 
 @router.get("/me", response_model=UserResponse, deprecated=True)

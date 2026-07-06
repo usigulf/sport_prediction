@@ -22,6 +22,9 @@ from app.models.game import Game
 from app.models.prediction import Prediction
 from app.models.team_standing import TeamStanding  # noqa: F401
 from app.models.game_player_spotlight import GamePlayerSpotlight  # noqa: F401
+from app.models.stripe_webhook_event import StripeWebhookEvent  # noqa: F401
+from app.models.revenuecat_webhook_event import RevenueCatWebhookEvent  # noqa: F401
+from app.models.password_reset_token import PasswordResetToken  # noqa: F401
 from app.core.security import get_password_hash
 from uuid import uuid4
 from datetime import datetime, timedelta

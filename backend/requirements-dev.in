@@ -1,0 +1,8 @@
+# Dev deps — compile with ./scripts/compile_requirements.sh
+-c requirements.txt
+-r requirements.in
+pytest>=7.4.0,<9
+pytest-cov>=4.1.0,<7
+httpx>=0.27.0,<0.29
+ruff>=0.8.0,<0.16
+pip-audit>=2.7.0,<3

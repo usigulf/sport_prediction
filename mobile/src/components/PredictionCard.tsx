@@ -9,7 +9,7 @@ import {
   impliedDrawForSoccer,
   normalizeThreeWay,
 } from '../utils/predictionDisplay';
-import { demoModelDisclaimer, isDemoModelPrediction } from '../utils/predictionTrust';
+import { demoModelDisclaimer, isDemoModelPrediction, shouldBlockHeuristicPickUi } from '../utils/predictionTrust';
 import { PredictionFreshnessBadge } from './PredictionFreshnessBadge';
 
 /** BetQL-style pick strength 1–5 from confidence (high→5, medium→3, low→1). */
@@ -109,11 +109,14 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
     ? `Data quality: ${prediction.data_quality_label.toUpperCase()}`
     : null;
   const showDemoNote = isDemoModelPrediction(prediction, league);
+  const blockHeuristicUi = shouldBlockHeuristicPickUi(prediction);
 
   const content = (
     <>
       {showDemoNote ? (
-        <Text style={styles.demoNote}>{demoModelDisclaimer(league)}</Text>
+        <Text style={styles.demoNote}>
+          {demoModelDisclaimer(league, prediction.prediction_source)}
+        </Text>
       ) : null}
       <PredictionFreshnessBadge prediction={prediction} />
       <View style={styles.header}>
@@ -125,7 +128,7 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
           <View
             style={[
               styles.confidenceBadge,
-              advancedInsightsLocked
+              advancedInsightsLocked || blockHeuristicUi
                 ? { backgroundColor: theme.colors.borderSubtle }
                 : { backgroundColor: badge.bg },
             ]}
@@ -133,15 +136,19 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
             <Text
               style={[
                 styles.confidenceText,
-                advancedInsightsLocked
+                advancedInsightsLocked || blockHeuristicUi
                   ? { color: theme.colors.textMuted }
                   : { color: badge.fg },
               ]}
             >
-              {advancedInsightsLocked ? 'Unlock for confidence' : confidenceLabel(confidence_level)}
+              {advancedInsightsLocked
+                ? 'Unlock for confidence'
+                : blockHeuristicUi
+                  ? 'Baseline pick'
+                  : confidenceLabel(confidence_level)}
             </Text>
           </View>
-          {!advancedInsightsLocked ? (
+          {!advancedInsightsLocked && !blockHeuristicUi ? (
             <View style={styles.starRow}>
               {[1, 2, 3, 4, 5].map((i) => (
                 <Ionicons
@@ -172,7 +179,7 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
             />
           </View>
           <Text style={styles.probabilityText}>
-            {advancedInsightsLocked ? '—' : `${(home * 100).toFixed(1)}%`}
+            {advancedInsightsLocked || blockHeuristicUi ? '—' : `${(home * 100).toFixed(1)}%`}
           </Text>
         </View>
 
@@ -191,7 +198,7 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
               />
             </View>
             <Text style={styles.probabilityText}>
-              {advancedInsightsLocked ? '—' : `${(draw * 100).toFixed(1)}%`}
+              {advancedInsightsLocked || blockHeuristicUi ? '—' : `${(draw * 100).toFixed(1)}%`}
             </Text>
           </View>
         ) : null}
@@ -210,23 +217,25 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
             />
           </View>
           <Text style={styles.probabilityText}>
-            {advancedInsightsLocked ? '—' : `${(away * 100).toFixed(1)}%`}
+            {advancedInsightsLocked || blockHeuristicUi ? '—' : `${(away * 100).toFixed(1)}%`}
           </Text>
         </View>
       </View>
 
-      {expectedLine && !advancedInsightsLocked ? (
+      {expectedLine && !advancedInsightsLocked && !blockHeuristicUi ? (
         <View style={styles.scorePrediction}>
           <Text style={styles.scoreLabel}>{expectedScoreLabel}</Text>
           <Text style={styles.scoreText}>{expectedLine}</Text>
         </View>
       ) : null}
 
-      <View style={styles.mostLikelyRow}>
-        <Text style={styles.mostLikelyLabel}>Most likely result</Text>
-        <Text style={styles.mostLikelyValue}>{mostLikelyLabel}</Text>
-      </View>
-      {qualityLabel && !advancedInsightsLocked ? (
+      {!blockHeuristicUi ? (
+        <View style={styles.mostLikelyRow}>
+          <Text style={styles.mostLikelyLabel}>Most likely result</Text>
+          <Text style={styles.mostLikelyValue}>{mostLikelyLabel}</Text>
+        </View>
+      ) : null}
+      {qualityLabel && !advancedInsightsLocked && !blockHeuristicUi ? (
         <Text style={styles.qualityMeta}>{qualityLabel}</Text>
       ) : null}
     </>

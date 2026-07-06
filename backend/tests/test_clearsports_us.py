@@ -1,5 +1,5 @@
 """ClearSports NFL/NBA sync helpers (no live API)."""
-from datetime import datetime, timezone
+from datetime import datetime
 
 from app.config import Settings
 from app.services.clearsports_soccer_schedule_sync import normalize_clearsports_game

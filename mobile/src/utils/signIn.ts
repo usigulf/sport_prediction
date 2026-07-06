@@ -4,9 +4,9 @@
 import { apiService, setAuthToken } from '../services/api';
 import { setStoredAuth } from './authStorage';
 import { setUser, fetchUserProfile } from '../store/slices/authSlice';
-import { registerPushTokenIfPossible } from './pushNotifications';
-import { getPushNotificationsEnabled } from './settingsStorage';
+import { syncPushRegistrationAfterConsent } from './pushNotifications';
 import type { AppDispatch } from '../store/store';
+import { trackSignInCompleted } from '../services/productAnalytics';
 
 export async function completeSignIn(
   dispatch: AppDispatch,
@@ -14,7 +14,21 @@ export async function completeSignIn(
   password: string,
 ): Promise<void> {
   const response = await apiService.login(email, password);
-  await applyAuthSession(dispatch, email, response.access_token, response.refresh_token);
+  await applyAuthSession(dispatch, email, response.access_token, response.refresh_token, 'email');
+}
+
+export async function completeSignInWithTokens(
+  dispatch: AppDispatch,
+  tokens: { access_token: string; refresh_token: string },
+  emailHint?: string,
+): Promise<void> {
+  await applyAuthSession(
+    dispatch,
+    emailHint,
+    tokens.access_token,
+    tokens.refresh_token,
+    'password_reset',
+  );
 }
 
 export type AppleSignInPayload = {
@@ -37,6 +51,7 @@ export async function completeAppleSignIn(
     payload.email,
     response.access_token,
     response.refresh_token,
+    'apple',
   );
 }
 
@@ -45,6 +60,7 @@ async function applyAuthSession(
   emailHint: string | undefined,
   accessToken: string,
   refreshToken: string,
+  signInMethod: 'email' | 'apple' | 'password_reset',
 ): Promise<void> {
   setAuthToken(accessToken);
   let email = emailHint;
@@ -65,11 +81,15 @@ async function applyAuthSession(
   } catch {
     /* non-blocking */
   }
-  await dispatch(fetchUserProfile()).unwrap().catch(() => {});
+  const profile = await dispatch(fetchUserProfile()).unwrap().catch(() => null);
   try {
-    const pushEnabled = await getPushNotificationsEnabled();
-    if (pushEnabled) registerPushTokenIfPossible();
+    void syncPushRegistrationAfterConsent();
   } catch {
     /* non-blocking */
+  }
+  if (profile?.id) {
+    void trackSignInCompleted(signInMethod, profile.id, profile.subscription_tier);
+  } else {
+    void trackSignInCompleted(signInMethod);
   }
 }

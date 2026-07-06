@@ -3,7 +3,6 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 from uuid import uuid4
 
-import pytest
 
 from app.models.game import Game
 from app.models.prediction import Prediction

@@ -1,7 +1,6 @@
 """
 Additional auth security tests
 """
-import pytest
 from fastapi import status
 
 

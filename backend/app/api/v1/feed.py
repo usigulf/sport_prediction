@@ -16,10 +16,12 @@ from app.models.user_favorite import UserFavorite
 from app.utils.team_logo_urls import team_to_api_dict
 from app.schemas.common import datetime_to_iso
 from app.services.prediction_service import PredictionService
+from app.services.prediction_payload import build_prediction_api_payload
 from app.services.player_props_service import PROPS_DISCLAIMER, build_game_player_props
-from app.services.data_quality_service import compute_prediction_quality, league_standings_last_updated_iso
+from app.services.data_quality_service import compute_prediction_quality
 from app.services.guest_access_service import cap_guest_teaser_picks
 from app.config import get_settings
+from app.utils.subscription_tiers import is_free_tier_user
 
 router = APIRouter(prefix="/feed", tags=["feed"])
 
@@ -86,13 +88,31 @@ def _games_query(
     return query.order_by(Game.scheduled_time).limit(fetch_limit).all()
 
 
-def _include_predictions_for_user(db: Session, current_user: Optional[User]) -> bool:
-    if not current_user or current_user.subscription_tier != "free":
-        return True
-    return not PredictionService(db).has_exceeded_daily_limit(current_user.id)
+def _attach_prediction_for_user(
+    db: Session,
+    prediction_service: PredictionService,
+    current_user: Optional[User],
+    game: Game,
+    pred,
+) -> Optional[dict]:
+    """Build prediction payload if user quota allows; records free-tier views."""
+    if pred is None:
+        return None
+    if current_user is not None:
+        if not prediction_service.grant_free_tier_prediction_view(current_user, game.id):
+            return None
+    return build_prediction_api_payload(db, game, pred)
 
 
-def _serialize_pick(db: Session, game: Game, pred, include_predictions: bool) -> dict:
+def _serialize_pick(
+    db: Session,
+    game: Game,
+    pred,
+    include_predictions: bool,
+    *,
+    prediction_service: Optional[PredictionService] = None,
+    current_user: Optional[User] = None,
+) -> dict:
     game_dict = {
         "id": str(game.id),
         "league": game.league,
@@ -107,37 +127,15 @@ def _serialize_pick(db: Session, game: Game, pred, include_predictions: bool) ->
         "venue": game.venue,
         "prediction": None,
     }
-    if pred and include_predictions:
-        quality = compute_prediction_quality(
-            db,
-            game,
-            pred,
-            threshold=float(get_settings().min_data_quality_score),
+    if include_predictions and pred and prediction_service is not None:
+        payload = _attach_prediction_for_user(
+            db, prediction_service, current_user, game, pred
         )
-        game_dict["prediction"] = {
-            "id": str(pred.id),
-            "game_id": str(pred.game_id),
-            "model_version": pred.model_version,
-            "home_win_probability": float(pred.home_win_probability),
-            "away_win_probability": float(pred.away_win_probability),
-            "expected_home_score": (
-                None
-                if quality["quality_gate_applied"]
-                else (float(pred.expected_home_score) if pred.expected_home_score else None)
-            ),
-            "expected_away_score": (
-                None
-                if quality["quality_gate_applied"]
-                else (float(pred.expected_away_score) if pred.expected_away_score else None)
-            ),
-            "confidence_level": "low" if quality["quality_gate_applied"] else pred.confidence_level,
-            "data_quality_score": quality["data_quality_score"],
-            "data_quality_label": quality["data_quality_label"],
-            "quality_gate_applied": quality["quality_gate_applied"],
-            "quality_reasons": quality["quality_reasons"],
-            "created_at": pred.created_at,
-            "standings_last_updated_iso": league_standings_last_updated_iso(db, game.league),
-        }
+        if payload is not None:
+            game_dict["prediction"] = payload
+    elif pred and include_predictions and prediction_service is None:
+        # Guest path: attach without quota (teaser cap applied upstream).
+        game_dict["prediction"] = build_prediction_api_payload(db, game, pred)
     return game_dict
 
 
@@ -175,26 +173,31 @@ def _build_picks(
     sort_key: Callable,
 ) -> list[dict]:
     prediction_service = PredictionService(db)
-    include_predictions = _include_predictions_for_user(db, current_user)
-
     with_pred = []
     threshold = float(get_settings().min_data_quality_score)
     for game in games:
         pred = prediction_service.get_latest_prediction(str(game.id))
-        if not pred and include_predictions:
+        if not pred:
             continue
-        if include_predictions and pred:
-            quality = compute_prediction_quality(db, game, pred, threshold=threshold)
-            if quality["quality_gate_applied"]:
-                continue
+        quality = compute_prediction_quality(db, game, pred, threshold=threshold)
+        if quality["quality_gate_applied"]:
+            continue
         with_pred.append((game, pred))
 
-    if include_predictions:
-        with_pred.sort(key=sort_key)
+    with_pred.sort(key=sort_key)
 
     picks = []
     for game, pred in with_pred[:limit]:
-        picks.append(_serialize_pick(db, game, pred, include_predictions))
+        picks.append(
+            _serialize_pick(
+                db,
+                game,
+                pred,
+                True,
+                prediction_service=prediction_service,
+                current_user=current_user,
+            )
+        )
     return picks
 
 
@@ -303,7 +306,7 @@ async def get_for_you_feed(
 
 
 def _premium_required(user: User) -> None:
-    if user.subscription_tier == "free":
+    if is_free_tier_user(user):
         raise HTTPException(
             status_code=403,
             detail="Player props require a premium subscription.",

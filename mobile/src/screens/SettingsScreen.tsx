@@ -21,10 +21,14 @@ import {
   disablePushNotifications,
 } from '../utils/pushNotifications';
 import { theme } from '../constants/theme';
+import {
+  isIosManageSubscriptionsAvailable,
+  openIosManageSubscriptions,
+} from '../utils/manageSubscriptions';
 
 export const SettingsScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-  const [pushEnabled, setPushEnabledState] = useState<boolean>(true);
+  const [pushEnabled, setPushEnabledState] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -41,7 +45,7 @@ export const SettingsScreen: React.FC = () => {
     setPushEnabledState(value);
     await setPushNotificationsEnabled(value);
     if (value) {
-      await registerPushTokenIfPossible();
+      await registerPushTokenIfPossible({ requestPermission: true });
     } else {
       await disablePushNotifications();
     }
@@ -67,6 +71,29 @@ export const SettingsScreen: React.FC = () => {
           post-game result summaries, and high-confidence pick alerts. Turn off to stop all push notifications.
         </Text>
       </View>
+
+      {isIosManageSubscriptionsAvailable() ? (
+        <>
+          <Text style={styles.outerSectionTitle}>Subscription</Text>
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={[styles.linkRow, styles.linkRowLast]}
+              onPress={() => void openIosManageSubscriptions()}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Manage subscriptions in App Store"
+            >
+              <View style={styles.linkTextBlock}>
+                <Text style={styles.linkTitle}>Manage subscriptions</Text>
+                <Text style={styles.linkSubtitle}>
+                  Cancel or change your Premium plan in the App Store
+                </Text>
+              </View>
+              <Ionicons name="open-outline" size={20} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+        </>
+      ) : null}
 
       <Text style={styles.outerSectionTitle}>Support & trust</Text>
       <View style={styles.section}>

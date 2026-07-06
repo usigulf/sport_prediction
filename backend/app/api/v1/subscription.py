@@ -26,6 +26,8 @@ from app.database import get_db
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.config import get_settings
+from app.services.stripe_webhook_idempotency import claim_stripe_webhook_event
+from app.services.revenuecat_webhook_idempotency import claim_revenuecat_webhook_event
 
 router = APIRouter(prefix="/subscription", tags=["subscription"])
 settings = get_settings()
@@ -198,6 +200,8 @@ async def stripe_webhook(
     event_id = event_data.get("id", "unknown")
     event_type = event_data.get("type", "unknown")
     logger.info("Stripe webhook received", extra={"event_id": event_id, "event_type": event_type})
+    if not claim_stripe_webhook_event(db, event_id, event_type):
+        return {"received": True, "duplicate": True}
     if event_type == "checkout.session.completed":
         session_obj = _as_plain_dict((event_data.get("data") or {}).get("object"))
         # Thin webhook payloads may omit fields; fetch full session when needed.
@@ -299,13 +303,21 @@ _RC_GRANTING_EVENTS = frozenset(
 _RC_REVOKING_EVENTS = frozenset({"EXPIRATION"})
 
 
-def _rc_tier_from_entitlements(entitlement_ids: list, settings_obj) -> str:
-    ids = {str(e).lower() for e in (entitlement_ids or [])}
+def _rc_tier_from_entitlements(entitlement_ids: list, settings_obj) -> str | None:
+    """
+    Map RevenueCat entitlement_ids to backend subscription_tier.
+
+    Returns None when entitlements are missing or unrecognized so granting events
+    do not over-grant premium access (P2-006).
+    """
+    ids = {str(e).lower() for e in (entitlement_ids or []) if e}
+    if not ids:
+        return None
     if settings_obj.revenuecat_entitlement_pro.lower() in ids:
         return "premium_plus"
     if settings_obj.revenuecat_entitlement_premium.lower() in ids:
         return "premium"
-    return "premium"  # granted but unknown entitlement → default to premium
+    return None
 
 
 @router.post("/revenuecat/webhook")
@@ -344,6 +356,15 @@ async def revenuecat_webhook(
         new_tier = "free"
     elif event_type in _RC_GRANTING_EVENTS:
         new_tier = _rc_tier_from_entitlements(entitlement_ids or [], req_settings)
+        if new_tier is None:
+            logger.warning(
+                "RevenueCat granting event ignored — no recognized entitlement",
+                extra={
+                    "event_type": event_type,
+                    "entitlement_ids": entitlement_ids,
+                },
+            )
+            return {"received": True, "ignored": True, "reason": "unrecognized_entitlement"}
     else:
         logger.info("RevenueCat webhook ignored event type", extra={"event_type": event_type})
         return {"received": True, "ignored": True}
@@ -365,6 +386,11 @@ async def revenuecat_webhook(
             extra={"event_type": event_type, "app_user_id": str(app_user_id)},
         )
         return {"received": True}
+
+    event_id = str(event.get("id") or "").strip()
+    if not claim_revenuecat_webhook_event(db, event_id, event_type):
+        return {"received": True, "duplicate": True}
+
     user.subscription_tier = new_tier
     db.commit()
     logger.info(

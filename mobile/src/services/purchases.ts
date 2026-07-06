@@ -122,6 +122,23 @@ export interface OfferingPackage {
   raw: PurchasesPackage;
 }
 
+let lastOfferingsError: string | null = null;
+
+/** Last fetch error from getOfferingPackages (for paywall diagnostics). */
+export function getLastOfferingsError(): string | null {
+  return lastOfferingsError;
+}
+
+function resolveCurrentOffering(
+  offerings: import('react-native-purchases').PurchasesOfferings,
+): import('react-native-purchases').PurchasesOffering | null {
+  if (offerings.current) return offerings.current;
+  const all = offerings.all ?? {};
+  if (all.default) return all.default;
+  const keys = Object.keys(all);
+  return keys.length ? all[keys[0]!] : null;
+}
+
 function tierForPackage(pkg: PurchasesPackage): NormalizedTier {
   const hay = `${pkg.identifier} ${pkg.product?.identifier ?? ''}`.toLowerCase();
   return 'premium';
@@ -130,18 +147,43 @@ function tierForPackage(pkg: PurchasesPackage): NormalizedTier {
 /** Packages from the current offering. Empty when RC isn't configured/available. */
 export async function getOfferingPackages(): Promise<OfferingPackage[]> {
   const m = loadPurchases();
-  if (!m || !configured) return [];
+  lastOfferingsError = null;
+  if (!m) {
+    lastOfferingsError = 'Native purchases module unavailable';
+    return [];
+  }
+  if (!configured && apiKey()) {
+    await configurePurchases();
+  }
+  if (!configured) {
+    lastOfferingsError = 'RevenueCat not configured (missing or invalid SDK key in this build)';
+    return [];
+  }
   try {
     const offerings = await m.default.getOfferings();
-    const current = offerings.current;
-    if (!current) return [];
-    return current.availablePackages.map((p) => ({
+    const current = resolveCurrentOffering(offerings);
+    if (!current) {
+      const ids = Object.keys(offerings.all ?? {});
+      lastOfferingsError =
+        ids.length > 0
+          ? `No current offering in RevenueCat (found: ${ids.join(', ')}). Mark one as Current.`
+          : 'No offerings in RevenueCat. Link com.octobetiq.premium.monthly and set a Current offering.';
+      return [];
+    }
+    const pkgs = current.availablePackages ?? [];
+    if (pkgs.length === 0) {
+      lastOfferingsError =
+        'Offering has no packages. Attach Premium Monthly to the default offering in RevenueCat.';
+      return [];
+    }
+    return pkgs.map((p) => ({
       identifier: p.identifier,
       priceString: p.product?.priceString ?? '',
       tier: tierForPackage(p),
       raw: p,
     }));
-  } catch {
+  } catch (e) {
+    lastOfferingsError = e instanceof Error ? e.message : String(e);
     return [];
   }
 }

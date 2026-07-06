@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import logging
 import uuid
-from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
@@ -20,7 +19,6 @@ from app.services.clearsports_soccer_service import (
 from app.services.sportradar_soccer_schedule_sync import (
     SoccerScheduleSyncResult,
     get_or_create_team,
-    upsert_game_from_fixture,
 )
 
 logger = logging.getLogger(__name__)

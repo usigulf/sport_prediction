@@ -10,9 +10,7 @@ from app.models.user import User
 from app.core.security import verify_access_token
 from app.config import get_settings
 from app.services.rate_limit_service import is_over_limit
-
-# Paid tiers — Premium includes challenges & leaderboards (legacy premium_plus / pro still honored).
-_PREMIUM_TIERS = frozenset({"premium", "premium_plus", "pro", "trialing"})
+from app.utils.subscription_tiers import has_paid_access
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 # Optional Bearer token: no 403 when header is missing (for public endpoints).
@@ -53,8 +51,7 @@ def require_pro_subscription(
     current_user: User = Depends(get_current_user),
 ) -> User:
     """Challenges and leaderboards require Premium (or legacy paid tiers)."""
-    t = (current_user.subscription_tier or "free").strip().lower()
-    if t in _PREMIUM_TIERS:
+    if has_paid_access(current_user.subscription_tier):
         return current_user
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,

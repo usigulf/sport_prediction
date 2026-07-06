@@ -46,6 +46,8 @@ import { BannerStrip } from '../ads/components/BannerStrip';
 import { HousePromotionCard } from '../ads/components/HousePromotionCard';
 import { useGameExitInterstitial } from '../ads/hooks/useGameExitInterstitial';
 import { useAdEngine } from '../ads/engine/AdEngineContext';
+import { trackSharePick } from '../services/productAnalytics';
+import { SharePickCard, buildSharePickCardData } from '../components/SharePickCard';
 
 interface FavoritesResponse {
   teams?: { id: string; name: string }[];
@@ -74,6 +76,7 @@ export const GameDetailScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const { gameId } = route.params as { gameId: string };
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const authUser = useAppSelector((state) => state.auth.user);
 
   const { currentGame, currentPrediction, loading, loadingPrediction, error: gamesError } =
     useAppSelector((state) => state.games);
@@ -242,7 +245,9 @@ export const GameDetailScreen: React.FC = () => {
 
   const handleShare = async () => {
     try {
+      void trackSharePick(gameId);
       const res = await apiService.sharePick(gameId);
+      const shareMessage = [res.message, res.deep_link].filter(Boolean).join('\n\n');
       if (res.image_base64 && (await Sharing.isAvailableAsync())) {
         const uri = `${FileSystem.cacheDirectory}octobetiq-share-${gameId}.png`;
         await FileSystem.writeAsStringAsync(uri, res.image_base64, {
@@ -254,8 +259,9 @@ export const GameDetailScreen: React.FC = () => {
         });
       } else {
         await Share.share({
-          message: res.message,
+          message: shareMessage,
           title: 'octobetiQ pick',
+          url: res.share_url ?? undefined,
         });
       }
     } catch (e) {
@@ -430,6 +436,17 @@ export const GameDetailScreen: React.FC = () => {
                 </Text>
               </View>
             </TouchableOpacity>
+            <SharePickCard
+              card={buildSharePickCardData({
+                homeName,
+                awayName,
+                league: currentGame.league,
+                prediction: currentPrediction,
+                userId: authUser?.id,
+                pickDetailsLocked: advancedLockedFree,
+              })}
+              pickDetailsLocked={advancedLockedFree}
+            />
             <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
               <Text style={styles.shareButtonText}>Share this pick</Text>
             </TouchableOpacity>

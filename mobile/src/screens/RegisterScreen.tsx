@@ -18,6 +18,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { useAppDispatch } from '../store/hooks';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { completeSignIn } from '../utils/signIn';
+import { trackSignUpCompleted } from '../services/productAnalytics';
 import { theme } from '../constants/theme';
 import { AUTH_SCREEN_TAGLINE } from '../constants/leagues';
 import { OctobetiQWordmark } from '../components/OctobetiQWordmark';
@@ -56,6 +57,12 @@ export const RegisterScreen: React.FC = () => {
     try {
       await apiService.register(email, password);
       await completeSignIn(dispatch, email, password);
+      try {
+        const user = await apiService.getCurrentUser();
+        void trackSignUpCompleted(user.id);
+      } catch {
+        void trackSignUpCompleted();
+      }
     } catch (error: unknown) {
       Alert.alert('Registration Failed', getUserFriendlyMessage(error));
     } finally {

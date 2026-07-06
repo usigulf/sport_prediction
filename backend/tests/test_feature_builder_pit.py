@@ -103,7 +103,7 @@ def test_pit_soccer_overrides_stale_snapshot(db):
 
 
 def test_pit_fallback_to_snapshot_when_insufficient_history(db):
-    """Fewer than PIT_MIN_TEAM_GAMES → keep synced standings."""
+    """Fewer than PIT_MIN_TEAM_GAMES → keep synced standings (non-production only)."""
     h = Team(id=uuid4(), name="Homers FC", league="premier_league", abbreviation="HOM")
     a = Team(id=uuid4(), name="AwayTown", league="premier_league", abbreviation="AWY")
     db.add_all([h, a])
@@ -193,3 +193,122 @@ def test_league_table_from_finished_ranks_by_points(db):
     assert table[t1.id].league_rank == 1
     assert table[t2.id].league_rank == 2
     assert PIT_MIN_TEAM_GAMES == 3
+
+
+def _enable_production_env(monkeypatch):
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("JWT_SECRET", "x" * 40)
+    monkeypatch.setenv("REDIS_URL", "redis://localhost:6379/0")
+    monkeypatch.setenv("REDIS_PASSWORD", "y" * 20)
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+
+
+def test_production_pit_only_skips_soccer_snapshot_fallback(db, monkeypatch):
+    """Production must not use current standings when PIT history is insufficient."""
+    _enable_production_env(monkeypatch)
+
+    h = Team(id=uuid4(), name="Homers FC", league="premier_league", abbreviation="HOM")
+    a = Team(id=uuid4(), name="AwayTown", league="premier_league", abbreviation="AWY")
+    db.add_all([h, a])
+    db.flush()
+    db.add(
+        TeamStanding(
+            league="premier_league",
+            team_id=h.id,
+            league_rank=2,
+            played=10,
+            wins=6,
+            draws=2,
+            losses=2,
+            points=20,
+            goals_for=18,
+            goals_against=10,
+        )
+    )
+    db.add(
+        TeamStanding(
+            league="premier_league",
+            team_id=a.id,
+            league_rank=8,
+            played=10,
+            wins=3,
+            draws=3,
+            losses=4,
+            points=12,
+            goals_for=11,
+            goals_against=15,
+        )
+    )
+    past = datetime(2030, 1, 1, 12, 0, tzinfo=timezone.utc)
+    _add_finished(db, league="premier_league", home=h, away=a, when=past, hs=2, aws=1)
+    kickoff = past + timedelta(days=30)
+    g = Game(
+        id=uuid4(),
+        league="premier_league",
+        home_team_id=h.id,
+        away_team_id=a.id,
+        scheduled_time=kickoff,
+        status="scheduled",
+    )
+    db.add(g)
+    db.commit()
+
+    g2 = (
+        db.query(Game)
+        .options(joinedload(Game.home_team), joinedload(Game.away_team))
+        .filter(Game.id == g.id)
+        .first()
+    )
+    feats, src = build_game_features(g2, db)
+    assert src == "neutral_baseline"
+    assert feats["home_team_win_rate"] == 0.5
+    assert feats["away_team_win_rate"] == 0.5
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+
+
+def test_production_pit_only_skips_us_standings_fallback(db, monkeypatch):
+    _enable_production_env(monkeypatch)
+
+    h = Team(id=uuid4(), name="Standings NBA A", league="nba", abbreviation="SNA")
+    a = Team(id=uuid4(), name="Standings NBA B", league="nba", abbreviation="SNB")
+    db.add_all([h, a])
+    db.flush()
+    db.add(
+        TeamStanding(
+            league="nba", team_id=h.id, league_rank=1, played=10, wins=8, draws=0, losses=2
+        )
+    )
+    db.add(
+        TeamStanding(
+            league="nba", team_id=a.id, league_rank=12, played=10, wins=3, draws=0, losses=7
+        )
+    )
+    g = Game(
+        id=uuid4(),
+        league="nba",
+        home_team_id=h.id,
+        away_team_id=a.id,
+        scheduled_time=datetime(2031, 2, 1, 1, 0, tzinfo=timezone.utc),
+        status="scheduled",
+    )
+    db.add(g)
+    db.commit()
+
+    g2 = (
+        db.query(Game)
+        .options(joinedload(Game.home_team), joinedload(Game.away_team))
+        .filter(Game.id == g.id)
+        .first()
+    )
+    feats, src = build_game_features(g2, db)
+    assert src == "neutral_baseline"
+    assert feats["home_team_win_rate"] == 0.5
+    assert feats["away_team_win_rate"] == 0.5
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+

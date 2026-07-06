@@ -2,6 +2,8 @@
 ## Complete Technical Architecture & Design Document
 
 > **Document role:** This doc is a **technical reference** (data pipelines, ML, backend detail, tier matrix). For **product vision, legal positioning, and roadmap**, the canonical source is **[ARCHITECTURE_DESIGN.md](ARCHITECTURE_DESIGN.md)** (information-only, no gambling; 2026 baseline: multi-sport, gamification, refined freemium). See **[ARCHITECTURE_COMPARISON.md](ARCHITECTURE_COMPARISON.md)** for a side-by-side comparison.
+>
+> **Production stack (octobetiQ, 2026):** Single **FastAPI** app in `backend/` (Postgres, Redis, Docker on VPS). ML training/inference is **in-process** (`backend/train_model.py`, `app/services/model_training.py`, `ml/models/` artifacts). Legacy `ml/training` demos and the Rust `services/predictions` crate are **archived** under `archive/` — not deployed. Sections below that describe Kafka, Triton, Rust microservices, and multi-cluster K8s are **aspirational** target architecture, not the running system.
 
 ---
 
@@ -244,6 +246,17 @@ During games, real-time updates:
 ---
 
 ## 3. AI/ML Architecture
+
+### 3.0 Shipped implementation (backend monolith)
+
+| Concern | Location |
+|---------|----------|
+| Feature vectors | `backend/app/services/feature_builder.py` (PIT standings in prod) |
+| Train / publish | `backend/train_model.py` → `ml/models/{football,basketball,soccer}/` |
+| Walk-forward eval | `backend/walk_forward_backtest.py` |
+| Batch inference | `app/services/prediction_inference_service.py`, `POST /internal/predictions/run` |
+| Explainability | `app/services/explanation_service.py` (per-league logistic coefs) |
+| Archived demos | `archive/ml/` (synthetic Random Forest scripts — do not use) |
 
 ### 3.1 Data Sources
 
@@ -867,7 +880,22 @@ class PredictionExplainer:
 
 ## 4. Backend System Architecture
 
-### 4.1 High-Level Architecture
+### 4.0 Shipped implementation (VPS / Docker Compose)
+
+```
+mobile (Expo) ──HTTPS──► nginx ──► backend/api (FastAPI, Python 3.11)
+                              ├── Postgres
+                              ├── Redis (auth rate limits, cache)
+                              └── ml/models (read-only volume for sklearn pickles)
+```
+
+Auth, games, predictions, subscriptions (Stripe + RevenueCat), stats, and internal cron hooks all live in **`backend/app/`**. There is **no** separate Rust predictions service in production; the crate under `archive/services/predictions/` was an early scaffold.
+
+Cron examples: `scripts/cron/internal_predictions_run.sh`, `internal_train_model.sh`, soccer/US sync scripts.
+
+The Kubernetes / Kong / Rust microservice diagrams in §4.1 below describe a **future** scale-out target, not the current deployment.
+
+### 4.1 Target platform (aspirational) — High-Level Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐

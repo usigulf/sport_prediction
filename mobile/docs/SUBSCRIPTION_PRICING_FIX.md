@@ -61,6 +61,41 @@ After ASC + RevenueCat are aligned:
 3. Premium card and legal footer should show **$29.99/month** and **7-day free trial**
 4. Tap subscribe — Apple payment sheet should show **$29.99** after trial
 
+## 7. “In-app purchase is not available right now” (empty offerings)
+
+The paywall shows this when **RevenueCat returns zero packages** (not a network error). Fix in this order:
+
+### App Store Connect
+
+1. **Agreements, Tax, and Banking** → **Paid Applications** agreement must be **Active**
+2. **Subscriptions** → **Premium Monthly** (`com.octobetiq.premium.monthly`) → status **Ready to Submit** or **Approved**
+3. **Distribution → iOS App → version 1.0.1** → **In-App Purchases and Subscriptions** includes **Premium Monthly**
+4. Subscription group, localization, and 7-day trial completed
+
+### RevenueCat dashboard
+
+1. **Project Settings → Apps** → iOS app **bundle id** matches `com.sportsprediction.app`
+2. **App Store Connect API** or **Shared Secret** configured (Products → iOS → sync)
+3. **Products** → `com.octobetiq.premium.monthly` linked to **App Store** (not Test Store only)
+4. **Entitlements** → `premium` includes that product
+5. **Offerings** → one offering marked **Current** (e.g. `default`) with a **monthly** package pointing at Premium Monthly
+
+If step 5 is wrong, the app now falls back to `default` or the first offering — but **no offering at all** still blocks purchase.
+
+### TestFlight / Review
+
+- Use a **TestFlight or App Store build** (build 35+). Expo Go cannot load real IAP.
+- Sandbox: Settings → App Store → Sandbox Account (for manual testing)
+- After RC/ASC changes, wait **15–60 minutes**, then tap **Retry** on the paywall alert
+
+### Diagnose in the app (build with latest paywall)
+
+The subscription alert now appends the RevenueCat error, e.g.:
+
+- `No offerings in RevenueCat…` → complete RC product + offering setup
+- `No current offering…` → mark an offering as **Current** in RC
+- `Offering has no packages…` → attach product to the offering package
+
 ## Quick reference
 
 | Surface | Source of truth |

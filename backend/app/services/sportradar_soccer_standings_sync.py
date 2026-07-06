@@ -82,11 +82,11 @@ def sync_soccer_standings_for_league(db: Session, app_league: str, settings: Set
         try:
             w = int(row.get("win") or 0)
             d = int(row.get("draw") or 0)
-            l = int(row.get("loss") or 0)
+            losses = int(row.get("loss") or 0)
         except (TypeError, ValueError):
             out.skipped += 1
             continue
-        played = w + d + l
+        played = w + d + losses
         if played < 0:
             out.skipped += 1
             continue
@@ -123,7 +123,7 @@ def sync_soccer_standings_for_league(db: Session, app_league: str, settings: Set
             existing.played = played
             existing.wins = w
             existing.draws = d
-            existing.losses = l
+            existing.losses = losses
             existing.points = pts
             existing.goals_for = gf
             existing.goals_against = ga
@@ -136,7 +136,7 @@ def sync_soccer_standings_for_league(db: Session, app_league: str, settings: Set
                     played=played,
                     wins=w,
                     draws=d,
-                    losses=l,
+                    losses=losses,
                     points=pts,
                     goals_for=gf,
                     goals_against=ga,

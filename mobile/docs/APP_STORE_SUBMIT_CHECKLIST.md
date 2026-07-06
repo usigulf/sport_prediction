@@ -35,7 +35,7 @@ Use the **Complete** TestFlight build already uploaded. Do **not** wait for a ne
 | 5 | Same page → **In-App Purchases** | Attach **Premium Monthly** ($29.99/mo, 7-day trial). Status must be **Ready to Submit**. No separate “Pro” product. |
 | 6 | [App Information](https://appstoreconnect.apple.com/apps/6762173223/distribution/info) | Support `https://octobetiq.com/support` · Privacy `https://octobetiq.com/privacy` · [Content Rights](#2-content-rights-information) |
 | 7 | [App Privacy](https://appstoreconnect.apple.com/apps/6762173223/distribution/privacy) | Complete questionnaire → **Publish** (align with ATT — see [§4](#4-tracking-vs-app-privacy-must-match-binary)) |
-| 8 | Version page → **App Review Information** | Demo: `appstore-review@octobetiq.com` / `AppReview2026!` |
+| 8 | Version page → **App Review Information** | Demo: `appstore-review@octobetiq.com` — password: [docs/APP_REVIEW_DEMO_ACCOUNT.md](../../docs/APP_REVIEW_DEMO_ACCOUNT.md) |
 | 9 | Version page | **Add for Review** → **Submit to App Review** |
 
 ### Before you click Submit
@@ -44,7 +44,7 @@ Use the **Complete** TestFlight build already uploaded. Do **not** wait for a ne
 - [ ] Build **28** on version **1.0.0** (not 1.0.1 — no 1.0.1 binary exists)
 - [ ] iPhone + iPad screenshots from **`asc-upload/`** folders
 - [ ] Metadata matches [APP_STORE_METADATA_COPY.md](./APP_STORE_METADATA_COPY.md)
-- [ ] Keywords use **`sports`** not `ports`
+- [x] Keywords use **`sports`** not `ports` (paste from `mobile/app-store-metadata/keywords.txt` or run `./scripts/print_asc_keywords.sh`)
 - [ ] Premium IAP attached on version page
 - [ ] `https://octobetiq.com/support` and `/privacy` return **200**
 - [ ] Description ends with Terms + Privacy URLs (in metadata copy file)
@@ -59,7 +59,7 @@ Screenshots re-uploaded from asc-upload/ (iPhone 6.5" + iPad 13").
 
 App is free to download; Premium is an optional in-app subscription ($29.99/mo).
 
-Demo: appstore-review@octobetiq.com / AppReview2026!
+Demo: `appstore-review@octobetiq.com` — password in App Store Connect only (see docs/APP_REVIEW_DEMO_ACCOUNT.md)
 ```
 
 ### What's New (version 1.0.0)
@@ -141,7 +141,7 @@ Landing hero, accuracy methodology, and in-app labels now use generic competitio
 (e.g. “major professional football, basketball, and soccer competitions worldwide”).
 Screenshots have been re-captured accordingly.
 
-Demo: appstore-review@octobetiq.com / AppReview2026!
+Demo: `appstore-review@octobetiq.com` — password in App Store Connect only (see docs/APP_REVIEW_DEMO_ACCOUNT.md)
 ```
 
 ---
@@ -173,7 +173,7 @@ Build 27 addresses all three issues:
 2. Google Play — removed from the iOS landing screen and updated screenshots.
 3. Metadata — App Store description, subtitle, and keywords no longer reference third-party league trademarks; in-app league pickers are functional category labels only.
 
-Demo: appstore-review@octobetiq.com / AppReview2026!
+Demo: `appstore-review@octobetiq.com` — password in App Store Connect only (see docs/APP_REVIEW_DEMO_ACCOUNT.md)
 ```
 
 ---
@@ -267,10 +267,10 @@ Privacy: https://octobetiq.com/privacy
 Terms of Use (EULA): https://octobetiq.com/terms
 ```
 
-**Keywords** (100 chars, comma-separated, no spaces after commas):
+**Keywords** (100 chars, comma-separated, no spaces after commas) — paste from [`app-store-metadata/keywords.txt`](../app-store-metadata/keywords.txt):
 
 ```
-sports,predictions,soccer,football,basketball,AI picks,accuracy,model,stats,analysis
+sports,predictions,soccer,football,basketball,AI,picks,forecast,analytics,accuracy,stats,insights
 ```
 
 ### What's New (1.0.0, build 24)
@@ -290,7 +290,7 @@ Initial App Store release.
 | Field | Value |
 |-------|--------|
 | Username | `appstore-review@octobetiq.com` |
-| Password | `AppReview2026!` |
+| Password | *(rotated — not in git; see [docs/APP_REVIEW_DEMO_ACCOUNT.md](../../docs/APP_REVIEW_DEMO_ACCOUNT.md))* |
 
 **Notes to reviewer** (optional):
 
@@ -393,7 +393,7 @@ Set `"supportsTablet": false` in `app.json`, run `expo prebuild` + new EAS build
 
 ## 6. Sign-in for review
 
-See prior message: `appstore-review@octobetiq.com` / `AppReview2026!`
+See [docs/APP_REVIEW_DEMO_ACCOUNT.md](../../docs/APP_REVIEW_DEMO_ACCOUNT.md) for current demo credentials (`appstore-review@octobetiq.com`).
 
 ---
 

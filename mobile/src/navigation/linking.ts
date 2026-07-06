@@ -23,6 +23,13 @@ export const linking: LinkingOptions<RootStackParamList> = {
       Landing: 'landing',
       Login: 'login',
       Register: 'register',
+      ForgotPassword: 'forgot-password',
+      ResetPassword: {
+        path: 'reset-password',
+        parse: {
+          token: (token: string) => decodeURIComponent(token),
+        },
+      },
       Accuracy: 'accuracy',
       Help: 'help',
       Onboarding: 'onboarding',

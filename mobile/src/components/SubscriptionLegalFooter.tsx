@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, Linking } from 'react-native';
+import { View, Text, StyleSheet, Linking, Platform } from 'react-native';
 import { theme } from '../constants/theme';
 import { PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from '../constants/legalUrls';
+import { openIosManageSubscriptions } from '../utils/manageSubscriptions';
 
 export type SubscriptionLegalPlan = {
   title: string;
@@ -38,7 +39,17 @@ export function SubscriptionLegalFooter({ plans }: Props) {
       <Text style={styles.body}>
         Payment is charged to your Apple ID account at confirmation of purchase. Subscriptions
         automatically renew unless cancelled at least 24 hours before the end of the current period.
-        Manage or cancel in Settings → Apple ID → Subscriptions.
+        {Platform.OS === 'ios' ? (
+          <>
+            {' '}
+            <Text style={styles.link} onPress={() => void openIosManageSubscriptions()}>
+              Manage subscriptions
+            </Text>
+            {' in the App Store.'}
+          </>
+        ) : (
+          ' Manage or cancel in your app store account settings.'
+        )}
       </Text>
       <Text style={styles.body}>
         <Text style={styles.link} onPress={() => openUrl(PRIVACY_POLICY_URL)}>

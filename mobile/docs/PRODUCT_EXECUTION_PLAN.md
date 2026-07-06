@@ -209,7 +209,7 @@
 ### C-10 · Demo account verified for App Review
 | Field | Detail |
 |-------|--------|
-| **Description** | Test `appstore-review@octobetiq.com` / `AppReview2026!` on iPad + iPhone; Premium tier visible or easy to reach paywall. |
+| **Description** | Test `appstore-review@octobetiq.com` on iPad + iPhone (password from secure store); Premium tier visible or easy to reach paywall. |
 | **Why** | 2.1a iPad sign-in loop was prior rejection. |
 | **User impact** | Reviewer can access app. |
 | **Business impact** | Approval speed |

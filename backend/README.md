@@ -22,7 +22,7 @@ Uses a virtualenv in `.venv` and starts the API on all interfaces (`--host 0.0.0
 
 To show the model’s real feature importance in “Why this prediction?” (instead of the stub), train the simple model and point the backend at it:
 
-1. From repo root: `cd ml/training && python train_simple_model.py` (creates `models/simple_model.pkl` and `feature_columns.pkl`).
+1. From repo root: `cd backend && python train_model.py --out ../ml/models` (creates `simple_model.pkl`, `feature_columns.pkl`, `metrics.json` per league group).
 2. Set `EXPLANATION_MODEL_DIR` to the path to that `models` directory (e.g. absolute path to `.../sport_prediction/models`).
 3. Restart the backend. The explanation endpoint will then return the model’s feature importance as top factors.
 

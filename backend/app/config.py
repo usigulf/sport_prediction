@@ -142,17 +142,32 @@ class Settings(BaseSettings):
     # Host deploy/payment-pages/*.html on your domain (match nginx canonical host www vs apex).
     stripe_success_url: str = "https://www.octobetiq.com/payment/success"
     stripe_cancel_url: str = "https://www.octobetiq.com/payment/cancel"
+    # Public marketing site — referral share links point here (?game=&ref=).
+    public_app_url: str = "https://www.octobetiq.com"
 
     # RevenueCat (in-app purchases). Set the Authorization header value you configure in the
     # RevenueCat dashboard webhook so we can verify inbound events. Webhook:
     #   POST {API_ORIGIN}/api/v1/subscription/revenuecat/webhook
     # Entitlement ids map: `pro` → premium_plus, `premium` → premium.
     revenuecat_webhook_auth: Optional[str] = None
+    # Project secret API key (RevenueCat → Project → API keys) for REST calls e.g. account delete.
+    revenuecat_secret_api_key: Optional[str] = None
     revenuecat_entitlement_pro: str = "pro"
     revenuecat_entitlement_premium: str = "premium"
 
     # Sign in with Apple — iOS bundle id / Services ID used as JWT `aud`.
     apple_client_id: str = "com.sportsprediction.app"
+
+    # Password reset — deep link or web URL base (token appended as ?token=...).
+    password_reset_link_base: str = "com.sportsprediction.app://reset-password"
+    password_reset_token_expire_minutes: int = 60
+    # Optional SMTP for transactional email. When unset, reset URLs are logged only.
+    smtp_host: Optional[str] = None
+    smtp_port: int = 587
+    smtp_username: Optional[str] = None
+    smtp_password: Optional[str] = None
+    smtp_from_email: Optional[str] = None
+    smtp_use_tls: bool = True
 
     @model_validator(mode="after")
     def validate_production_config(self) -> "Settings":
@@ -168,6 +183,12 @@ class Settings(BaseSettings):
         if redis in ("", "disabled", "false"):
             raise ValueError(
                 "Production requires REDIS_URL for rate limits and token revocation."
+            )
+        redis_pwd = (self.redis_password or "").strip()
+        if len(redis_pwd) < 16:
+            raise ValueError(
+                "Production requires REDIS_PASSWORD (min 16 characters) so Redis "
+                "is not reachable without auth. Set REDIS_PASSWORD in .env / .env.production."
             )
         cidrs = (self.internal_allowed_cidrs or "").strip()
         if cidrs:

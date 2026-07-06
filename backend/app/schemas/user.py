@@ -61,3 +61,25 @@ class AppleSignInRequest(BaseModel):
     identity_token: str
     email: Optional[EmailStr] = None
     full_name: Optional[str] = None
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str
+
+    @field_validator("password")
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        if len(v) < _PASSWORD_MIN_LEN:
+            raise ValueError("Password must be at least 8 characters")
+        if not _PASSWORD_PATTERN.match(v):
+            raise ValueError("Password must include at least one letter and one number")
+        return v
+
+
+class MessageResponse(BaseModel):
+    message: str

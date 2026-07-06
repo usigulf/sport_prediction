@@ -1,5 +1,5 @@
 """UTC bounds for calendar-day filtering (games feed)."""
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta, timezone
 
 import pytest
 

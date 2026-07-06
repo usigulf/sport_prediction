@@ -10,6 +10,15 @@ import os
 import pickle
 from typing import Any, Optional
 
+from app.services.model_training import (
+    FEATURE_COLUMNS,
+    MODEL_KIND_SOCCER_1X2,
+    SOCCER_1X2_LABEL_AWAY,
+    SOCCER_1X2_LABEL_DRAW,
+    SOCCER_1X2_LABEL_HOME,
+    load_metrics_json,
+)
+
 logger = logging.getLogger(__name__)
 
 # Only unpickle files with these exact names from the model directory.
@@ -34,56 +43,82 @@ def _safe_load_pickle(path: str) -> Any:
         return pickle.load(f)
 
 
-def predict_from_artifacts(
-    model_dir: str,
+def decisive_home_edge_from_1x2(home_p: float, away_p: float) -> float:
+    """P(home wins | match is not a draw) for expected-score translation."""
+    rem = home_p + away_p
+    if rem <= 1e-9:
+        return 0.5
+    return max(0.02, min(0.98, home_p / rem))
+
+
+def _normalize_1x2_probs(home_p: float, draw_p: float, away_p: float) -> tuple[float, float, float]:
+    home_p = max(0.01, float(home_p))
+    draw_p = max(0.01, float(draw_p))
+    away_p = max(0.01, float(away_p))
+    total = home_p + draw_p + away_p
+    if total <= 0:
+        return 0.33, 0.34, 0.33
+    return home_p / total, draw_p / total, away_p / total
+
+
+def _proba_index(classes: list, label: int) -> int:
+    class_to_idx = {int(c): i for i, c in enumerate(classes)}
+    if label in class_to_idx:
+        return class_to_idx[label]
+    return 0
+
+
+def _proba_index(classes: list, label: int) -> int:
+    class_to_idx = {int(c): i for i, c in enumerate(classes)}
+    if label in class_to_idx:
+        return class_to_idx[label]
+    return 0
+
+
+def predict_with_estimator(
+    estimator,
     features: dict[str, Any],
+    *,
+    model_kind: str | None = None,
+    feature_columns: list[str] | None = None,
+    model_version: str = "sklearn_walk_forward",
 ) -> Optional[dict[str, Any]]:
-    """
-    If model_dir contains trained pickles, return
-    home_win_probability, away_win_probability, confidence_level, model_version.
-    """
-    if not model_dir or not os.path.isdir(model_dir):
-        return None
-    model_path, feature_path = _artifact_paths(model_dir)
-    if not os.path.isfile(model_path) or not os.path.isfile(feature_path):
+    """Run predict_proba on an in-memory sklearn estimator (walk-forward backtest)."""
+    if not hasattr(estimator, "predict_proba"):
         return None
     try:
         import pandas as pd
     except ImportError:
         return None
-    try:
-        model = _safe_load_pickle(model_path)
-        feature_columns: list = _safe_load_pickle(feature_path)
-    except Exception as exc:
-        logger.warning("Failed to load ML artifacts from %s: %s", model_dir, exc)
-        return None
-    if not hasattr(model, "predict_proba"):
-        return None
 
-    model_version = "sklearn_simple"
-    metrics_path = os.path.join(model_dir, "metrics.json")
-    if os.path.isfile(metrics_path):
-        try:
-            import json
-
-            with open(metrics_path, encoding="utf-8") as mf:
-                metrics = json.load(mf)
-            if isinstance(metrics, dict) and metrics.get("model_version"):
-                model_version = str(metrics["model_version"])
-        except Exception:
-            pass
-
+    cols = feature_columns or FEATURE_COLUMNS
     row: dict[str, Any] = dict(features)
-    for col in feature_columns:
+    for col in cols:
         if col not in row:
             row[col] = 0.5
     try:
-        df = pd.DataFrame([row])[list(feature_columns)]
-        proba = model.predict_proba(df)[0]
-        home_win = float(proba[1]) if len(proba) > 1 else float(proba[0])
+        df = pd.DataFrame([row])[list(cols)]
+        proba = estimator.predict_proba(df)[0]
+        classes = [int(c) for c in estimator.classes_]
     except Exception:
         return None
 
+    if model_kind == MODEL_KIND_SOCCER_1X2 or len(classes) >= 3:
+        away_p = float(proba[_proba_index(classes, SOCCER_1X2_LABEL_AWAY)])
+        draw_p = float(proba[_proba_index(classes, SOCCER_1X2_LABEL_DRAW)])
+        home_p = float(proba[_proba_index(classes, SOCCER_1X2_LABEL_HOME)])
+        home_p, draw_p, away_p = _normalize_1x2_probs(home_p, draw_p, away_p)
+        return {
+            "home_win_probability": round(home_p, 4),
+            "away_win_probability": round(away_p, 4),
+            "confidence_level": confidence_from_three_way(home_p, draw_p, away_p),
+            "model_version": model_version,
+            "native_1x2": True,
+            "_proba": [float(p) for p in proba],
+            "_classes": classes,
+        }
+
+    home_win = float(proba[1]) if len(proba) > 1 else float(proba[0])
     home_win = max(0.02, min(0.98, home_win))
     away_win = 1.0 - home_win
     if home_win >= 0.7 or home_win <= 0.3:
@@ -98,7 +133,49 @@ def predict_from_artifacts(
         "away_win_probability": round(away_win, 4),
         "confidence_level": confidence,
         "model_version": model_version,
+        "_proba": [float(p) for p in proba],
+        "_classes": classes,
     }
+
+
+def predict_from_artifacts(
+    model_dir: str,
+    features: dict[str, Any],
+) -> Optional[dict[str, Any]]:
+    """
+    If model_dir contains trained pickles, return
+    home_win_probability, away_win_probability, confidence_level, model_version.
+    """
+    if not model_dir or not os.path.isdir(model_dir):
+        return None
+    model_path, feature_path = _artifact_paths(model_dir)
+    if not os.path.isfile(model_path) or not os.path.isfile(feature_path):
+        return None
+    try:
+        model = _safe_load_pickle(model_path)
+        feature_columns: list = _safe_load_pickle(feature_path)
+    except Exception as exc:
+        logger.warning("Failed to load ML artifacts from %s: %s", model_dir, exc)
+        return None
+    if not hasattr(model, "predict_proba"):
+        return None
+
+    model_version = "sklearn_simple"
+    metrics = load_metrics_json(model_dir)
+    model_kind = metrics.get("model_kind") if metrics else None
+    if metrics and metrics.get("model_version"):
+        model_version = str(metrics["model_version"])
+
+    out = predict_with_estimator(
+        model,
+        features,
+        model_kind=model_kind,
+        feature_columns=feature_columns,
+        model_version=model_version,
+    )
+    if out is None:
+        return None
+    return {k: v for k, v in out.items() if not str(k).startswith("_")}
 
 
 def soccer_three_way_from_home_edge(home_two_way: float) -> tuple[float, float, float]:

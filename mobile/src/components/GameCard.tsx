@@ -5,6 +5,7 @@ import { theme } from '../constants/theme';
 import { formatLeagueLabel } from '../utils/leagueDisplay';
 import { teamLogoUriCandidates } from '../utils/teamLogoUrl';
 import { TeamCrestImage } from './TeamCrestImage';
+import { buildGameCardAccessibilityLabel } from '../utils/gameCardAccessibility';
 
 interface GameCardProps {
   game: Game;
@@ -50,6 +51,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onPress, onLongPress }
 
   const homeLogoCandidates = teamLogoUriCandidates(game.home_team, game.league);
   const awayLogoCandidates = teamLogoUriCandidates(game.away_team, game.league);
+  const isInteractive = !!(onPress || onLongPress);
 
   return (
     <TouchableOpacity
@@ -57,9 +59,13 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onPress, onLongPress }
       onPress={onPress}
       onLongPress={onLongPress}
       delayLongPress={400}
-      disabled={!onPress && !onLongPress}
+      disabled={!isInteractive}
       activeOpacity={onPress ? 0.7 : 1}
+      accessibilityRole={isInteractive ? 'button' : 'text'}
+      accessibilityLabel={buildGameCardAccessibilityLabel(game)}
+      accessibilityHint={isInteractive ? 'Opens game details' : undefined}
     >
+      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       <View style={styles.header}>
         <Text style={styles.league}>{formatLeagueLabel(game.league)}</Text>
         <View
@@ -113,6 +119,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onPress, onLongPress }
             <Text style={styles.predictionText}>Prediction Available</Text>
           </View>
         )}
+      </View>
       </View>
     </TouchableOpacity>
   );

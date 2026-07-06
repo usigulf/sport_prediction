@@ -1,26 +1,20 @@
 """
 FastAPI application entry point
 """
-import asyncio
 import logging
-from typing import Optional
-from uuid import UUID
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from starlette.middleware.cors import CORSMiddleware as StarletteCORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
-from sqlalchemy.orm import joinedload
 from app.api.v1.router import api_router
 from app.api.internal import router as internal_router
 from app.core.exceptions import setup_exception_handlers
 from contextlib import asynccontextmanager
 
-from app.core.security import verify_access_token
 from app.config import get_settings
 from app.database import SessionLocal
-from app.models.game import Game
-from app.models.user import User
-from app.services.prediction_service import PredictionService
+from app.services.live_websocket_auth import authenticate_live_websocket, get_ws_token
+from app.services.live_websocket_hub import live_ws_hub
 
 settings = get_settings()
 
@@ -68,7 +62,9 @@ async def lifespan(app: FastAPI):
             )
         except Exception as exc:
             logging.getLogger(__name__).warning("Sentry init failed: %s", exc)
+    await live_ws_hub.start()
     yield
+    await live_ws_hub.stop()
 
 
 app = FastAPI(
@@ -103,26 +99,9 @@ async def health_check():
     return {"status": "healthy", "service": "sports-prediction-api"}
 
 
-def _get_ws_token(websocket: WebSocket) -> Optional[str]:
-    """
-    JWT for WebSocket auth: Authorization Bearer header (native clients) or
-    Sec-WebSocket-Protocol `bearer.<jwt>` (browser clients — no query tokens).
-    """
-    auth = websocket.headers.get("authorization") or websocket.headers.get("Authorization")
-    if auth:
-        auth = auth.strip()
-        if auth.lower().startswith("bearer "):
-            return auth[7:].strip()
-        return auth or None
-
-    subprotocols = websocket.scope.get("subprotocols") or []
-    for proto in subprotocols:
-        raw = (proto or "").strip()
-        if raw.lower().startswith("bearer."):
-            token = raw[7:].strip()
-            if token:
-                return token
-    return None
+def _get_ws_token(websocket: WebSocket):
+    """Backward-compatible alias for tests and callers."""
+    return get_ws_token(websocket)
 
 
 @app.websocket("/ws/live/{game_id}")
@@ -131,104 +110,30 @@ async def websocket_live_updates(
     game_id: str,
 ):
     """
-    Live updates stream for a game. Sends prediction + score every 30s (stub until real live pipeline).
-    Requires JWT: Authorization: Bearer <access_token>, or Sec-WebSocket-Protocol bearer.<jwt> on web.
-    Premium tier required for live updates.
+    Live updates stream for a game. Subscribes to the in-process pub/sub hub (Redis-backed
+    when configured). Requires JWT: Authorization: Bearer <access_token>, or
+    Sec-WebSocket-Protocol bearer.<jwt> on web. Premium tier required.
     """
-    # Accept first: if we close() before accept(), uvicorn maps that to HTTP 403 on the handshake,
-    # which breaks clients and confuses operators — use WS close codes after accept instead.
-    # Do not use Depends(get_db) here: some ASGI stacks resolve WS dependencies before accept and can fail the handshake.
     await websocket.accept()
     db = SessionLocal()
+    queue = None
+    game_key = None
     try:
-        game_id_str = str(game_id).strip()
-        if not game_id_str:
-            await websocket.send_json({"error": "Missing game id in path"})
-            await websocket.close(code=1008, reason="Missing game id")
+        auth = await authenticate_live_websocket(websocket, db, game_id)
+        if auth is None:
             return
-        try:
-            game_uuid = UUID(game_id_str)
-        except ValueError:
-            await websocket.send_json({"error": "Invalid game id"})
-            await websocket.close(code=1008, reason="Invalid game id")
-            return
-
-        token = _get_ws_token(websocket)
-        if not token:
-            await websocket.send_json(
-                {"error": "Missing token. Send Authorization: Bearer <access_token> or Sec-WebSocket-Protocol bearer.<jwt>."}
-            )
-            await websocket.close(
-                code=1008,
-                reason="Missing token — use Authorization header or bearer.<jwt> subprotocol",
-            )
-            return
-        payload = verify_access_token(token)
-        if not payload:
-            await websocket.send_json({"error": "Invalid or expired token"})
-            await websocket.close(code=1008, reason="Invalid or expired token")
-            return
-        user_id_raw = payload.get("user_id")
-        if not user_id_raw:
-            await websocket.send_json({"error": "Invalid token payload"})
-            await websocket.close(code=1008, reason="Invalid token payload")
-            return
-        try:
-            user_uuid = UUID(str(user_id_raw))
-        except ValueError:
-            await websocket.send_json({"error": "Invalid user in token"})
-            await websocket.close(code=1008, reason="Invalid user in token")
-            return
-
-        user = db.query(User).filter(User.id == user_uuid).first()
-        if not user:
-            await websocket.send_json({"error": "User not found"})
-            await websocket.close(code=1008, reason="User not found")
-            return
-        if (user.subscription_tier or "free").lower() not in ("premium", "premium_plus", "trialing", "pro"):
-            await websocket.send_json({"error": "Premium subscription required for live updates"})
-            await websocket.close(code=1008, reason="Premium subscription required for live updates")
-            return
+        game_uuid, _user = auth
+        game_key = str(game_uuid)
+        queue = await live_ws_hub.subscribe(game_key)
 
         while True:
-            game = (
-                db.query(Game)
-                .options(joinedload(Game.home_team), joinedload(Game.away_team))
-                .filter(Game.id == game_uuid)
-                .first()
-            )
-            if not game:
-                await websocket.send_json({"error": "Game not found"})
-                break
-            prediction = PredictionService(db).get_latest_prediction(str(game_uuid), use_cache=False)
-            from app.services.live_prediction_service import (
-                build_live_prediction_payload,
-                prediction_source_label,
-            )
-
-            if prediction:
-                payload = build_live_prediction_payload(game, prediction)
-                out = {
-                    "type": "update",
-                    "game_id": str(game_uuid),
-                    **payload,
-                }
-            else:
-                out = {
-                    "type": "update",
-                    "game_id": str(game_uuid),
-                    "home_score": game.home_score or 0,
-                    "away_score": game.away_score or 0,
-                    "home_win_probability": 0.5,
-                    "away_win_probability": 0.5,
-                    "confidence_level": None,
-                    "prediction_updated_at": None,
-                    "game_status": game.status,
-                    "is_in_play": False,
-                    "prediction_source": prediction_source_label(game, None),
-                }
-            await websocket.send_json(out)
-            await asyncio.sleep(12 if game.status == "live" else 45)
+            message = await queue.get()
+            if message.get("type") == "error":
+                await websocket.send_json({"error": message.get("error", "error")})
+                if message.get("error") == "Game not found":
+                    break
+                continue
+            await websocket.send_json(message)
     except WebSocketDisconnect:
         pass
     except Exception:
@@ -237,6 +142,8 @@ async def websocket_live_updates(
         except Exception:
             pass
     finally:
+        if queue is not None and game_key is not None:
+            await live_ws_hub.unsubscribe(game_key, queue)
         db.close()
 
 

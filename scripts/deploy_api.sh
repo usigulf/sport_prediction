@@ -5,28 +5,38 @@ set -euo pipefail
 #   scripts/deploy_api.sh
 # Runs a safe API deploy on the droplet host:
 # - pulls latest main
-# - rebuilds + restarts API container
+# - builds API image
+# - runs alembic upgrade head (fails deploy on migration error)
+# - restarts API container
 # - verifies container health and /health response
 
 ROOT_DIR="${ROOT_DIR:-$HOME/sport_prediction}"
 cd "$ROOT_DIR"
 
+COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.prod.yml)
+
 echo "[deploy] Pulling latest code..."
 git pull
 
-echo "[deploy] Rebuilding and restarting API (production overlay)..."
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build api
+echo "[deploy] Building API image..."
+"${COMPOSE[@]}" build api
+
+echo "[deploy] Running database migrations..."
+"${COMPOSE[@]}" run --rm --no-deps api alembic upgrade head
+
+echo "[deploy] Starting/restarting API (production overlay)..."
+"${COMPOSE[@]}" up -d api
 
 echo "[deploy] Waiting for container to report healthy in docker compose ps..."
 for _ in {1..45}; do
-  if docker compose ps api | python3 -c 'import sys; s=sys.stdin.read().lower(); raise SystemExit(0 if "(healthy)" in s or " healthy" in s else 1)'; then
+  if "${COMPOSE[@]}" ps api | python3 -c 'import sys; s=sys.stdin.read().lower(); raise SystemExit(0 if "(healthy)" in s or " healthy" in s else 1)'; then
     break
   fi
   sleep 2
 done
 
 echo "[deploy] API status:"
-docker compose ps api
+"${COMPOSE[@]}" ps api
 
 echo "[deploy] Verifying /health (may take a few seconds right after container start)..."
 ok=0
@@ -39,7 +49,7 @@ for _ in {1..45}; do
 done
 if [[ "$ok" -ne 1 ]]; then
   echo "[deploy] ERROR: /health failed after waiting."
-  docker compose logs --tail 80 api || true
+  "${COMPOSE[@]}" logs --tail 80 api || true
   exit 1
 fi
 echo "[deploy] Success."

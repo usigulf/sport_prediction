@@ -1,5 +1,4 @@
 """Leaderboards require Pro subscription."""
-import pytest
 from fastapi import status
 
 

@@ -29,6 +29,7 @@ import {
 } from '../constants/leagues';
 import { apiService } from '../services/api';
 import { recordOnboardingEvent, setOnboardingComplete } from '../utils/onboardingStorage';
+import { trackOnboardingCompleted } from '../services/productAnalytics';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { registerPushTokenIfPossible } from '../utils/pushNotifications';
 import { setPushNotificationsEnabled } from '../utils/settingsStorage';
@@ -73,6 +74,7 @@ export function OnboardingScreen() {
 
   const finishOnboarding = useCallback(() => {
     void recordOnboardingEvent(step, 'complete');
+    void trackOnboardingCompleted(pushOptIn);
     void setOnboardingComplete().catch(() => {});
     navigation.dispatch(
       CommonActions.reset({
@@ -80,7 +82,7 @@ export function OnboardingScreen() {
         routes: [{ name: 'MainTabs' }],
       }),
     );
-  }, [navigation, step]);
+  }, [navigation, step, pushOptIn]);
 
   const toggleLeague = (id: string) => {
     setSelected((prev) => {
@@ -93,7 +95,7 @@ export function OnboardingScreen() {
 
   const applyPushPreference = async () => {
     await setPushNotificationsEnabled(pushOptIn);
-    if (pushOptIn) await registerPushTokenIfPossible();
+    if (pushOptIn) await registerPushTokenIfPossible({ requestPermission: true });
   };
 
   const handleFinish = async () => {

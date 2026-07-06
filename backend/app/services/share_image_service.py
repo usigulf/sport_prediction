@@ -24,6 +24,9 @@ def generate_share_image(
     away_name: str,
     confidence: Optional[str] = None,
     league: Optional[str] = None,
+    favored_team: Optional[str] = None,
+    pick_probability_pct: Optional[int] = None,
+    share_url: Optional[str] = None,
 ) -> Optional[str]:
     """
     Generate a PNG image for sharing. Returns base64-encoded PNG string, or None if Pillow unavailable.
@@ -60,10 +63,25 @@ def generate_share_image(
     y += 28
     draw.text((WIDTH // 2, y), f"{away_name}", fill=TEXT_COLOR, font=font_medium, anchor="mt")
     y += 40
-    if confidence:
+    if favored_team and pick_probability_pct is not None:
+        draw.text(
+            (WIDTH // 2, y),
+            f"Pick: {favored_team} ({pick_probability_pct}%)",
+            fill=ACCENT_COLOR,
+            font=font_medium,
+            anchor="mt",
+        )
+        y += 36
+    elif confidence:
         draw.text((WIDTH // 2, y), f"{confidence} confidence", fill=ACCENT_COLOR, font=font_medium, anchor="mt")
         y += 36
-    draw.text((WIDTH // 2, HEIGHT - 44), "Get picks in the app", fill=SUBTLE_COLOR, font=font_small, anchor="mt")
+    footer = "Get picks in the app"
+    if share_url:
+        short = share_url.replace("https://", "").replace("http://", "")
+        if len(short) > 52:
+            short = short[:49] + "..."
+        footer = short
+    draw.text((WIDTH // 2, HEIGHT - 44), footer, fill=SUBTLE_COLOR, font=font_small, anchor="mt")
 
     buf = io.BytesIO()
     img.save(buf, format="PNG")

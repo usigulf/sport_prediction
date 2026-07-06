@@ -9,8 +9,9 @@ Optional **15–30 second** preview for the **iPhone 6.5" Display** slot. Up to 
 ```bash
 cd mobile
 EXPO_PUBLIC_HIDE_DEV_UI=true EXPO_PUBLIC_APP_STORE_CAPTURE=true \
-EXPO_PUBLIC_CAPTURE_LOGIN_EMAIL=appstore-review@octobetiq.com \
-EXPO_PUBLIC_CAPTURE_LOGIN_PASSWORD='AppReview2026!' \
+set -a && source secrets/app_review_demo.env && set +a
+EXPO_PUBLIC_CAPTURE_LOGIN_EMAIL="$VERIFY_DEMO_EMAIL" \
+EXPO_PUBLIC_CAPTURE_LOGIN_PASSWORD="$VERIFY_DEMO_PASSWORD" \
 npx expo start --dev-client
 ```
 

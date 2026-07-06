@@ -28,10 +28,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt -r requirements-dev.txt
 
-      - name: Ruff (if installed)
-        run: |
-          pip install ruff 2>/dev/null || true
-          ruff check app tests --ignore E501 2>/dev/null || true
+      - name: Ruff
+        run: ruff check app tests --ignore E501
+
+      - name: pip-audit
+        run: bash ../scripts/pip_audit_backend.sh
 
       - name: Pytest with coverage
         env:
@@ -61,3 +62,6 @@ jobs:
         run: |
           npm ci
           npx tsc --noEmit
+
+      - name: npm audit
+        run: npm audit --omit=dev --audit-level=high

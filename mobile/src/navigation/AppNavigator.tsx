@@ -1,7 +1,7 @@
 /**
  * Main navigation for octobetiQ
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -13,6 +13,7 @@ import { getOnboardingComplete, setOnboardingComplete } from '../utils/onboardin
 import { linking } from './linking';
 import { navigationRef } from './navigationRef';
 import { captureRoutesEnabled } from './screenshotNavigation';
+import { AUTH_TAB_A11Y, GUEST_TAB_A11Y } from './tabAccessibility';
 
 const skipOnboardingForCapture =
   process.env.EXPO_PUBLIC_APP_STORE_CAPTURE === 'true';
@@ -33,6 +34,8 @@ import { TermsOfServiceScreen } from '../screens/TermsOfServiceScreen';
 import { LandingScreen } from '../screens/LandingScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
+import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen';
+import { ResetPasswordScreen } from '../screens/ResetPasswordScreen';
 import { LiveHubScreen } from '../screens/LiveHubScreen';
 import { LeaderboardsScreen } from '../screens/LeaderboardsScreen';
 import { ChallengesScreen } from '../screens/ChallengesScreen';
@@ -40,6 +43,7 @@ import { CreateChallengeScreen } from '../screens/CreateChallengeScreen';
 import { ChallengeDetailScreen } from '../screens/ChallengeDetailScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { GuestProfileScreen } from '../screens/GuestProfileScreen';
+import { trackScreenView } from '../services/productAnalytics';
 
 // Types
 export type RootStackParamList = {
@@ -61,6 +65,8 @@ export type RootStackParamList = {
   Landing: undefined;
   Login: undefined;
   Register: undefined;
+  ForgotPassword: undefined;
+  ResetPassword: { token?: string } | undefined;
 };
 
 export type MainTabParamList = {
@@ -91,7 +97,15 @@ function GuestTabs() {
             iconName = 'help-outline';
           }
 
-          return <Ionicons name={iconName} size={size} color={color} />;
+          return (
+            <Ionicons
+              name={iconName}
+              size={size}
+              color={color}
+              accessibilityElementsHidden
+              importantForAccessibility="no"
+            />
+          );
         },
         tabBarActiveTintColor: theme.colors.accent,
         tabBarInactiveTintColor: theme.colors.textMuted,
@@ -108,12 +122,20 @@ function GuestTabs() {
         },
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Home' }} />
-      <Tab.Screen name="Games" component={GamesScreen} options={{ title: 'Games' }} />
+      <Tab.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{ title: 'Home', tabBarAccessibilityLabel: GUEST_TAB_A11Y.Home }}
+      />
+      <Tab.Screen
+        name="Games"
+        component={GamesScreen}
+        options={{ title: 'Games', tabBarAccessibilityLabel: GUEST_TAB_A11Y.Games }}
+      />
       <Tab.Screen
         name="Profile"
         component={GuestProfileScreen}
-        options={{ title: 'Account' }}
+        options={{ title: 'Account', tabBarAccessibilityLabel: GUEST_TAB_A11Y.Profile }}
       />
     </Tab.Navigator>
   );
@@ -138,6 +160,16 @@ function GuestStack() {
       <Stack.Screen name="Landing" component={LandingScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Create Account' }} />
+      <Stack.Screen
+        name="ForgotPassword"
+        component={ForgotPasswordScreen}
+        options={{ title: 'Forgot Password' }}
+      />
+      <Stack.Screen
+        name="ResetPassword"
+        component={ResetPasswordScreen}
+        options={{ title: 'Reset Password' }}
+      />
       <Stack.Screen name="Accuracy" component={AccuracyScreen} options={{ title: 'Model accuracy' }} />
       <Stack.Screen name="Help" component={HelpScreen} options={{ title: 'Help & FAQ' }} />
       <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ title: 'Privacy Policy' }} />
@@ -170,7 +202,15 @@ function MainTabs() {
             iconName = 'help-outline';
           }
 
-          return <Ionicons name={iconName} size={size} color={color} />;
+          return (
+            <Ionicons
+              name={iconName}
+              size={size}
+              color={color}
+              accessibilityElementsHidden
+              importantForAccessibility="no"
+            />
+          );
         },
         tabBarActiveTintColor: theme.colors.accent,
         tabBarInactiveTintColor: theme.colors.textMuted,
@@ -190,27 +230,27 @@ function MainTabs() {
       <Tab.Screen
         name="Home"
         component={HomeScreen}
-        options={{ title: 'Home' }}
+        options={{ title: 'Home', tabBarAccessibilityLabel: AUTH_TAB_A11Y.Home }}
       />
       <Tab.Screen
         name="LiveHub"
         component={LiveHubScreen}
-        options={{ title: 'Live' }}
+        options={{ title: 'Live', tabBarAccessibilityLabel: AUTH_TAB_A11Y.LiveHub }}
       />
       <Tab.Screen
         name="Games"
         component={GamesScreen}
-        options={{ title: 'Games' }}
+        options={{ title: 'Games', tabBarAccessibilityLabel: AUTH_TAB_A11Y.Games }}
       />
       <Tab.Screen
         name="Favorites"
         component={FavoritesScreen}
-        options={{ title: 'Favorites' }}
+        options={{ title: 'Favorites', tabBarAccessibilityLabel: AUTH_TAB_A11Y.Favorites }}
       />
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{ title: 'Profile' }}
+        options={{ title: 'Profile', tabBarAccessibilityLabel: AUTH_TAB_A11Y.Profile }}
       />
     </Tab.Navigator>
   );
@@ -338,9 +378,27 @@ export function AppNavigator() {
   }, [isAuthenticated]);
 
   const navigationKey = isAuthenticated ? 'authenticated' : 'guest';
+  const routeNameRef = useRef<string | undefined>(undefined);
 
   return (
-    <NavigationContainer key={navigationKey} ref={navigationRef} linking={linking}>
+    <NavigationContainer
+      key={navigationKey}
+      ref={navigationRef}
+      linking={linking}
+      onReady={() => {
+        routeNameRef.current = navigationRef.getCurrentRoute()?.name;
+        const initial = routeNameRef.current;
+        if (initial) void trackScreenView(initial);
+      }}
+      onStateChange={() => {
+        const previous = routeNameRef.current;
+        const current = navigationRef.getCurrentRoute()?.name;
+        if (current && previous !== current) {
+          void trackScreenView(current);
+        }
+        routeNameRef.current = current;
+      }}
+    >
       {!isAuthenticated ? (
         <GuestStack />
       ) : !onboardingChecked ? (

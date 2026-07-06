@@ -47,3 +47,7 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # M-07 historical backfill: prior seasons for training corpus (Sunday 04:00 UTC, monthly-ish load)
 0 4 1 * * /root/sport_prediction/scripts/cron/internal_historical_backfill.sh >> /tmp/sport-prediction-cron.log 2>&1
+
+# Daily Postgres backup (local pg_dump) + optional offsite copy (03:00 UTC)
+# Or install idempotently: ./scripts/setup_db_backup_cron.sh
+0 3 * * * /root/sport_prediction/scripts/run_pg_backup.sh >>/var/log/pg_backup.log 2>&1

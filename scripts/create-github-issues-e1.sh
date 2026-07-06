@@ -197,7 +197,7 @@ create_issue \
   "[E1-105] Verify demo account on iPad and iPhone" \
   "$(cat <<'EOF'
 ## Description
-Test `appstore-review@octobetiq.com` / `AppReview2026!` on iPad + iPhone. Confirm login → MainTabs without loop. Paywall reachable.
+Test `appstore-review@octobetiq.com` on iPad + iPhone (password from docs/APP_REVIEW_DEMO_ACCOUNT.md). Confirm login → MainTabs without loop. Paywall reachable.
 
 ## Why it matters
 Prior rejection 2.1a: iPad sign-in loop.

@@ -1,7 +1,6 @@
 """
 Tests for prediction endpoints
 """
-import pytest
 from fastapi import status
 from datetime import datetime, timedelta
 
@@ -52,6 +51,7 @@ def test_get_prediction_free_user(client, auth_headers, test_game, test_predicti
     assert "data_quality_score" in data
     assert "data_quality_label" in data
     assert "quality_gate_applied" in data
+    assert data.get("prediction_source") == "warming"
 
 
 def test_get_prediction_exceeds_daily_limit(client, auth_headers, test_game, test_prediction, db):

@@ -5,7 +5,6 @@ Fixed window per key (e.g. per IP or per user).
 import logging
 import time
 import threading
-from typing import Optional
 
 from app.config import get_settings
 from app.services.cache_service import CacheService

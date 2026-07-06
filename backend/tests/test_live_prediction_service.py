@@ -72,7 +72,7 @@ def test_build_live_prediction_payload():
     pred = _prediction()
     payload = build_live_prediction_payload(game, pred)
     assert payload["is_in_play"] is True
-    assert payload["prediction_source"] == "score_adjusted_inplay_v0"
+    assert payload["prediction_source"] == "inplay"
     assert payload["home_score"] == 80
     assert payload["game_status"] == "live"
 

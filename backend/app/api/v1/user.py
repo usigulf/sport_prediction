@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
 from app.database import get_db
 from app.api.deps import get_current_user
+from app.config import get_settings
+from app.services.subscription_cancel_service import cancel_external_subscriptions_for_user
 from app.schemas.user import UserResponse
 from app.models.user import User
 from app.models.user_favorite import UserFavorite
@@ -265,9 +267,12 @@ async def delete_account(
 ):
     """
     Permanently delete the current user and all associated data (GDPR right to erasure).
-    Favorites, prediction history, push tokens, and reminder records are removed. The session is invalid after this.
+    Cancels Stripe subscriptions and removes the RevenueCat subscriber when configured.
+    Favorites, prediction history, push tokens, and reminder records are removed.
+    The session is invalid after this.
     """
     user_id = current_user.id
+    cancel_external_subscriptions_for_user(str(user_id), get_settings())
     db.query(UserPushToken).filter(UserPushToken.user_id == user_id).delete()
     db.query(PushReminderSent).filter(PushReminderSent.user_id == user_id).delete()
     db.query(UserPredictionView).filter(UserPredictionView.user_id == user_id).delete()

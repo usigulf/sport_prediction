@@ -95,6 +95,14 @@ export const LoginScreen: React.FC = () => {
 
           <Pressable
             accessibilityRole="button"
+            style={({ pressed }) => [styles.forgotLink, pressed && styles.linkPressed]}
+            onPress={() => navigation.navigate('ForgotPassword')}
+          >
+            <Text style={styles.forgotLinkText}>Forgot password?</Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
             style={({ pressed }) => [
               styles.button,
               loading && styles.buttonDisabled,
@@ -162,6 +170,18 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     borderWidth: 1,
     borderColor: theme.colors.border,
+  },
+  forgotLink: {
+    alignSelf: 'flex-end',
+    marginTop: -theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+    minHeight: theme.minTouchSize / 2,
+    justifyContent: 'center',
+  },
+  forgotLinkText: {
+    color: theme.colors.accent,
+    fontSize: 14,
+    fontWeight: '600',
   },
   button: {
     backgroundColor: theme.colors.accent,

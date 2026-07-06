@@ -102,7 +102,7 @@ create_issue "[E1-105] Verify demo account on iPad and iPhone" <<'EOF'
 **Labels:** critical, qa, epic-e1, sprint-1
 
 ## Acceptance criteria
-- [ ] appstore-review@octobetiq.com / AppReview2026! works
+- [ ] appstore-review@octobetiq.com login works (password from secure store)
 - [ ] No iPad sign-in loop
 - [ ] Credentials in App Review Information
 EOF

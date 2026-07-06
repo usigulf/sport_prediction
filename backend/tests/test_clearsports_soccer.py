@@ -1,5 +1,5 @@
 """ClearSports soccer sync helpers (no live API)."""
-from datetime import datetime, timezone
+from datetime import datetime
 
 from app.services.clearsports_soccer_schedule_sync import (
     clearsports_game_id_to_uuid,

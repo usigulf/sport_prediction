@@ -4,7 +4,6 @@ Upsert team_standings from ClearSports team-stats when the payload includes tabl
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -17,7 +16,7 @@ from app.services.clearsports_soccer_service import (
     clearsports_season_for_league,
     fetch_clearsports_team_stats,
 )
-from app.services.sportradar_soccer_standings_sync import SoccerStandingsSyncResult, _match_team, _norm_name
+from app.services.sportradar_soccer_standings_sync import SoccerStandingsSyncResult, _match_team
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +26,7 @@ def _standing_fields(row: dict[str, Any]) -> tuple[int, int, int, int, int | Non
     try:
         w = int(row.get("wins") or row.get("win") or row.get("W") or 0)
         d = int(row.get("draws") or row.get("draw") or row.get("D") or 0)
-        l = int(row.get("losses") or row.get("loss") or row.get("L") or 0)
+        losses = int(row.get("losses") or row.get("loss") or row.get("L") or 0)
         rk = int(row.get("rank") or row.get("position") or row.get("standing") or 999)
     except (TypeError, ValueError):
         return None
@@ -36,9 +35,9 @@ def _standing_fields(row: dict[str, Any]) -> tuple[int, int, int, int, int | Non
         pts = int(pts_raw) if pts_raw is not None else None
     except (TypeError, ValueError):
         pts = None
-    if w + d + l <= 0 and pts is None:
+    if w + d + losses <= 0 and pts is None:
         return None
-    return rk, w, d, l, pts
+    return rk, w, d, losses, pts
 
 
 def _team_fields_from_row(row: dict[str, Any]) -> tuple[str | None, str]:
@@ -81,7 +80,7 @@ def sync_clearsports_soccer_standings_for_league(
         if not parsed:
             out.skipped += 1
             continue
-        rk, w, d, l, pts = parsed
+        rk, w, d, losses, pts = parsed
         ab, name = _team_fields_from_row(row)
         if not name:
             out.skipped += 1
@@ -90,7 +89,7 @@ def sync_clearsports_soccer_standings_for_league(
         if not team:
             out.skipped += 1
             continue
-        played = w + d + l
+        played = w + d + losses
         existing = (
             db.query(TeamStanding)
             .filter(TeamStanding.league == app_league, TeamStanding.team_id == team.id)
@@ -100,7 +99,7 @@ def sync_clearsports_soccer_standings_for_league(
             existing.league_rank = rk
             existing.wins = w
             existing.draws = d
-            existing.losses = l
+            existing.losses = losses
             existing.played = played
             existing.points = pts
         else:
@@ -111,7 +110,7 @@ def sync_clearsports_soccer_standings_for_league(
                     league_rank=rk,
                     wins=w,
                     draws=d,
-                    losses=l,
+                    losses=losses,
                     played=played,
                     points=pts,
                 )

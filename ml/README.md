@@ -1,49 +1,29 @@
-# ML Pipeline
+# ML artifacts directory
 
-## Quick Start
+Production ML runs through the **FastAPI backend**, not scripts in this folder.
 
-### 1. Train a Simple Model
-
-```bash
-cd ml/training
-python train_simple_model.py
-```
-
-This will:
-- Generate synthetic training data
-- Train a Random Forest model
-- Evaluate performance
-- Save the model to `models/simple_model.pkl`
-
-### 2. Test Inference
+## Train models
 
 ```bash
-cd ml/inference
-python simple_inference.py
+cd backend
+python train_model.py --out ../ml/models
+# Docker: scripts/cron/internal_train_model.sh  (writes to ml/models on host)
 ```
 
-This will load the trained model and make a sample prediction.
+Writes per-league-group artifacts under `ml/models/{football,basketball,soccer}/`:
+`simple_model.pkl`, `feature_columns.pkl`, `metrics.json`.
 
-## Model Files
+## Walk-forward backtest
 
-- `models/simple_model.pkl` - Trained model
-- `models/feature_columns.pkl` - Feature column names
+```bash
+cd backend
+python walk_forward_backtest.py --min-train 60 --test-window 20
+```
 
-## Next Steps
+## Configure API
 
-1. **Real Data Integration**: Replace synthetic data with actual game data
-2. **Feature Engineering**: Implement the full feature engineering pipeline
-3. **Model Training**: Train XGBoost, Neural Networks, and ensemble models
-4. **Model Deployment**: Deploy to TensorFlow Serving or similar
-5. **Explainability**: Add SHAP/LIME explanations
+Set `MODEL_ARTIFACT_DIR` (or `EXPLANATION_MODEL_DIR`) to the absolute path of `ml/models` and restart the API.
 
-## Production Models
+## Archived legacy scripts
 
-For production, you'll want to:
-- Use real historical game data
-- Implement proper feature engineering
-- Train multiple models and ensemble them
-- Deploy to a model serving infrastructure
-- Monitor model performance and retrain regularly
-
-See `ML_PIPELINE.md` for the full architecture.
+Synthetic-data demos and standalone inference loaders live under `archive/ml/` — see `archive/README.md`.

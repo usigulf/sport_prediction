@@ -32,6 +32,7 @@ import { formatLeagueLabel } from '../utils/leagueDisplay';
 import { PREMIUM_MONTHLY_PRICE_LABEL } from '../constants/subscriptionPricing';
 import { PREMIUM_LANDING_FEATURES_LINE } from '../constants/premiumCopy';
 import { PremiumPreviewModal } from '../components/PremiumPreviewModal';
+import { APP_STORE_URL, GOOGLE_PLAY_URL } from '../constants/storeLinks';
 
 type LandingScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -158,15 +159,35 @@ export const LandingScreen: React.FC = () => {
               {Platform.OS === 'android' ? (
                 <TouchableOpacity
                   style={styles.outlineButton}
-                  onPress={() =>
-                    Linking.openURL(
-                      'https://play.google.com/store/apps/details?id=com.sportsprediction.app',
-                    ).catch(() => {})
-                  }
+                  onPress={() => Linking.openURL(GOOGLE_PLAY_URL).catch(() => {})}
                   activeOpacity={0.85}
+                  accessibilityRole="link"
+                  accessibilityLabel="Get it on Google Play"
                 >
                   <Text style={styles.outlineButtonText}>Get it on Google Play</Text>
                 </TouchableOpacity>
+              ) : null}
+              {Platform.OS === 'web' ? (
+                <>
+                  <TouchableOpacity
+                    style={styles.outlineButton}
+                    onPress={() => Linking.openURL(APP_STORE_URL).catch(() => {})}
+                    activeOpacity={0.85}
+                    accessibilityRole="link"
+                    accessibilityLabel="Download on the App Store"
+                  >
+                    <Text style={styles.outlineButtonText}>Download on the App Store</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.outlineButton}
+                    onPress={() => Linking.openURL(GOOGLE_PLAY_URL).catch(() => {})}
+                    activeOpacity={0.85}
+                    accessibilityRole="link"
+                    accessibilityLabel="Get it on Google Play"
+                  >
+                    <Text style={styles.outlineButtonText}>Get it on Google Play</Text>
+                  </TouchableOpacity>
+                </>
               ) : null}
             </View>
             <Text style={styles.proofLine}>Informational picks · Methodology & accuracy tracked in the app</Text>

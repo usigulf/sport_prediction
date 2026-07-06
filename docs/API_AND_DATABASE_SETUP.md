@@ -88,7 +88,7 @@ Without Stripe, the API and DB still work; only “Create checkout” for premiu
 | Goal | What to set | Notes |
 |------|-------------|--------|
 | **Stub explanation** | Nothing | “Why this prediction?” uses a generic stub. |
-| **Real model factors** | In `backend/.env`: `EXPLANATION_MODEL_DIR=/absolute/path/to/models` | That directory must contain `simple_model.pkl` and `feature_columns.pkl` (e.g. from `ml/training/train_simple_model.py`). Restart backend. |
+| **Real model factors** | In `backend/.env`: `EXPLANATION_MODEL_DIR=/absolute/path/to/ml/models` | That directory must contain per-group subdirs with `simple_model.pkl` and `feature_columns.pkl` (from `backend/train_model.py`). Restart backend. |
 
 ---
 

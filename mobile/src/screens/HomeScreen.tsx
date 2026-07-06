@@ -21,8 +21,7 @@ import { BestPickMiniCard, CARD_WIDTH_WITH_MARGIN, type BestPickItem } from '../
 import { BestPicksCarousel } from '../components/BestPicksCarousel';
 import { SportIconsRow } from '../components/SportIconsRow';
 import { OctobetiQWordmark } from '../components/OctobetiQWordmark';
-import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { fetchUpcomingGames, restoreGamesFromCache } from '../store/slices/gamesSlice';
+import { useAppSelector } from '../store/hooks';
 import { PREMIUM_TRIAL_DAYS } from '../constants/subscriptionPricing';
 import { PREMIUM_PAYWALL_CONTEXT } from '../constants/premiumCopy';
 import { apiService } from '../services/api';
@@ -38,6 +37,7 @@ import { formatLeagueLabel } from '../utils/leagueDisplay';
 import { theme } from '../constants/theme';
 import { soccerBetaFetchParams } from '../utils/soccerBetaFetch';
 import { useIntervalWhen } from '../hooks/useIntervalWhen';
+import { useUpcomingGamesQuery } from '../hooks/useUpcomingGamesQuery';
 import { hasProAccess } from '../utils/subscription';
 import { SoccerBetaNotice } from '../components/SoccerBetaNotice';
 import { ModelWarmingNotice } from '../components/ModelWarmingNotice';
@@ -91,11 +91,19 @@ function getGreeting(): string {
 export const HomeScreen: React.FC = () => {
   const adEngine = useAdEngine();
   const navigation = useNavigation<HomeScreenNavigationProp>();
-  const dispatch = useAppDispatch();
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
-  const { upcomingGames, loading, cachedAt } = useAppSelector((state) => state.games);
+  const {
+    data: gamesData,
+    isLoading: gamesLoading,
+    isError: gamesIsError,
+    error: gamesError,
+    refetch: refetchGames,
+  } = useUpcomingGamesQuery({ limit: 30, ...soccerBetaFetchParams() });
+  const upcomingGames = gamesData?.games ?? [];
+  const cachedAt = gamesData?.updatedAt ?? null;
+  const loading = gamesLoading && upcomingGames.length === 0;
+  const loadError = gamesIsError ? getUserFriendlyMessage(gamesError) : null;
   const [refreshing, setRefreshing] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [forYouPicks, setForYouPicks] = useState<any[]>([]);
   const [forYouLoading, setForYouLoading] = useState(false);
   const [accuracyPct, setAccuracyPct] = useState<number | null>(null);
@@ -106,15 +114,6 @@ export const HomeScreen: React.FC = () => {
   const [trendingLoading, setTrendingLoading] = useState(false);
   const [favoritesCount, setFavoritesCount] = useState<{ leagues: number; teams: number } | null>(null);
   const [selectedFeaturedId, setSelectedFeaturedId] = useState<string | null>(null);
-
-  const loadGames = useCallback(async () => {
-    setLoadError(null);
-    try {
-      await dispatch(fetchUpcomingGames({ limit: 30, ...soccerBetaFetchParams() })).unwrap();
-    } catch (error) {
-      setLoadError(getUserFriendlyMessage(error));
-    }
-  }, [dispatch]);
 
   const loadForYou = useCallback(async () => {
     setForYouLoading(true);
@@ -133,11 +132,6 @@ export const HomeScreen: React.FC = () => {
       setForYouLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    dispatch(restoreGamesFromCache());
-    loadGames();
-  }, [dispatch, loadGames]);
 
   useEffect(() => {
     loadForYou();
@@ -220,7 +214,7 @@ export const HomeScreen: React.FC = () => {
   const onRefresh = async () => {
     setRefreshing(true);
     await Promise.all([
-      loadGames(),
+      refetchGames(),
       loadForYou(),
       loadTrending(),
       apiService.getAccuracy().then((d) => {
@@ -278,7 +272,9 @@ export const HomeScreen: React.FC = () => {
 
   // Live games
   const liveGames = upcomingGames.filter((g) => g.status === 'live');
-  useIntervalWhen(liveGames.length > 0, LIVE_GAMES_POLL_MS, loadGames);
+  useIntervalWhen(liveGames.length > 0, LIVE_GAMES_POLL_MS, () => {
+    void refetchGames();
+  });
 
   const bestPicksFade = useRef(new Animated.Value(0)).current;
   useEffect(() => {

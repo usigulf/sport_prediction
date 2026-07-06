@@ -9,6 +9,8 @@ services:
     environment:
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (min 32 chars)}
       REDIS_URL: redis://redis:6379/0
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env (min 16 chars)}
+      INTERNAL_ALLOWED_CIDRS: ${INTERNAL_ALLOWED_CIDRS:-127.0.0.1/32,172.16.0.0/12}
 
   prometheus:
     profiles:

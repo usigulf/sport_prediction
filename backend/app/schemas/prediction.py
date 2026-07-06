@@ -72,6 +72,7 @@ class PredictionResponse(BaseModel):
     id: str
     game_id: str
     model_version: str
+    prediction_source: Optional[str] = None
     home_win_probability: float
     away_win_probability: float
     expected_home_score: Optional[float] = None
@@ -119,6 +120,7 @@ class PredictionExplanationResponse(BaseModel):
     top_features: List[FeatureImportance]
     confidence_explanation: Optional[str] = None
     model_version: str
+    prediction_source: Optional[str] = None
     accuracy: Optional[float] = None
     data_quality_score: Optional[float] = None
     data_quality_label: Optional[str] = None

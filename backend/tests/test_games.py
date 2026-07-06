@@ -3,7 +3,7 @@ Tests for games API: leagues, pagination, scheduled_time ISO 8601
 """
 import re
 import urllib.request
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import pytest
 from fastapi import status

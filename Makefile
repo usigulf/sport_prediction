@@ -84,8 +84,8 @@ clean: ## Clean Python cache and build files
 clean-all: clean docker-clean ## Clean everything including Docker
 
 # ML
-ml-train: ## Train ML models
-	cd ml/training && python train_pre_game.py
+ml-train: ## Train ML models from finished DB games
+	cd backend && python train_model.py --out ../ml/models
 
 ml-evaluate: ## Evaluate ML models
 	cd ml/monitoring && python evaluate_models.py

@@ -9,8 +9,10 @@ from datetime import timezone
 from typing import Any, Optional
 
 from app.constants.predictions import PREDICTION_TYPE_INPLAY, PREDICTION_TYPE_PRE_GAME
+from app.config import get_settings
 from app.models.game import Game
 from app.models.prediction import Prediction
+from app.utils.prediction_source import classify_prediction_source
 
 INPLAY_VERSION_MARKER = "inplay_v0"
 
@@ -71,9 +73,15 @@ def is_in_play_prediction(game: Game, prediction: Optional[Prediction]) -> bool:
 
 
 def prediction_source_label(game: Game, prediction: Optional[Prediction]) -> str:
-    if is_in_play_prediction(game, prediction):
-        return "score_adjusted_inplay_v0"
-    return "pregame"
+    if not prediction:
+        return classify_prediction_source(
+            None,
+            default_version=get_settings().ml_model_version,
+        )
+    return classify_prediction_source(
+        prediction.model_version,
+        default_version=get_settings().ml_model_version,
+    )
 
 
 def build_live_prediction_payload(game: Game, prediction: Prediction) -> dict[str, Any]:

@@ -3,7 +3,8 @@
  */
 import 'react-native-gesture-handler';
 import React, { useEffect, useState } from 'react';
-import { Linking, LogBox } from 'react-native';
+import { Linking, LogBox, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 if (process.env.EXPO_PUBLIC_HIDE_DEV_UI === 'true') {
   LogBox.ignoreAllLogs(true);
@@ -12,10 +13,13 @@ import * as SplashScreen from 'expo-splash-screen';
 import * as WebBrowser from 'expo-web-browser';
 import { initializeGoogleMobileAds } from './src/ads/native/loadGma';
 import { Provider } from 'react-redux';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { store } from './src/store/store';
+import { queryClient } from './src/query/queryClient';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { handleScreenshotDeepLink } from './src/navigation/screenshotNavigation';
 import { LaunchScreen } from './src/components/LaunchScreen';
+import { OfflineBanner } from './src/components/OfflineBanner';
 import { getStoredAuth } from './src/utils/authStorage';
 import { setAuthToken, setOnUnauthorized, setOnAccessTokenRefreshed } from './src/services/api';
 import { setUser, fetchUserProfile, setSubscriptionTier } from './src/store/slices/authSlice';
@@ -24,13 +28,13 @@ import {
   configurePurchases,
   addEntitlementListener,
 } from './src/services/purchases';
-import { registerPushTokenIfPossible } from './src/utils/pushNotifications';
+import { syncPushRegistrationAfterConsent } from './src/utils/pushNotifications';
 import {
   configurePushNotificationPresentation,
   subscribeToPushNotificationResponses,
 } from './src/utils/pushNotificationHandlers';
-import { getPushNotificationsEnabled } from './src/utils/settingsStorage';
 import { recordAppLaunch } from './src/utils/storeReview';
+import { trackAppOpened } from './src/services/productAnalytics';
 import { RewardedUnlockProvider } from './src/ads/engine/RewardedUnlockContext';
 import { AdEngineProvider } from './src/ads/engine/AdEngineContext';
 
@@ -49,6 +53,7 @@ function AppContent() {
   useEffect(() => {
     if (!appReady) return;
     void recordAppLaunch();
+    void trackAppOpened();
     return subscribeToPushNotificationResponses();
   }, [appReady]);
 
@@ -99,8 +104,7 @@ function AppContent() {
           setAuthToken(auth.accessToken);
           store.dispatch(setUser({ email: auth.email, token: auth.accessToken }));
           store.dispatch(fetchUserProfile());
-          const pushEnabled = await getPushNotificationsEnabled();
-          if (pushEnabled) registerPushTokenIfPossible();
+          void syncPushRegistrationAfterConsent();
         }
       } catch {
         // ignore
@@ -141,17 +145,26 @@ function AppContent() {
     return <LaunchScreen />;
   }
 
-  return <AppNavigator />;
+  return (
+    <View style={{ flex: 1 }}>
+      <OfflineBanner />
+      <AppNavigator />
+    </View>
+  );
 }
 
 export default function App() {
   return (
-    <Provider store={store}>
-      <RewardedUnlockProvider>
-        <AdEngineProvider>
-          <AppContent />
-        </AdEngineProvider>
-      </RewardedUnlockProvider>
-    </Provider>
+    <SafeAreaProvider>
+      <QueryClientProvider client={queryClient}>
+        <Provider store={store}>
+          <RewardedUnlockProvider>
+            <AdEngineProvider>
+              <AppContent />
+            </AdEngineProvider>
+          </RewardedUnlockProvider>
+        </Provider>
+      </QueryClientProvider>
+    </SafeAreaProvider>
   );
 }

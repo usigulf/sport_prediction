@@ -1,7 +1,6 @@
 """Sportradar NFL/NBA schedule sync helpers (no live HTTP)."""
 from datetime import datetime, timezone
 
-from app.config import Settings
 from app.services import sportradar_us_schedule_sync as us_sync
 
 

@@ -127,9 +127,9 @@ def find_team_by_alias(data: dict[str, Any], abbreviation: str) -> dict[str, Any
 
 def format_team_standings_line(team: dict[str, Any]) -> str:
     ab = team.get("alias", "?")
-    w, l = team.get("wins"), team.get("losses")
+    w, losses = team.get("wins"), team.get("losses")
     t = team.get("ties") or 0
-    rec = f"{w}-{l}" + (f"-{t}" if t else "")
+    rec = f"{w}-{losses}" + (f"-{t}" if t else "")
     rk = team.get("rank") or {}
     dr, cr = rk.get("division"), rk.get("conference")
     bits: list[str] = [f"{ab} {rec}"]

@@ -17,7 +17,7 @@ Three parallel tracks. Do **Track A today** (no new binary). **Track B** after J
 | 5 | Attach **Premium Monthly** IAP on version page | Ready to Submit |
 | 6 | Support + Privacy URLs | `https://octobetiq.com/support` · `https://octobetiq.com/privacy` |
 | 7 | App Privacy questionnaire → **Publish** | [Privacy](https://appstoreconnect.apple.com/apps/6762173223/distribution/privacy) |
-| 8 | Demo account | `appstore-review@octobetiq.com` / `AppReview2026!` |
+| 8 | Demo account | `appstore-review@octobetiq.com` — password: [docs/APP_REVIEW_DEMO_ACCOUNT.md](../../docs/APP_REVIEW_DEMO_ACCOUNT.md) |
 | 9 | **Add for Review** → **Submit** | Same version page |
 
 **Pre-flight:** `octobetiq.com/support` and `/privacy` return **200** (with redirects). VPS API deployed through `57d4608`+.

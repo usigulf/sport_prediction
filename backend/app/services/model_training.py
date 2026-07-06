@@ -6,16 +6,14 @@ write the artifacts the inference path already loads:
     <out_dir>/feature_columns.pkl   # ordered feature names
     <out_dir>/metrics.json          # eval + dataset summary
 
-The model predicts P(home wins | decisive). Draws are excluded from training so
-the output is a clean two-way edge; soccer's 1X2 draw arm is added downstream by
-`ml_artifacts.soccer_three_way_from_home_edge`. Point inference at the output
-dir via MODEL_ARTIFACT_DIR (or EXPLANATION_MODEL_DIR).
+The soccer group trains a native 3-class 1X2 model (home / draw / away) including
+drawn fixtures. NFL/NBA groups train a binary home-vs-away model on decisive games
+only. Point inference at the output dir via MODEL_ARTIFACT_DIR (or EXPLANATION_MODEL_DIR).
 
 Run via backend/train_model.py (Docker: python train_model.py from /app).
 
-Caveat: features use point-in-time standings rebuilt from finished league games
-before each kickoff when enough history exists; otherwise they fall back to the
-current `team_standings` snapshot or provider APIs.
+Features use point-in-time standings rebuilt from finished league games before each
+kickoff when enough history exists; production inference uses PIT only (P2-001).
 """
 from __future__ import annotations
 
@@ -52,6 +50,13 @@ FEATURE_COLUMNS: list[str] = [
 ARTIFACT_MODEL = "simple_model.pkl"
 ARTIFACT_FEATURES = "feature_columns.pkl"
 ARTIFACT_METRICS = "metrics.json"
+
+MODEL_KIND_BINARY = "binary_home_away"
+MODEL_KIND_SOCCER_1X2 = "soccer_1x2"
+SOCCER_1X2_LABEL_AWAY = 0
+SOCCER_1X2_LABEL_DRAW = 1
+SOCCER_1X2_LABEL_HOME = 2
+SOCCER_1X2_OUTCOME_CLASSES = ["away", "draw", "home"]
 
 # Calibration needs enough samples per class to be stable.
 _CALIBRATION_MIN_PER_CLASS = 8
@@ -173,9 +178,54 @@ def publish_corpus_min_for_group(group: str, *, default: int, football_min: int)
     return max(1, int(default))
 
 
+def _finished_soccer_games(db: Session) -> list[Game]:
+    """All finished soccer fixtures with scores, including draws (native 1X2 training)."""
+    return (
+        db.query(Game)
+        .options(joinedload(Game.home_team), joinedload(Game.away_team))
+        .filter(Game.status.in_(["finished", "final"]))
+        .filter(Game.league.in_(list(SOCCER_LEAGUES_SET)))
+        .filter(Game.home_team_id.isnot(None), Game.away_team_id.isnot(None))
+        .filter(Game.home_score.isnot(None), Game.away_score.isnot(None))
+        .order_by(Game.scheduled_time.asc())
+        .all()
+    )
+
+
+def _soccer_1x2_label(game: Game) -> int:
+    hs = game.home_score or 0
+    aws = game.away_score or 0
+    if hs > aws:
+        return SOCCER_1X2_LABEL_HOME
+    if hs == aws:
+        return SOCCER_1X2_LABEL_DRAW
+    return SOCCER_1X2_LABEL_AWAY
+
+
 def build_training_frame(db: Session, *, group: str | None = None):
-    """Return (X DataFrame, y Series of home-win labels, leagues, kickoff times)."""
+    """Return (X DataFrame, y Series, leagues, kickoff times)."""
     import pandas as pd
+
+    if group == "soccer":
+        games = _finished_soccer_games(db)
+        pit_cache = PitStandingsCache.from_games(db, games)
+        rows: list[list[float]] = []
+        labels: list[int] = []
+        leagues: list[str] = []
+        times: list[Any] = []
+        for g in games:
+            try:
+                feats, _src = build_game_features(g, db, pit_cache=pit_cache)
+            except Exception:
+                logger.exception("feature build failed for game %s", g.id)
+                continue
+            rows.append([float(feats.get(c, 0.5)) for c in FEATURE_COLUMNS])
+            labels.append(_soccer_1x2_label(g))
+            leagues.append((g.league or "").lower())
+            times.append(g.scheduled_time)
+        X = pd.DataFrame(rows, columns=FEATURE_COLUMNS)
+        y = pd.Series(labels, name="outcome_1x2", dtype=int)
+        return X, y, leagues, times
 
     games = _finished_decisive_games(db)
     if group:
@@ -200,6 +250,40 @@ def build_training_frame(db: Session, *, group: str | None = None):
     return X, y, leagues, times
 
 
+def build_training_frame_from_games(
+    db: Session,
+    games: list[Game],
+    *,
+    group: str,
+) -> tuple[Any, Any, list[str], list[Any]]:
+    """Build a training matrix from an explicit chronological game list (walk-forward folds)."""
+    import pandas as pd
+
+    pit_cache = PitStandingsCache.from_games(db, games)
+    rows: list[list[float]] = []
+    labels: list[int] = []
+    leagues: list[str] = []
+    times: list[Any] = []
+    multiclass = group == "soccer"
+    for g in games:
+        try:
+            feats, _src = build_game_features(g, db, pit_cache=pit_cache)
+        except Exception:
+            logger.exception("feature build failed for game %s", g.id)
+            continue
+        rows.append([float(feats.get(c, 0.5)) for c in FEATURE_COLUMNS])
+        if multiclass:
+            labels.append(_soccer_1x2_label(g))
+        else:
+            labels.append(1 if (g.home_score or 0) > (g.away_score or 0) else 0)
+        leagues.append((g.league or "").lower())
+        times.append(g.scheduled_time)
+    X = pd.DataFrame(rows, columns=FEATURE_COLUMNS)
+    y_name = "outcome_1x2" if multiclass else "home_win"
+    y = pd.Series(labels, name=y_name, dtype=int)
+    return X, y, leagues, times
+
+
 def _should_calibrate(y) -> bool:
     if len(y) < _CALIBRATION_MIN_TOTAL:
         return False
@@ -207,16 +291,26 @@ def _should_calibrate(y) -> bool:
     return len(counts) >= 2 and int(counts.min()) >= _CALIBRATION_MIN_PER_CLASS
 
 
-def _make_estimator(calibrate: bool):
+def _should_calibrate_multiclass(y, *, min_per_class: int = 5) -> bool:
+    if len(y) < _CALIBRATION_MIN_TOTAL:
+        return False
+    counts = y.value_counts()
+    return len(counts) >= 3 and int(counts.min()) >= min_per_class
+
+
+def _make_estimator(calibrate: bool, *, multiclass: bool = False):
     from sklearn.calibration import CalibratedClassifierCV
     from sklearn.linear_model import LogisticRegression
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler
 
+    clf_kwargs: dict[str, Any] = {"max_iter": 1000, "C": 1.0}
+    if multiclass:
+        clf_kwargs["solver"] = "lbfgs"
     pipe = Pipeline(
         [
             ("scaler", StandardScaler()),
-            ("clf", LogisticRegression(max_iter=1000, C=1.0)),
+            ("clf", LogisticRegression(**clf_kwargs)),
         ]
     )
     if calibrate:
@@ -224,16 +318,17 @@ def _make_estimator(calibrate: bool):
     return pipe
 
 
-def _fit_safely(calibrate: bool, X, y):
+def _fit_safely(calibrate: bool, X, y, *, multiclass: bool = False):
     """Fit with calibration if requested, falling back to the plain pipeline."""
-    est = _make_estimator(calibrate)
+    should = _should_calibrate_multiclass(y) if multiclass else _should_calibrate(y)
+    est = _make_estimator(calibrate and should, multiclass=multiclass)
     try:
         est.fit(X, y)
-        return est, calibrate
+        return est, calibrate and should
     except Exception:
         if not calibrate:
             raise
-        est = _make_estimator(False)
+        est = _make_estimator(False, multiclass=multiclass)
         est.fit(X, y)
         return est, False
 
@@ -258,6 +353,123 @@ def train_and_save(
     )
 
 
+def _train_soccer_1x2_group(
+    X,
+    y,
+    leagues: list[str],
+    out_dir: str,
+    *,
+    test_frac: float,
+    min_publish_holdout_per_league_group: int,
+    force: bool,
+) -> dict:
+    """Train native 3-class soccer 1X2 model (away / draw / home)."""
+    import numpy as np
+    from sklearn.metrics import accuracy_score, log_loss
+
+    group = "soccer"
+    n = len(X)
+    eval_metrics: dict = {}
+    n_test = max(1, int(round(n * test_frac))) if n >= 10 else 0
+    if n_test > 0 and n - n_test >= 5:
+        X_tr, X_te = X.iloc[: n - n_test], X.iloc[n - n_test :]
+        y_tr, y_te = y.iloc[: n - n_test], y.iloc[n - n_test :]
+        if y_tr.nunique() >= 2:
+            est, calibrated = _fit_safely(_should_calibrate_multiclass(y_tr), X_tr, y_tr, multiclass=True)
+            if y_te.nunique() >= 2:
+                proba = est.predict_proba(X_te)
+                classes = list(est.classes_)
+                preds = np.array([classes[int(np.argmax(row))] for row in proba], dtype=int)
+                eval_metrics = {
+                    "test_games": int(len(y_te)),
+                    "accuracy": round(float(accuracy_score(y_te, preds)), 4),
+                    "log_loss": round(
+                        float(log_loss(y_te, proba, labels=classes)),
+                        4,
+                    ),
+                    "draw_rate_test": round(float((y_te == SOCCER_1X2_LABEL_DRAW).mean()), 4),
+                    "home_rate_test": round(float((y_te == SOCCER_1X2_LABEL_HOME).mean()), 4),
+                    "away_rate_test": round(float((y_te == SOCCER_1X2_LABEL_AWAY).mean()), 4),
+                    "calibrated": bool(calibrated),
+                }
+
+    final, calibrated_full = _fit_safely(_should_calibrate_multiclass(y), X, y, multiclass=True)
+
+    corpus_min = max(1, int(min_publish_holdout_per_league_group))
+    publish_ready, publish_block_reasons, corpus_by_group, holdout_by_group = assess_publish_readiness(
+        leagues,
+        n=n,
+        test_frac=test_frac,
+        min_holdout_per_group=corpus_min,
+    )
+    write_artifacts = publish_ready or force
+
+    os.makedirs(out_dir, exist_ok=True)
+    if write_artifacts:
+        with open(os.path.join(out_dir, ARTIFACT_MODEL), "wb") as f:
+            pickle.dump(final, f)
+        with open(os.path.join(out_dir, ARTIFACT_FEATURES), "wb") as f:
+            pickle.dump(FEATURE_COLUMNS, f)
+    else:
+        for name in (ARTIFACT_MODEL, ARTIFACT_FEATURES):
+            path = os.path.join(out_dir, name)
+            if os.path.isfile(path):
+                os.remove(path)
+
+    outcome_counts = Counter(int(v) for v in y.tolist())
+    summary = {
+        "league_group": group,
+        "model_kind": MODEL_KIND_SOCCER_1X2,
+        "outcome_classes": SOCCER_1X2_OUTCOME_CLASSES,
+        "games": int(n),
+        "out_dir": os.path.abspath(out_dir),
+        "feature_columns": FEATURE_COLUMNS,
+        "outcome_counts": {
+            SOCCER_1X2_OUTCOME_CLASSES[k]: int(outcome_counts.get(k, 0))
+            for k in (SOCCER_1X2_LABEL_AWAY, SOCCER_1X2_LABEL_DRAW, SOCCER_1X2_LABEL_HOME)
+        },
+        "league_counts": dict(Counter(leagues)),
+        "league_group_corpus_counts": corpus_by_group,
+        "league_group_holdout_counts": holdout_by_group,
+        "calibrated_final": bool(calibrated_full),
+        "eval": eval_metrics,
+        "trained_at": datetime.now(timezone.utc).isoformat(),
+        "publish_ready": bool(publish_ready),
+        "publish_block_reasons": publish_block_reasons,
+        "min_publish_holdout_per_league_group": int(min_publish_holdout_per_league_group),
+        "min_publish_corpus_required": int(corpus_min),
+        "artifacts_written": bool(write_artifacts),
+        "model_version": "sklearn_soccer_1x2",
+        "note": (
+            "Native 1X2 model: predicts P(away), P(draw), P(home) directly. "
+            "Drawn fixtures are included in training. Features are point-in-time "
+            "from finished league games before kickoff when enough history exists."
+        ),
+    }
+    if not publish_ready and not force:
+        summary["status"] = "warming"
+        summary["note"] += (
+            f" Model artifacts were not published — need ≥{corpus_min} "
+            f"finished soccer games in the corpus."
+        )
+    elif publish_ready:
+        summary["status"] = "ready"
+    else:
+        summary["status"] = "forced"
+    with open(os.path.join(out_dir, ARTIFACT_METRICS), "w") as f:
+        json.dump(summary, f, indent=2, default=str)
+    if not write_artifacts:
+        logger.warning(
+            "Training %s blocked (%s); metrics only in %s",
+            group,
+            "; ".join(publish_block_reasons),
+            out_dir,
+        )
+    else:
+        logger.info("Wrote %s 1X2 model artifacts to %s (games=%d)", group, out_dir, n)
+    return summary
+
+
 def _train_single_group(
     X,
     y,
@@ -270,6 +482,17 @@ def _train_single_group(
     min_publish_corpus_football: int,
     force: bool,
 ) -> dict:
+    if group == "soccer":
+        return _train_soccer_1x2_group(
+            X,
+            y,
+            leagues,
+            out_dir,
+            test_frac=test_frac,
+            min_publish_holdout_per_league_group=min_publish_holdout_per_league_group,
+            force=force,
+        )
+
     import numpy as np
     from sklearn.metrics import accuracy_score, brier_score_loss, log_loss
 
@@ -325,6 +548,7 @@ def _train_single_group(
 
     summary = {
         "league_group": group,
+        "model_kind": MODEL_KIND_BINARY,
         "games": int(n),
         "out_dir": os.path.abspath(out_dir),
         "feature_columns": FEATURE_COLUMNS,

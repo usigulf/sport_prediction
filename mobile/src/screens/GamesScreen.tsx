@@ -19,8 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { GameCard } from '../components/GameCard';
 import { PredictionCard } from '../components/PredictionCard';
 import { ExplanationView } from '../components/ExplanationView';
-import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { fetchUpcomingGames, restoreGamesFromCache } from '../store/slices/gamesSlice';
+import { useAppSelector } from '../store/hooks';
 import { apiService } from '../services/api';
 import { RootStackParamList, MainTabParamList } from '../navigation/AppNavigator';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
@@ -42,6 +41,7 @@ import {
   mondayBasedIndexInWeek,
   weekRangeLabel,
 } from '../utils/soccerWeek';
+import { useUpcomingGamesQuery } from '../hooks/useUpcomingGamesQuery';
 
 /** BetQL-style sub-views within Games (per sport). */
 type GamesViewType = 'model' | 'trending' | 'props';
@@ -63,8 +63,6 @@ function formatCachedAt(iso: string | null): string {
 export const GamesScreen: React.FC = () => {
   const navigation = useNavigation<GamesScreenNavigationProp>();
   const route = useRoute<RouteProp<MainTabParamList, 'Games'>>();
-  const dispatch = useAppDispatch();
-  const { upcomingGames, loading, cachedAt } = useAppSelector((state) => state.games);
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedLeague, setSelectedLeague] = useState<string | null>(null);
@@ -85,7 +83,6 @@ export const GamesScreen: React.FC = () => {
     }
   }, [selectedLeague]);
   const [gamesView, setGamesView] = useState<GamesViewType>('model');
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [trendingPicks, setTrendingPicks] = useState<any[]>([]);
   const [trendingLoading, setTrendingLoading] = useState(false);
   const [previewGame, setPreviewGame] = useState<any | null>(null);
@@ -93,7 +90,6 @@ export const GamesScreen: React.FC = () => {
   const [previewExplanation, setPreviewExplanation] = useState<PredictionExplanation | null>(null);
   const [previewExplanationLoading, setPreviewExplanationLoading] = useState(false);
   const [previewExplanationError, setPreviewExplanationError] = useState<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
   const sheetMaxHeight = useMemo(
     () => Math.round(Dimensions.get('window').height * 0.9),
     []
@@ -105,70 +101,73 @@ export const GamesScreen: React.FC = () => {
   const [soccerWeekOffset, setSoccerWeekOffset] = useState(0);
   const [soccerDayIndex, setSoccerDayIndex] = useState(() => mondayBasedIndexInWeek(new Date()));
   const [soccerSubLeague, setSoccerSubLeague] = useState<SoccerSubFilter>('all');
+  /** null = loading favorite leagues for My Leagues filter */
+  const [favoriteLeagueCsv, setFavoriteLeagueCsv] = useState<string | undefined | null>(undefined);
 
   const soccerWeekDays = useMemo(() => buildSoccerWeekDays(soccerWeekOffset), [soccerWeekOffset]);
   const selectedSoccerYmd =
     soccerWeekDays[soccerDayIndex]?.ymd ?? formatLocalYMD(new Date());
 
   useEffect(() => {
-    dispatch(restoreGamesFromCache());
-  }, []);
-
-  const loadGames = async (signal?: AbortSignal) => {
-    setLoadError(null);
-    const opts = { limit: 50, signal };
-    try {
-      if (selectedLeague === MY_LEAGUES_ID) {
-        if (!isAuthenticated) {
-          await dispatch(fetchUpcomingGames(opts)).unwrap();
-        } else {
-          try {
-            const favs = (await apiService.getFavorites()) as { leagues?: { id: string }[] };
-            const leagueIds = favs.leagues?.map((l) => l.id) ?? [];
-            await dispatch(
-              fetchUpcomingGames({
-                ...opts,
-                leagues: leagueIds.length > 0 ? leagueIds.join(',') : undefined,
-              })
-            ).unwrap();
-          } catch (e) {
-            if ((e as Error)?.name === 'AbortError') return;
-            await dispatch(fetchUpcomingGames(opts)).unwrap();
-          }
-        }
-      } else if (selectedLeague === 'soccer') {
-        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const leaguesArg =
-          soccerSubLeague === 'all'
-            ? SOCCER_LEAGUE_IDS.join(',')
-            : soccerSubLeague;
-        await dispatch(
-          fetchUpcomingGames({
-            ...opts,
-            leagues: leaguesArg,
-            date: selectedSoccerYmd,
-            time_zone: tz,
-            limit: Math.max(opts.limit ?? 50, 100),
-          })
-        ).unwrap();
-      } else {
-        await dispatch(
-          fetchUpcomingGames({ ...opts, league: selectedLeague || undefined })
-        ).unwrap();
-      }
-    } catch (error) {
-      if ((error as Error)?.name === 'AbortError') return;
-      setLoadError(getUserFriendlyMessage(error));
+    if (selectedLeague !== MY_LEAGUES_ID) {
+      setFavoriteLeagueCsv(undefined);
+      return;
     }
-  };
+    if (!isAuthenticated) {
+      setFavoriteLeagueCsv(undefined);
+      return;
+    }
+    let cancelled = false;
+    setFavoriteLeagueCsv(null);
+    apiService
+      .getFavorites()
+      .then((favs) => {
+        if (cancelled) return;
+        const leagueIds = (favs as { leagues?: { id: string }[] }).leagues?.map((l) => l.id) ?? [];
+        setFavoriteLeagueCsv(leagueIds.length > 0 ? leagueIds.join(',') : undefined);
+      })
+      .catch(() => {
+        if (!cancelled) setFavoriteLeagueCsv(undefined);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedLeague, isAuthenticated]);
 
-  useEffect(() => {
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-    loadGames(controller.signal);
-    return () => controller.abort();
-  }, [selectedLeague, selectedSoccerYmd, soccerSubLeague]);
+  const gamesQueryParams = useMemo(() => {
+    const limit = 50;
+    if (selectedLeague === 'soccer') {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const leaguesArg =
+        soccerSubLeague === 'all' ? SOCCER_LEAGUE_IDS.join(',') : soccerSubLeague;
+      return {
+        limit: Math.max(limit, 100),
+        leagues: leaguesArg,
+        date: selectedSoccerYmd,
+        time_zone: tz,
+      };
+    }
+    if (selectedLeague === MY_LEAGUES_ID) {
+      return { limit, leagues: favoriteLeagueCsv || undefined };
+    }
+    return { limit, league: selectedLeague || undefined };
+  }, [selectedLeague, selectedSoccerYmd, soccerSubLeague, favoriteLeagueCsv]);
+
+  const gamesQueryEnabled =
+    selectedLeague !== MY_LEAGUES_ID || !isAuthenticated || favoriteLeagueCsv !== null;
+
+  const {
+    data: gamesData,
+    isLoading: gamesLoading,
+    isError: gamesIsError,
+    error: gamesError,
+    refetch: refetchGames,
+  } = useUpcomingGamesQuery(gamesQueryParams, { enabled: gamesQueryEnabled });
+
+  const upcomingGames = gamesData?.games ?? [];
+  const cachedAt = gamesData?.updatedAt ?? null;
+  const loading = gamesLoading && upcomingGames.length === 0;
+  const loadError = gamesIsError ? getUserFriendlyMessage(gamesError) : null;
 
   const getLeaguesParam = useCallback((): string | undefined => {
     if (selectedLeague === null) return undefined;
@@ -208,7 +207,7 @@ export const GamesScreen: React.FC = () => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadGames();
+    await refetchGames();
     if (gamesView === 'trending') {
       const leaguesParam = getLeaguesParam();
       const soccerTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
