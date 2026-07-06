@@ -50,13 +50,21 @@ install_awscli_if_needed() {
     return 0
   fi
   if [[ "${INSTALL_AWSCLI:-0}" != "1" ]]; then
-    echo "error: aws CLI not found; set INSTALL_AWSCLI=1 or apt install awscli" >&2
+    echo "error: aws CLI not found; set INSTALL_AWSCLI=1 or install awscli manually" >&2
     exit 1
   fi
-  echo "[offsite] Installing awscli..."
+  echo "[offsite] Installing aws CLI..."
   export DEBIAN_FRONTEND=noninteractive
+  if apt-get install -y -qq awscli 2>/dev/null; then
+    return 0
+  fi
+  if command -v pip3 >/dev/null 2>&1; then
+    pip3 install --break-system-packages -q awscli || pip3 install -q awscli
+    return 0
+  fi
   apt-get update -qq
-  apt-get install -y -qq awscli
+  apt-get install -y -qq python3-pip curl unzip
+  pip3 install --break-system-packages -q awscli || pip3 install -q awscli
 }
 
 _load_existing_env() {
