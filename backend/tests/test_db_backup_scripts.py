@@ -14,7 +14,9 @@ def test_backup_scripts_exist_and_reference_offsite():
     text = offsite.read_text(encoding="utf-8")
     assert "OFFSITE_BACKUP_SCP_TARGET" in text
     assert "OFFSITE_BACKUP_S3_URI" in text
+    assert "AWS_ENDPOINT_URL" in text
     assert "run_pg_backup.sh" in run_script.read_text(encoding="utf-8")
+    assert "AWS_ACCESS_KEY_ID" in run_script.read_text(encoding="utf-8")
 
 
 def test_crontab_example_includes_daily_backup():
@@ -28,3 +30,4 @@ def test_database_backup_doc_covers_restore_and_offsite():
     assert "pg_restore" in doc
     assert "OFFSITE_BACKUP_SCP_TARGET" in doc
     assert "setup_db_backup_cron.sh" in doc
+    assert "setup_offsite_backup.sh" in doc

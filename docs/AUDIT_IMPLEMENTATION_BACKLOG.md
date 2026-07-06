@@ -90,7 +90,7 @@ Master backlog from technical due diligence (2026-07-04).
 | PH2-002 | Home feed error surfacing + retry | Weakness #39 | done |
 | PH2-003 | Sentry alerts on webhook anomalies | Imp #19 | done |
 | PH2-004 | Uptime probe script + cron example | Imp #20 | done |
-| PH2-005 | Offsite DB backup configured on VPS | Weakness #4 | pending |
+| PH2-005 | Offsite DB backup configured on VPS | Weakness #4 | in_progress |
 | PH2-006 | Split god screens (HomeScreen) | Weakness #14, Imp #32 | pending |
 | PH2-007 | 60%+ test coverage | Imp #71 | pending |
 | PH2-008 | Annual subscription plan | Imp #41 | pending |

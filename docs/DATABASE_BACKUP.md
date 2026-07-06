@@ -10,6 +10,8 @@ Production uses **Docker Compose** with TimescaleDB (`sport-prediction-postgres`
 | `scripts/pg_backup_offsite_copy.sh` | Copy newest dump to SCP or S3 (optional) |
 | `scripts/run_pg_backup.sh` | Runs local + offsite (cron entrypoint) |
 | `scripts/setup_db_backup_cron.sh` | Install `0 3 * * *` cron idempotently |
+| `scripts/setup_offsite_backup.sh` | Write `secrets/backup_offsite.env` + test offsite copy |
+| `scripts/verify_db_backup.sh` | Alert if local/offsite backups are stale or missing |
 
 ## Install on VPS
 
@@ -59,6 +61,35 @@ Requires `aws` CLI configured on the VPS (IAM user or instance role).
 
 If neither variable is set, offsite copy is skipped (local backup still runs).
 
+### DigitalOcean Spaces (recommended for NYC droplets)
+
+1. Create a Space in the same region as the droplet (e.g. `nyc3`).
+2. Generate Spaces access keys in the DO control panel.
+3. On the VPS:
+
+```bash
+cd ~/sport_prediction
+INSTALL_AWSCLI=1 \
+OFFSITE_BACKUP_S3_URI=s3://your-space-name/octobetiq/db/ \
+AWS_ACCESS_KEY_ID=... \
+AWS_SECRET_ACCESS_KEY=... \
+AWS_DEFAULT_REGION=nyc3 \
+AWS_ENDPOINT_URL=https://nyc3.digitaloceanspaces.com \
+./scripts/setup_offsite_backup.sh
+```
+
+4. Confirm: `./scripts/setup_offsite_backup.sh --check`
+
+Successful offsite copies write `/var/log/pg_backup_offsite.last`.
+
+## Monitoring
+
+- Cron log: `/var/log/pg_backup.log`
+- Offsite success marker: `/var/log/pg_backup_offsite.last`
+- Daily verify (after backup): `30 3 * * * .../scripts/verify_db_backup.sh` (see `deploy/crontab.example`)
+- Alert if no new dump in 36h: `./scripts/verify_db_backup.sh` (exit 1)
+- Enforce offsite in prod: `OFFSITE_REQUIRED=1 ./scripts/verify_db_backup.sh`
+
 ## Restore (disaster recovery)
 
 **On the VPS** (stops writes — schedule maintenance):
@@ -83,8 +114,3 @@ curl -fsS http://127.0.0.1:8000/health
 Test restores on a **staging** clone before relying on this in production.
 
 For migrating to a **managed Postgres** provider (RDS, DigitalOcean, Neon, etc.), see **`docs/MANAGED_POSTGRES_MIGRATION.md`** and `scripts/migrate_to_managed_postgres.sh`.
-
-## Monitoring
-
-- Cron log: `/var/log/pg_backup.log`
-- Alert if no new dump in 36h: `find /root/backups -name 'sportsprediction-*.dump' -mtime -1.5 | wc -l` should be ≥ 1

@@ -30,6 +30,10 @@ _load_backup_env() {
     _read_backup_env_var PG_USER "${file}"
     _read_backup_env_var OFFSITE_BACKUP_SCP_TARGET "${file}"
     _read_backup_env_var OFFSITE_BACKUP_S3_URI "${file}"
+    _read_backup_env_var AWS_ACCESS_KEY_ID "${file}"
+    _read_backup_env_var AWS_SECRET_ACCESS_KEY "${file}"
+    _read_backup_env_var AWS_DEFAULT_REGION "${file}"
+    _read_backup_env_var AWS_ENDPOINT_URL "${file}"
   done
 }
 

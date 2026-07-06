@@ -59,3 +59,22 @@ def test_api_health_check_script():
 def test_crontab_includes_health_check():
     crontab = (REPO_ROOT / "deploy" / "crontab.example").read_text(encoding="utf-8")
     assert "check_api_health.sh" in crontab
+
+
+def test_offsite_backup_setup_and_verify_scripts():
+    setup = REPO_ROOT / "scripts" / "setup_offsite_backup.sh"
+    verify = REPO_ROOT / "scripts" / "verify_db_backup.sh"
+    offsite = REPO_ROOT / "scripts" / "pg_backup_offsite_copy.sh"
+    for path in (setup, verify):
+        assert path.is_file(), f"missing {path}"
+    offsite_text = offsite.read_text(encoding="utf-8")
+    assert "AWS_ENDPOINT_URL" in offsite_text
+    assert "pg_backup_offsite.last" in offsite_text
+    assert "OFFSITE_REQUIRED" in verify.read_text(encoding="utf-8")
+    example = (REPO_ROOT / "docs" / "backup_offsite.env.example").read_text(encoding="utf-8")
+    assert "digitaloceanspaces.com" in example
+
+
+def test_crontab_includes_backup_verify():
+    crontab = (REPO_ROOT / "deploy" / "crontab.example").read_text(encoding="utf-8")
+    assert "verify_db_backup.sh" in crontab

@@ -42,6 +42,6 @@ echo "Installed DB backup cron:"
 crontab -l | grep run_pg_backup.sh
 echo ""
 echo "Local dumps: \${BACKUP_DIR:-/root/backups}/sportsprediction-*.dump"
-echo "Optional offsite: copy docs/backup_offsite.env.example -> secrets/backup_offsite.env"
+echo "Optional offsite: ./scripts/setup_offsite_backup.sh (see docs/DATABASE_BACKUP.md)"
 echo ""
 echo "Test now: ${BACKUP_SCRIPT}"
