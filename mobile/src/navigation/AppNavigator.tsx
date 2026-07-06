@@ -174,9 +174,7 @@ function GuestStack() {
       <Stack.Screen name="Help" component={HelpScreen} options={{ title: 'Help & FAQ' }} />
       <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ title: 'Privacy Policy' }} />
       <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} options={{ title: 'Terms of Service' }} />
-      {captureRoutesEnabled() ? (
-        <Stack.Screen name="Paywall" component={PaywallScreen} options={{ title: 'Subscription' }} />
-      ) : null}
+      <Stack.Screen name="Paywall" component={PaywallScreen} options={{ title: 'Subscription' }} />
     </Stack.Navigator>
   );
 }

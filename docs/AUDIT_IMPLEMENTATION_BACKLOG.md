@@ -82,6 +82,21 @@ Master backlog from technical due diligence (2026-07-04).
 |----|------|--------------|--------|
 | DISC-001 | Share endpoint leaks pick confidence without limit check | P0-001 | done |
 
+## Phase 2 — Post-audit (ongoing)
+
+| ID | Task | Audit ref | Status |
+|----|------|-----------|--------|
+| PH2-001 | Guest paywall preview (production) | Weakness #31, Imp #40 | done |
+| PH2-002 | Home feed error surfacing + retry | Weakness #39 | done |
+| PH2-003 | Sentry alerts on webhook anomalies | Imp #19 | done |
+| PH2-004 | Uptime probe script + cron example | Imp #20 | done |
+| PH2-005 | Offsite DB backup configured on VPS | Weakness #4 | pending |
+| PH2-006 | Split god screens (HomeScreen) | Weakness #14, Imp #32 | pending |
+| PH2-007 | 60%+ test coverage | Imp #71 | pending |
+| PH2-008 | Annual subscription plan | Imp #41 | pending |
+| PH2-009 | Staging environment | Weakness #50, Imp #58 | pending |
+| PH2-010 | Prometheus metrics | Weakness #28, Imp #60 | pending |
+
 ---
 
 ## Completed

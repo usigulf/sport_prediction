@@ -28,6 +28,7 @@ from app.models.user import User
 from app.config import get_settings
 from app.services.stripe_webhook_idempotency import claim_stripe_webhook_event
 from app.services.revenuecat_webhook_idempotency import claim_revenuecat_webhook_event
+from app.utils.sentry_alerts import report_webhook_issue
 
 router = APIRouter(prefix="/subscription", tags=["subscription"])
 settings = get_settings()
@@ -191,10 +192,10 @@ async def stripe_webhook(
             body, stripe_signature or "", req_settings.stripe_webhook_secret
         )
     except ValueError:
-        logger.warning("Stripe webhook invalid payload")
+        report_webhook_issue("Stripe webhook invalid payload", level="error")
         raise HTTPException(status_code=400, detail="Invalid payload")
     except stripe.error.SignatureVerificationError:
-        logger.warning("Stripe webhook signature verification failed")
+        report_webhook_issue("Stripe webhook signature verification failed", level="error")
         raise HTTPException(status_code=400, detail="Invalid signature")
     event_data = _as_plain_dict(event)
     event_id = event_data.get("id", "unknown")
@@ -234,23 +235,25 @@ async def stripe_webhook(
                     extra={"event_id": event_id, "user_id": str(user.id), "tier": db_tier},
                 )
             else:
-                logger.warning(
+                report_webhook_issue(
                     "Stripe webhook user not found",
-                    extra={"event_id": event_id, "client_reference_id": str(user_id)},
+                    event_id=event_id,
+                    client_reference_id=str(user_id),
                 )
         else:
-            logger.warning(
+            report_webhook_issue(
                 "Stripe checkout.session.completed missing client_reference_id",
-                extra={"event_id": event_id},
+                event_id=event_id,
             )
     elif event_type in ("customer.subscription.updated", "customer.subscription.deleted"):
         sub_obj = _as_plain_dict((event_data.get("data") or {}).get("object"))
         meta = sub_obj.get("metadata") or {}
         user_id = _user_id_from_stripe_metadata(meta)
         if not user_id:
-            logger.warning(
+            report_webhook_issue(
                 "Stripe subscription event missing user_id metadata",
-                extra={"event_id": event_id, "event_type": event_type},
+                event_id=event_id,
+                event_type=event_type,
             )
             return {"received": True}
         try:
@@ -261,9 +264,10 @@ async def stripe_webhook(
             uid = user_id
         user = db.query(User).filter(User.id == uid).first()
         if not user:
-            logger.warning(
+            report_webhook_issue(
                 "Stripe subscription event user not found",
-                extra={"event_id": event_id, "user_id": user_id},
+                event_id=event_id,
+                user_id=str(user_id),
             )
             return {"received": True}
         if event_type == "customer.subscription.deleted":
@@ -337,7 +341,7 @@ async def revenuecat_webhook(
     if not expected:
         raise HTTPException(status_code=503, detail="RevenueCat webhook not configured")
     if not authorization or not secrets.compare_digest(authorization, expected):
-        logger.warning("RevenueCat webhook auth failed")
+        report_webhook_issue("RevenueCat webhook auth failed", level="error")
         raise HTTPException(status_code=401, detail="Invalid authorization")
 
     try:
@@ -357,12 +361,10 @@ async def revenuecat_webhook(
     elif event_type in _RC_GRANTING_EVENTS:
         new_tier = _rc_tier_from_entitlements(entitlement_ids or [], req_settings)
         if new_tier is None:
-            logger.warning(
+            report_webhook_issue(
                 "RevenueCat granting event ignored — no recognized entitlement",
-                extra={
-                    "event_type": event_type,
-                    "entitlement_ids": entitlement_ids,
-                },
+                event_type=event_type,
+                entitlement_ids=entitlement_ids,
             )
             return {"received": True, "ignored": True, "reason": "unrecognized_entitlement"}
     else:
@@ -370,7 +372,10 @@ async def revenuecat_webhook(
         return {"received": True, "ignored": True}
 
     if not app_user_id:
-        logger.warning("RevenueCat webhook missing app_user_id", extra={"event_type": event_type})
+        report_webhook_issue(
+            "RevenueCat webhook missing app_user_id",
+            event_type=event_type,
+        )
         return {"received": True}
 
     try:
@@ -381,9 +386,10 @@ async def revenuecat_webhook(
         uid = app_user_id
     user = db.query(User).filter(User.id == uid).first()
     if not user:
-        logger.warning(
+        report_webhook_issue(
             "RevenueCat webhook user not found",
-            extra={"event_type": event_type, "app_user_id": str(app_user_id)},
+            event_type=event_type,
+            app_user_id=str(app_user_id),
         )
         return {"received": True}
 

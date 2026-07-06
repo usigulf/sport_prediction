@@ -51,3 +51,6 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # Daily Postgres backup (local pg_dump) + optional offsite copy (03:00 UTC)
 # Or install idempotently: ./scripts/setup_db_backup_cron.sh
 0 3 * * * /root/sport_prediction/scripts/run_pg_backup.sh >>/var/log/pg_backup.log 2>&1
+
+# API uptime probe (/health + /ready) every 5 minutes
+*/5 * * * * /root/sport_prediction/scripts/check_api_health.sh >>/var/log/api_health.log 2>&1

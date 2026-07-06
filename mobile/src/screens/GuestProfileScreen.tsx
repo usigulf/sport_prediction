@@ -42,6 +42,16 @@ export const GuestProfileScreen: React.FC = () => {
       </Pressable>
 
       <View style={styles.menu}>
+        <MenuRow
+          icon="diamond-outline"
+          label="View Premium plans"
+          onPress={() =>
+            navigation.navigate('Paywall', {
+              emphasizeTier: 'premium',
+              contextMessage: 'Premium unlocks unlimited picks, analysis, and live updates.',
+            })
+          }
+        />
         <MenuRow icon="stats-chart-outline" label="Model accuracy" onPress={() => navigation.navigate('Accuracy')} />
         <MenuRow icon="help-circle-outline" label="Help & FAQ" onPress={() => navigation.navigate('Help')} />
         <MenuRow icon="information-circle-outline" label="About octobetiQ" onPress={() => navigation.navigate('Landing')} />

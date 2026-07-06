@@ -106,17 +106,20 @@ export const HomeScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [forYouPicks, setForYouPicks] = useState<any[]>([]);
   const [forYouLoading, setForYouLoading] = useState(false);
+  const [forYouError, setForYouError] = useState<string | null>(null);
   const [accuracyPct, setAccuracyPct] = useState<number | null>(null);
   const [subscriptionTier, setSubscriptionTier] = useState<string>('free');
   const [challengeCount, setChallengeCount] = useState<number>(0);
   const [premiumTeaserDismissed, setPremiumTeaserDismissed] = useState(false);
   const [trendingPicks, setTrendingPicks] = useState<any[]>([]);
   const [trendingLoading, setTrendingLoading] = useState(false);
+  const [trendingError, setTrendingError] = useState<string | null>(null);
   const [favoritesCount, setFavoritesCount] = useState<{ leagues: number; teams: number } | null>(null);
   const [selectedFeaturedId, setSelectedFeaturedId] = useState<string | null>(null);
 
   const loadForYou = useCallback(async () => {
     setForYouLoading(true);
+    setForYouError(null);
     try {
       const beta = soccerBetaFetchParams();
       const res = await apiService.getForYouFeed({
@@ -126,7 +129,8 @@ export const HomeScreen: React.FC = () => {
         limit: 10,
       });
       setForYouPicks(res.picks ?? []);
-    } catch {
+    } catch (e) {
+      setForYouError(getUserFriendlyMessage(e));
       setForYouPicks([]);
     } finally {
       setForYouLoading(false);
@@ -139,10 +143,12 @@ export const HomeScreen: React.FC = () => {
 
   const loadTrending = useCallback(async () => {
     setTrendingLoading(true);
+    setTrendingError(null);
     try {
       const res = await apiService.getTopPicks({ limit: 6, ...soccerBetaFetchParams() });
       setTrendingPicks(res.picks ?? []);
-    } catch {
+    } catch (e) {
+      setTrendingError(getUserFriendlyMessage(e));
       setTrendingPicks([]);
     } finally {
       setTrendingLoading(false);
@@ -357,6 +363,17 @@ export const HomeScreen: React.FC = () => {
             Guest mode — {GUEST_TEASER_PICK_LIMIT} free picks with probabilities today. Create an account for
             full analysis and unlimited picks.
           </Text>
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate('Paywall', {
+                emphasizeTier: 'premium',
+                contextMessage: PREMIUM_PAYWALL_CONTEXT,
+              })
+            }
+            style={styles.guestPremiumLink}
+          >
+            <Text style={styles.guestPremiumLinkText}>View Premium plans</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate('Register')} style={styles.guestBannerBtn}>
             <Text style={styles.guestBannerBtnText}>Create free account</Text>
           </TouchableOpacity>
@@ -419,7 +436,15 @@ export const HomeScreen: React.FC = () => {
             </TouchableOpacity>
           )}
         </View>
-        {forYouLoading && forYouPicks.length === 0 ? (
+        {forYouError ? (
+          <View style={styles.feedErrorBanner}>
+            <Text style={styles.feedErrorText}>{forYouError}</Text>
+            <TouchableOpacity onPress={() => void loadForYou()} style={styles.feedRetryBtn}>
+              <Text style={styles.feedRetryText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+        {forYouLoading && forYouPicks.length === 0 && !forYouError ? (
           <View style={styles.skeletonContainer}>
             {[1, 2, 3].map((i) => (
               <View key={i} style={styles.skeletonCard}>
@@ -429,7 +454,7 @@ export const HomeScreen: React.FC = () => {
               </View>
             ))}
           </View>
-        ) : forYouPicks.length === 0 ? (
+        ) : forYouPicks.length === 0 && !forYouError ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateTitle}>No high-confidence picks right now</Text>
             <Text style={styles.emptyStateSub}>Check back before game time for fresh AI picks.</Text>
@@ -450,13 +475,21 @@ export const HomeScreen: React.FC = () => {
       </View>
 
       {/* Live / high-confidence picks carousel */}
-      {(trendingLoading || trendingPicks.length > 0) && (
+      {(trendingLoading || trendingPicks.length > 0 || trendingError) && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="flame" size={18} color={theme.colors.accent} />
             <Text style={styles.sectionTitle}>LIVE PICKS</Text>
           </View>
-          {trendingLoading && trendingPicks.length === 0 ? (
+          {trendingError ? (
+            <View style={styles.feedErrorBanner}>
+              <Text style={styles.feedErrorText}>{trendingError}</Text>
+              <TouchableOpacity onPress={() => void loadTrending()} style={styles.feedRetryBtn}>
+                <Text style={styles.feedRetryText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+          {trendingLoading && trendingPicks.length === 0 && !trendingError ? (
             <View style={styles.skeletonContainer}>
               {[1, 2].map((i) => (
                 <View key={i} style={styles.skeletonCard}>
@@ -738,6 +771,14 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: theme.colors.text,
     marginBottom: theme.spacing.sm,
+  },
+  guestPremiumLink: {
+    marginBottom: theme.spacing.sm,
+  },
+  guestPremiumLinkText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.accent,
   },
   guestBannerBtn: {
     alignSelf: 'flex-start',
@@ -1031,6 +1072,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: theme.colors.secondary,
     fontWeight: '500',
+  },
+  feedErrorBanner: {
+    backgroundColor: theme.colors.secondaryDim,
+    padding: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
+    borderRadius: theme.radii.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: theme.spacing.sm,
+  },
+  feedErrorText: {
+    flex: 1,
+    fontSize: 13,
+    color: theme.colors.secondary,
+  },
+  feedRetryBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: theme.spacing.sm,
+  },
+  feedRetryText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.accent,
   },
   cacheHint: {
     fontSize: 12,

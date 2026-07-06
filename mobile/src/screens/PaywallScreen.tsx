@@ -14,7 +14,8 @@ import {
 } from 'react-native';
 import Constants from 'expo-constants';
 import * as WebBrowser from 'expo-web-browser';
-import { useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
+import { useFocusEffect, useRoute, RouteProp, useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchUserProfile, setSubscriptionTier } from '../store/slices/authSlice';
 import { apiService } from '../services/api';
@@ -39,6 +40,7 @@ import { SubscriptionLegalFooter } from '../components/SubscriptionLegalFooter';
 import { captureRoutesEnabled } from '../navigation/screenshotNavigation';
 import { openIosManageSubscriptions } from '../utils/manageSubscriptions';
 import { trackSubscriptionActivated } from '../services/productAnalytics';
+import type { RootStackParamList } from '../navigation/AppNavigator';
 
 const CHECKOUT_TIMEOUT_MS = 20000;
 
@@ -76,6 +78,7 @@ type PaywallRoute = RouteProp<
 
 export const PaywallScreen: React.FC = () => {
   const route = useRoute<PaywallRoute>();
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const emphasizeTier = route.params?.emphasizeTier;
   const contextMessage = route.params?.contextMessage;
   const contextBannerText =
@@ -87,7 +90,8 @@ export const PaywallScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
   const reduxTier = useAppSelector((s) => s.auth.user?.subscriptionTier ?? 'free');
-  const screenshotGuest = captureRoutesEnabled() && !isAuthenticated;
+  const guestPreview = !isAuthenticated;
+  const screenshotGuest = captureRoutesEnabled() && guestPreview;
 
   const [currentTier, setCurrentTier] = useState<string>('free');
   const [loading, setLoading] = useState(true);
@@ -226,6 +230,18 @@ export const PaywallScreen: React.FC = () => {
   const handleSubscribe = useCallback(
     async (tierId: string) => {
       if (tierId !== 'premium') return;
+      if (guestPreview) {
+        Alert.alert(
+          'Create an account',
+          'Sign in or register to start your 7-day free trial.',
+          [
+            { text: 'Create account', onPress: () => navigation.navigate('Register') },
+            { text: 'Sign in', onPress: () => navigation.navigate('Login') },
+            { text: 'Cancel', style: 'cancel' },
+          ],
+        );
+        return;
+      }
       setCheckoutLoadingTier(tierId);
       try {
         // Preferred: in-app purchase via the store (App Store / Play Billing).
@@ -271,7 +287,7 @@ export const PaywallScreen: React.FC = () => {
         setCheckoutLoadingTier(null);
       }
     },
-    [storeBillingReady, purchaseViaStore, dispatch, offeringsError, loadOfferings, handleRestore],
+    [storeBillingReady, purchaseViaStore, dispatch, offeringsError, loadOfferings, handleRestore, guestPreview, navigation],
   );
 
   if (loading) {
@@ -307,6 +323,13 @@ export const PaywallScreen: React.FC = () => {
       {contextBannerText ? (
         <View style={styles.contextBanner}>
           <Text style={styles.contextBannerText}>{contextBannerText}</Text>
+        </View>
+      ) : null}
+      {guestPreview ? (
+        <View style={styles.guestPreviewBanner}>
+          <Text style={styles.guestPreviewText}>
+            Preview Premium plans — create a free account to subscribe and start your trial.
+          </Text>
         </View>
       ) : null}
       <Text style={styles.title}>Choose your plan</Text>
@@ -353,7 +376,11 @@ export const PaywallScreen: React.FC = () => {
                   <ActivityIndicator color={theme.colors.background} />
                 ) : (
                   <Text style={[styles.ctaText, isCurrent && styles.ctaTextCurrent]}>
-                    {isCurrent ? 'Current plan' : 'Start 7-day free trial'}
+                    {isCurrent
+                      ? 'Current plan'
+                      : guestPreview
+                        ? 'Sign up for free trial'
+                        : 'Start 7-day free trial'}
                   </Text>
                 )}
               </View>
@@ -529,6 +556,19 @@ const styles = StyleSheet.create({
   contextBannerText: {
     fontSize: 14,
     color: theme.colors.text,
+    lineHeight: 20,
+  },
+  guestPreviewBanner: {
+    backgroundColor: theme.colors.backgroundElevated,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    marginBottom: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSubtle,
+  },
+  guestPreviewText: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
     lineHeight: 20,
   },
   cardHeader: {
