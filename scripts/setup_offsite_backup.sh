@@ -123,12 +123,33 @@ chmod 700 "${REPO_ROOT}/secrets"
 chmod 600 "${SECRETS_FILE}"
 echo "[offsite] wrote ${SECRETS_FILE}"
 
+# Test write permission before saving secrets (Spaces keys need read+write).
+test_spaces_write_permission() {
+  [[ -n "${OFFSITE_BACKUP_S3_URI:-}" ]] || return 0
+  local bucket endpoint test_key
+  bucket="$(echo "${OFFSITE_BACKUP_S3_URI}" | sed -E 's|^s3://([^/]+).*|\1|')"
+  endpoint="${AWS_ENDPOINT_URL:-}"
+  test_key=".offsite-write-test-$(date +%s)"
+  echo "probe" > /tmp/offsite-write-probe.txt
+  if ! aws s3 cp /tmp/offsite-write-probe.txt "s3://${bucket}/${test_key}" \
+    ${endpoint:+--endpoint-url "$endpoint"} 2>/tmp/offsite-write.err; then
+    echo "error: Spaces/S3 write denied for bucket ${bucket}" >&2
+    echo "       Create the Space in DO control panel and use read+write API keys." >&2
+    sed -n '1,3p' /tmp/offsite-write.err >&2 || true
+    rm -f /tmp/offsite-write.err /tmp/offsite-write-probe.txt
+    exit 1
+  fi
+  aws s3 rm "s3://${bucket}/${test_key}" ${endpoint:+--endpoint-url "$endpoint"} >/dev/null 2>&1 || true
+  rm -f /tmp/offsite-write-probe.txt
+}
+
 if [[ -n "${OFFSITE_BACKUP_S3_URI:-}" ]]; then
   install_awscli_if_needed
   if [[ -z "${AWS_ACCESS_KEY_ID:-}" || -z "${AWS_SECRET_ACCESS_KEY:-}" ]]; then
     echo "error: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY required for S3" >&2
     exit 1
   fi
+  test_spaces_write_permission
 fi
 
 echo "[offsite] testing copy with newest local dump..."

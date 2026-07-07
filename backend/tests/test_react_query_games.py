@@ -26,8 +26,10 @@ def test_upcoming_games_hook_uses_react_query():
 
 def test_home_and_games_use_upcoming_games_query():
     home = (MOBILE / "src/screens/HomeScreen.tsx").read_text(encoding="utf-8")
+    home_data = (MOBILE / "src/screens/home/useHomeScreenData.ts").read_text(encoding="utf-8")
     games = (MOBILE / "src/screens/GamesScreen.tsx").read_text(encoding="utf-8")
-    assert "useUpcomingGamesQuery" in home
+    assert "useHomeScreenData" in home
+    assert "useUpcomingGamesQuery" in home_data
     assert "fetchUpcomingGames" not in home
     assert "useUpcomingGamesQuery" in games
     assert "fetchUpcomingGames" not in games

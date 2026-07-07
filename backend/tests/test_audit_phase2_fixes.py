@@ -30,9 +30,18 @@ def test_guest_profile_links_to_paywall():
 
 
 def test_home_screen_surfaces_feed_errors():
-    home = (REPO_ROOT / "mobile" / "src" / "screens" / "HomeScreen.tsx").read_text(encoding="utf-8")
-    assert "forYouError" in home
-    assert "trendingError" in home
+    home_dir = REPO_ROOT / "mobile" / "src" / "screens" / "home"
+    for_you = (home_dir / "HomeFeedSections.tsx").read_text(encoding="utf-8")
+    assert "forYouError" in for_you
+    assert "trendingError" in for_you
+
+
+def test_home_screen_split_into_modules():
+    home = REPO_ROOT / "mobile" / "src" / "screens" / "HomeScreen.tsx"
+    text = home.read_text(encoding="utf-8")
+    assert "useHomeScreenData" in text
+    assert "HomeFeedSections" in text
+    assert len(text.splitlines()) < 180
 
 
 def test_subscription_webhooks_report_to_sentry():

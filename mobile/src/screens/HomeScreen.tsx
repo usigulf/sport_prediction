@@ -1,249 +1,71 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  RefreshControl,
-  TouchableOpacity,
-  ActivityIndicator,
-  Animated,
-  FlatList,
-} from 'react-native';
-import { CompositeNavigationProp, useNavigation } from '@react-navigation/native';
-import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { Ionicons } from '@expo/vector-icons';
-import { GameCard } from '../components/GameCard';
-import { PredictionCard } from '../components/PredictionCard';
-import { GUEST_TEASER_PICK_LIMIT } from '../constants/guestBrowse';
-import { BestPickMiniCard, CARD_WIDTH_WITH_MARGIN, type BestPickItem } from '../components/BestPickMiniCard';
-import { BestPicksCarousel } from '../components/BestPicksCarousel';
+import React, { useEffect, useRef } from 'react';
+import { View, ScrollView, RefreshControl, Animated } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { SportIconsRow } from '../components/SportIconsRow';
-import { OctobetiQWordmark } from '../components/OctobetiQWordmark';
-import { useAppSelector } from '../store/hooks';
-import { PREMIUM_TRIAL_DAYS } from '../constants/subscriptionPricing';
-import { PREMIUM_PAYWALL_CONTEXT } from '../constants/premiumCopy';
-import { apiService } from '../services/api';
-import { MainTabParamList, RootStackParamList } from '../navigation/AppNavigator';
-import { getUserFriendlyMessage } from '../utils/errorMessages';
-import {
-  compareLeagueDisplayOrder,
-  HOME_HEADER_SUBTITLE,
-  HOME_HERO_EMPTY_TAGLINE,
-  isSoccerLeague,
-} from '../constants/leagues';
-import { formatLeagueLabel } from '../utils/leagueDisplay';
-import { theme } from '../constants/theme';
-import { soccerBetaFetchParams } from '../utils/soccerBetaFetch';
-import { useIntervalWhen } from '../hooks/useIntervalWhen';
-import { useUpcomingGamesQuery } from '../hooks/useUpcomingGamesQuery';
-import { hasProAccess } from '../utils/subscription';
 import { SoccerBetaNotice } from '../components/SoccerBetaNotice';
 import { ModelWarmingNotice } from '../components/ModelWarmingNotice';
+import { useAppSelector } from '../store/hooks';
+import { theme } from '../constants/theme';
+import { useIntervalWhen } from '../hooks/useIntervalWhen';
 import { useAdEngine } from '../ads/engine/AdEngineContext';
-import { NativeFeedAdCard } from '../ads/components/NativeFeedAdCard';
 import { BannerStrip } from '../ads/components/BannerStrip';
-
-const LIVE_GAMES_POLL_MS = 60_000;
-
-type HomeScreenNavigationProp = CompositeNavigationProp<
-  BottomTabNavigationProp<MainTabParamList, 'Home'>,
-  StackNavigationProp<RootStackParamList>
->;
-
-function formatCachedAt(iso: string | null): string {
-  if (!iso) return '';
-  try {
-    const d = new Date(iso);
-    return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-  } catch {
-    return iso;
-  }
-}
-
-const getSportIcon = (leagueId: string): keyof typeof Ionicons.glyphMap => {
-  switch (leagueId) {
-    case 'nfl':
-      return 'football';
-    case 'nba':
-      return 'basketball';
-    case 'soccer':
-    case 'premier_league':
-    case 'champions_league':
-    case 'la_liga':
-    case 'serie_a':
-    case 'bundesliga':
-    case 'mls':
-      return 'football';
-    default:
-      return 'football-outline';
-  }
-};
-
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
-}
+import type { BestPickItem } from '../components/BestPickMiniCard';
+import { HomeHeader } from './home/HomeHeader';
+import { HomeGuestBanner, HomeHeroStrip, HomeStatsWidget } from './home/HomeHeroSections';
+import { HomeFeedSections } from './home/HomeFeedSections';
+import { useHomeScreenData } from './home/useHomeScreenData';
+import { LIVE_GAMES_POLL_MS, type HomeScreenNavigationProp } from './home/homeScreenUtils';
+import { homeScreenStyles as styles } from './home/homeScreenStyles';
 
 export const HomeScreen: React.FC = () => {
   const adEngine = useAdEngine();
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
+
   const {
-    data: gamesData,
-    isLoading: gamesLoading,
-    isError: gamesIsError,
-    error: gamesError,
-    refetch: refetchGames,
-  } = useUpcomingGamesQuery({ limit: 30, ...soccerBetaFetchParams() });
-  const upcomingGames = gamesData?.games ?? [];
-  const cachedAt = gamesData?.updatedAt ?? null;
-  const loading = gamesLoading && upcomingGames.length === 0;
-  const loadError = gamesIsError ? getUserFriendlyMessage(gamesError) : null;
-  const [refreshing, setRefreshing] = useState(false);
-  const [forYouPicks, setForYouPicks] = useState<any[]>([]);
-  const [forYouLoading, setForYouLoading] = useState(false);
-  const [forYouError, setForYouError] = useState<string | null>(null);
-  const [accuracyPct, setAccuracyPct] = useState<number | null>(null);
-  const [subscriptionTier, setSubscriptionTier] = useState<string>('free');
-  const [challengeCount, setChallengeCount] = useState<number>(0);
-  const [premiumTeaserDismissed, setPremiumTeaserDismissed] = useState(false);
-  const [trendingPicks, setTrendingPicks] = useState<any[]>([]);
-  const [trendingLoading, setTrendingLoading] = useState(false);
-  const [trendingError, setTrendingError] = useState<string | null>(null);
-  const [favoritesCount, setFavoritesCount] = useState<{ leagues: number; teams: number } | null>(null);
-  const [selectedFeaturedId, setSelectedFeaturedId] = useState<string | null>(null);
+    upcomingGames,
+    cachedAt,
+    loading,
+    loadError,
+    refreshing,
+    onRefresh,
+    forYouPicks,
+    forYouLoading,
+    forYouError,
+    loadForYou,
+    accuracyPct,
+    subscriptionTier,
+    challengeCount,
+    premiumTeaserDismissed,
+    setPremiumTeaserDismissed,
+    trendingPicks,
+    trendingLoading,
+    trendingError,
+    loadTrending,
+    favoritesCount,
+    setSelectedFeaturedId,
+    gamesByLeague,
+    featuredGame,
+    liveGames,
+    refetchGames,
+  } = useHomeScreenData(isAuthenticated, user?.subscriptionTier);
 
-  const loadForYou = useCallback(async () => {
-    setForYouLoading(true);
-    setForYouError(null);
-    try {
-      const beta = soccerBetaFetchParams();
-      const res = await apiService.getForYouFeed({
-        leagues: beta.leagues,
-        date: beta.date,
-        time_zone: beta.time_zone,
-        limit: 10,
-      });
-      setForYouPicks(res.picks ?? []);
-    } catch (e) {
-      setForYouError(getUserFriendlyMessage(e));
-      setForYouPicks([]);
-    } finally {
-      setForYouLoading(false);
-    }
-  }, []);
+  useIntervalWhen(liveGames.length > 0, LIVE_GAMES_POLL_MS, () => {
+    void refetchGames();
+  });
 
+  const liveDotOpacity = useRef(new Animated.Value(1)).current;
   useEffect(() => {
-    loadForYou();
-  }, [loadForYou]);
-
-  const loadTrending = useCallback(async () => {
-    setTrendingLoading(true);
-    setTrendingError(null);
-    try {
-      const res = await apiService.getTopPicks({ limit: 6, ...soccerBetaFetchParams() });
-      setTrendingPicks(res.picks ?? []);
-    } catch (e) {
-      setTrendingError(getUserFriendlyMessage(e));
-      setTrendingPicks([]);
-    } finally {
-      setTrendingLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadTrending();
-  }, [loadTrending]);
-
-  useEffect(() => {
-    apiService.getAccuracy().then((d) => {
-      if (d?.accuracy_pct != null) setAccuracyPct(Math.round(d.accuracy_pct));
-    }).catch(() => {});
-  }, []);
-
-  const loadChallengeCount = useCallback(async (tier: string) => {
-    if (!hasProAccess(tier)) {
-      setChallengeCount(0);
-      return;
-    }
-    try {
-      const r = await apiService.getChallenges({ limit: 50 });
-      setChallengeCount(r?.count ?? r?.challenges?.length ?? 0);
-    } catch {
-      setChallengeCount(0);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setFavoritesCount(null);
-      setChallengeCount(0);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      let tier = user?.subscriptionTier ?? subscriptionTier;
-      try {
-        const u = (await apiService.getCurrentUser()) as { subscription_tier?: string };
-        if (u?.subscription_tier) {
-          tier = u.subscription_tier;
-          if (!cancelled) setSubscriptionTier(u.subscription_tier);
-        }
-      } catch {
-        /* profile optional for home */
-      }
-      if (!cancelled) await loadChallengeCount(tier);
-      if (!cancelled) {
-        try {
-          const favs = (await apiService.getFavorites()) as {
-            leagues?: unknown[];
-            teams?: unknown[];
-          };
-          setFavoritesCount({
-            leagues: favs?.leagues?.length ?? 0,
-            teams: favs?.teams?.length ?? 0,
-          });
-        } catch {
-          setFavoritesCount(null);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isAuthenticated, loadChallengeCount, user?.subscriptionTier]);
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await Promise.all([
-      refetchGames(),
-      loadForYou(),
-      loadTrending(),
-      apiService.getAccuracy().then((d) => {
-        if (d?.accuracy_pct != null) setAccuracyPct(Math.round(d.accuracy_pct));
-      }).catch(() => {}),
-      isAuthenticated
-        ? apiService
-            .getCurrentUser()
-            .then((u: { subscription_tier?: string }) => {
-              if (u?.subscription_tier) setSubscriptionTier(u.subscription_tier);
-              return loadChallengeCount(u?.subscription_tier ?? subscriptionTier);
-            })
-            .catch(() => loadChallengeCount(subscriptionTier))
-        : Promise.resolve(),
-      isAuthenticated ? apiService.getFavorites().then((favs: any) => {
-        setFavoritesCount({
-          leagues: favs?.leagues?.length ?? 0,
-          teams: favs?.teams?.length ?? 0,
-        });
-      }).catch(() => setFavoritesCount(null)) : Promise.resolve(),
-    ]);
-    setRefreshing(false);
-  };
+    if (liveGames.length === 0) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(liveDotOpacity, { toValue: 0.4, duration: 600, useNativeDriver: true }),
+        Animated.timing(liveDotOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [liveGames.length, liveDotOpacity]);
 
   const handleGamePress = (gameId: string) => {
     navigation.navigate('GameDetail', { gameId });
@@ -261,66 +83,9 @@ export const HomeScreen: React.FC = () => {
     navigation.navigate('Games', { league: sportId });
   };
 
-  // Group games by league
-  const gamesByLeague = upcomingGames.reduce((acc, game) => {
-    const league = game.league || 'other';
-    if (!acc[league]) acc[league] = [];
-    acc[league].push(game);
-    return acc;
-  }, {} as Record<string, typeof upcomingGames>);
-
-  // Featured game: user-selected from carousel, or first with prediction, or first game
-  const defaultFeatured = upcomingGames.find((g) => g.prediction) || upcomingGames[0];
-  const featuredGame = selectedFeaturedId
-    ? (upcomingGames.find((g) => g.id === selectedFeaturedId) ?? defaultFeatured)
-    : defaultFeatured;
-  const otherGames = upcomingGames.filter((g) => g.id !== featuredGame?.id);
-
-  // Live games
-  const liveGames = upcomingGames.filter((g) => g.status === 'live');
-  useIntervalWhen(liveGames.length > 0, LIVE_GAMES_POLL_MS, () => {
-    void refetchGames();
-  });
-
-  const bestPicksFade = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    if (forYouPicks.length > 0) {
-      Animated.timing(bestPicksFade, { toValue: 1, duration: 400, useNativeDriver: true }).start();
-    } else {
-      bestPicksFade.setValue(0);
-    }
-  }, [forYouPicks.length]);
-
-  const liveDotOpacity = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    if (liveGames.length === 0) return;
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(liveDotOpacity, { toValue: 0.4, duration: 600, useNativeDriver: true }),
-        Animated.timing(liveDotOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [liveGames.length]);
-
   return (
     <View style={styles.wrapper}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <View style={styles.logoContainer}>
-            <View style={styles.headerTextContainer}>
-              <OctobetiQWordmark variant="header" />
-              <Text style={styles.headerSubtitle}>{HOME_HEADER_SUBTITLE}</Text>
-            </View>
-          </View>
-        </View>
-        {cachedAt && !loadError && (
-          <Text style={styles.lastUpdated}>Updated {formatCachedAt(cachedAt)}</Text>
-        )}
-      </View>
-
+      <HomeHeader cachedAt={cachedAt} loadError={loadError} />
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
@@ -329,793 +94,58 @@ export const HomeScreen: React.FC = () => {
         }
         showsVerticalScrollIndicator={false}
       >
-      {/* Hero strip: greeting + value prop + trust */}
-      <View style={styles.heroStrip}>
-        <Text style={styles.heroGreeting}>
-          {isAuthenticated ? `${getGreeting()}${user?.email ? ` · ${user.email.split('@')[0]}` : ''}` : 'Welcome to octobetiQ'}
-        </Text>
-        <Text style={styles.heroHeadline}>AI Picks That Win More</Text>
-        <Text style={styles.heroSub}>
-          {forYouPicks.length > 0
-            ? `${forYouPicks.length} pick${forYouPicks.length === 1 ? '' : 's'} for you today`
-            : HOME_HERO_EMPTY_TAGLINE}
-        </Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.trustRow} contentContainerStyle={styles.trustRowContent}>
-          <TouchableOpacity onPress={() => navigation.navigate('Accuracy')} style={styles.trustPill}>
-            <Text style={styles.trustPillText}>
-              {accuracyPct != null ? `${accuracyPct}% · model accuracy` : 'Model accuracy'}
-            </Text>
-            <Ionicons name="chevron-forward" size={12} color={theme.colors.textMuted} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('Help')} style={styles.trustPill} activeOpacity={0.85}>
-            <Text style={styles.trustPillText}>FAQ & trust</Text>
-            <Ionicons name="chevron-forward" size={12} color={theme.colors.textMuted} />
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
-
-      <SoccerBetaNotice />
-      <ModelWarmingNotice />
-
-      {!isAuthenticated ? (
-        <View style={styles.guestBanner}>
-          <Text style={styles.guestBannerText}>
-            Guest mode — {GUEST_TEASER_PICK_LIMIT} free picks with probabilities today. Create an account for
-            full analysis and unlimited picks.
-          </Text>
-          <TouchableOpacity
-            onPress={() =>
-              navigation.navigate('Paywall', {
-                emphasizeTier: 'premium',
-                contextMessage: PREMIUM_PAYWALL_CONTEXT,
-              })
-            }
-            style={styles.guestPremiumLink}
-          >
-            <Text style={styles.guestPremiumLinkText}>View Premium plans</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('Register')} style={styles.guestBannerBtn}>
-            <Text style={styles.guestBannerBtnText}>Create free account</Text>
-          </TouchableOpacity>
-        </View>
-      ) : null}
-
-      {/* User stats widget (logged in): always link to tracked model accuracy */}
-      {isAuthenticated && (
-        <View style={styles.statsWidget}>
-          <TouchableOpacity
-            style={styles.statsPill}
-            onPress={() => navigation.navigate('Accuracy')}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="stats-chart" size={16} color={theme.colors.accent} />
-            <Text style={styles.statsPillText}>
-              {accuracyPct != null ? `Model: ${accuracyPct}%` : 'Model accuracy'}
-            </Text>
-          </TouchableOpacity>
-          {favoritesCount && (favoritesCount.leagues > 0 || favoritesCount.teams > 0) && (
-            <TouchableOpacity
-              style={styles.statsPill}
-              onPress={() => navigation.navigate('Favorites')}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="star" size={16} color={theme.colors.accent} />
-              <Text style={styles.statsPillText}>
-                {favoritesCount.leagues > 0 && favoritesCount.teams > 0
-                  ? `${favoritesCount.leagues} leagues · ${favoritesCount.teams} teams`
-                  : favoritesCount.leagues > 0
-                    ? `${favoritesCount.leagues} leagues`
-                    : `${favoritesCount.teams} teams`}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
-
-      {/* Sport filter icons row (tap → Games tab with league pre-selected) */}
-      <SportIconsRow onSportPress={handleSportPress} />
-
-      {loadError ? (
-        <View style={styles.errorBanner}>
-          <Text style={styles.errorText}>{loadError}</Text>
-          {cachedAt && upcomingGames.length > 0 && (
-            <Text style={styles.cacheHint}>Showing cached data from {formatCachedAt(cachedAt)}</Text>
-          )}
-        </View>
-      ) : null}
-
-      {/* Best Picks for You: horizontal carousel (3–5 mini cards) or empty state */}
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>TOP VALUE TODAY</Text>
-        <View style={styles.sectionHeader}>
-          <Ionicons name="star" size={20} color={theme.colors.accent} />
-          <Text style={styles.sectionTitle}>Best Picks for You</Text>
-          {forYouPicks.length > 0 && (
-            <TouchableOpacity onPress={() => navigation.navigate('Games')} style={styles.seeAllButton}>
-              <Text style={styles.seeAllText}>See all</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-        {forYouError ? (
-          <View style={styles.feedErrorBanner}>
-            <Text style={styles.feedErrorText}>{forYouError}</Text>
-            <TouchableOpacity onPress={() => void loadForYou()} style={styles.feedRetryBtn}>
-              <Text style={styles.feedRetryText}>Retry</Text>
-            </TouchableOpacity>
+        <HomeHeroStrip
+          navigation={navigation}
+          isAuthenticated={isAuthenticated}
+          userEmail={user?.email}
+          forYouCount={forYouPicks.length}
+          accuracyPct={accuracyPct}
+        />
+        <SoccerBetaNotice />
+        <ModelWarmingNotice />
+        {!isAuthenticated ? <HomeGuestBanner navigation={navigation} /> : null}
+        {isAuthenticated ? (
+          <HomeStatsWidget
+            navigation={navigation}
+            accuracyPct={accuracyPct}
+            favoritesCount={favoritesCount}
+          />
+        ) : null}
+        <SportIconsRow onSportPress={handleSportPress} />
+        <HomeFeedSections
+          navigation={navigation}
+          adEngine={adEngine}
+          isAuthenticated={isAuthenticated}
+          subscriptionTier={subscriptionTier}
+          challengeCount={challengeCount}
+          premiumTeaserDismissed={premiumTeaserDismissed}
+          onDismissPremiumTeaser={() => setPremiumTeaserDismissed(true)}
+          loadError={loadError}
+          cachedAt={cachedAt}
+          upcomingGames={upcomingGames}
+          loading={loading}
+          forYouPicks={forYouPicks}
+          forYouLoading={forYouLoading}
+          forYouError={forYouError}
+          onRetryForYou={() => void loadForYou()}
+          trendingPicks={trendingPicks}
+          trendingLoading={trendingLoading}
+          trendingError={trendingError}
+          onRetryTrending={() => void loadTrending()}
+          liveGames={liveGames}
+          liveDotOpacity={liveDotOpacity}
+          featuredGame={featuredGame}
+          gamesByLeague={gamesByLeague}
+          onGamePress={handleGamePress}
+          onPickPress={handlePickPress}
+          onSetFeatured={setSelectedFeaturedId}
+        />
+        {adEngine.initialized ? (
+          <View style={styles.homeBannerDock}>
+            <BannerStrip screen="HomeBanner" />
           </View>
         ) : null}
-        {forYouLoading && forYouPicks.length === 0 && !forYouError ? (
-          <View style={styles.skeletonContainer}>
-            {[1, 2, 3].map((i) => (
-              <View key={i} style={styles.skeletonCard}>
-                <View style={styles.skeletonLine} />
-                <View style={[styles.skeletonLine, { width: '70%', marginTop: 8 }]} />
-                <View style={[styles.skeletonLine, { width: '50%', marginTop: 8 }]} />
-              </View>
-            ))}
-          </View>
-        ) : forYouPicks.length === 0 && !forYouError ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateTitle}>No high-confidence picks right now</Text>
-            <Text style={styles.emptyStateSub}>Check back before game time for fresh AI picks.</Text>
-            <TouchableOpacity style={styles.emptyStateButton} onPress={() => navigation.navigate('Games')}>
-              <Text style={styles.emptyStateButtonText}>Browse all games</Text>
-              <Ionicons name="arrow-forward" size={18} color={theme.colors.background} />
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <Animated.View style={{ opacity: bestPicksFade }}>
-            <BestPicksCarousel
-              picks={forYouPicks.slice(0, 5)}
-              onPickPress={handlePickPress}
-              onSetFeatured={(id) => setSelectedFeaturedId(id)}
-            />
-          </Animated.View>
-        )}
-      </View>
-
-      {/* Live / high-confidence picks carousel */}
-      {(trendingLoading || trendingPicks.length > 0 || trendingError) && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="flame" size={18} color={theme.colors.accent} />
-            <Text style={styles.sectionTitle}>LIVE PICKS</Text>
-          </View>
-          {trendingError ? (
-            <View style={styles.feedErrorBanner}>
-              <Text style={styles.feedErrorText}>{trendingError}</Text>
-              <TouchableOpacity onPress={() => void loadTrending()} style={styles.feedRetryBtn}>
-                <Text style={styles.feedRetryText}>Retry</Text>
-              </TouchableOpacity>
-            </View>
-          ) : null}
-          {trendingLoading && trendingPicks.length === 0 && !trendingError ? (
-            <View style={styles.skeletonContainer}>
-              {[1, 2].map((i) => (
-                <View key={i} style={styles.skeletonCard}>
-                  <View style={styles.skeletonLine} />
-                  <View style={[styles.skeletonLine, { width: '70%', marginTop: 8 }]} />
-                </View>
-              ))}
-            </View>
-          ) : trendingPicks.length > 0 ? (
-            <FlatList
-              data={trendingPicks.slice(0, 4)}
-              keyExtractor={(item) => item.id}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.bestPicksCarousel}
-              getItemLayout={(_: any, index: number) => ({
-                length: CARD_WIDTH_WITH_MARGIN,
-                offset: CARD_WIDTH_WITH_MARGIN * index,
-                index,
-              })}
-              renderItem={({ item }) => (
-                <BestPickMiniCard pick={item} onPress={() => handlePickPress(item)} />
-              )}
-            />
-          ) : null}
-        </View>
-      )}
-
-      {/* Live Games Section */}
-      {liveGames.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>IN-PLAY</Text>
-          <View style={styles.sectionHeader}>
-            <Animated.View style={[styles.liveIndicator, { opacity: liveDotOpacity }]} />
-            <Text style={styles.sectionTitle}>Live Now</Text>
-          </View>
-          {liveGames.slice(0, 3).map((game) => (
-            <TouchableOpacity key={game.id} onPress={() => handleGamePress(game.id)}>
-              <GameCard game={game} />
-            </TouchableOpacity>
-          ))}
-          {adEngine.initialized && liveGames.length > 0 ? (
-            <NativeFeedAdCard surface="home" screenLabel="Home_InPlay_Rail" />
-          ) : null}
-        </View>
-      )}
-
-      {/* Featured Game */}
-      {featuredGame && (
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>AI PICK</Text>
-          <View style={styles.featuredBadgeWrap}>
-            <View style={styles.featuredBadge}>
-              <Ionicons name="sparkles" size={14} color={theme.colors.accent} />
-              <Text style={styles.featuredBadgeText}>Featured</Text>
-            </View>
-            <Text style={styles.sectionTitle}>Featured Game</Text>
-          </View>
-          <TouchableOpacity onPress={() => handleGamePress(featuredGame.id)} activeOpacity={0.9}>
-            <View style={styles.featuredCard}>
-              <GameCard game={featuredGame} />
-              {featuredGame.prediction && (
-                <View style={styles.featuredPrediction}>
-                  <PredictionCard prediction={featuredGame.prediction} league={featuredGame.league} />
-                </View>
-              )}
-            </View>
-          </TouchableOpacity>
-          {featuredGame.prediction && (
-            <TouchableOpacity
-              style={styles.whyPickButton}
-              onPress={() => handleGamePress(featuredGame.id)}
-            >
-              <Ionicons name="document-text-outline" size={16} color={theme.colors.accent} />
-              <Text style={styles.whyPickText}>View analysis</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
-
-      {/* Challenge CTA — only when user already has challenges (avoid empty-state noise) */}
-      {isAuthenticated && hasProAccess(subscriptionTier) && challengeCount > 0 && (
-        <View style={styles.section}>
-          <TouchableOpacity
-            style={styles.challengeCTA}
-            onPress={() => navigation.navigate('Challenges')}
-            activeOpacity={0.9}
-          >
-            <Ionicons name="trophy" size={24} color={theme.colors.accent} />
-            <View style={styles.challengeCTAText}>
-              <Text style={styles.challengeCTATitle}>
-                {challengeCount > 0 ? `You have ${challengeCount} challenge${challengeCount === 1 ? '' : 's'}` : 'Start a challenge'}
-              </Text>
-              <Text style={styles.challengeCTASub}>
-                {challengeCount > 0 ? 'View your challenges' : 'Pick games and track your picks vs the model'}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* Premium teaser (dismissible, hidden when premium) */}
-      {isAuthenticated && subscriptionTier !== 'premium' && subscriptionTier !== 'premium_plus' && !premiumTeaserDismissed && (
-        <View style={styles.section}>
-          <View style={styles.premiumTeaser}>
-            <TouchableOpacity
-              style={styles.premiumTeaserDismiss}
-              onPress={() => setPremiumTeaserDismissed(true)}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <Ionicons name="close" size={20} color={theme.colors.textMuted} />
-            </TouchableOpacity>
-            <Text style={styles.premiumTeaserTitle}>Live picks & full analysis</Text>
-            <Text style={styles.premiumTeaserSub}>
-              {PREMIUM_TRIAL_DAYS}-day free trial · cancel anytime in Settings
-            </Text>
-            <TouchableOpacity
-              style={styles.premiumTeaserButton}
-              onPress={() =>
-                navigation.navigate('Paywall', {
-                  emphasizeTier: 'premium',
-                  contextMessage: PREMIUM_PAYWALL_CONTEXT,
-                })
-              }
-              activeOpacity={0.9}
-            >
-              <Text style={styles.premiumTeaserButtonText}>Try free</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-
-      {/* Games by League */}
-      {Object.entries(gamesByLeague)
-        .sort(([a], [b]) => compareLeagueDisplayOrder(a, b))
-        .map(([league, games], sectionIndex) => {
-        if (games.length === 0 || games[0]?.id === featuredGame?.id) return null;
-        const leagueLabel = formatLeagueLabel(league);
-        const spacing = adEngine.initialized ? adEngine.spacingForHome() : 4;
-        const showMidRail =
-          adEngine.initialized &&
-          sectionIndex > 0 &&
-          (sectionIndex + 1) % spacing === 0;
-        return (
-          <View key={league} style={styles.section}>
-            <Text style={styles.sectionLabel}>{leagueLabel.toUpperCase()}</Text>
-            <View style={styles.sectionHeader}>
-              <Ionicons name={getSportIcon(league)} size={20} color={theme.colors.accent} />
-              <Text style={styles.sectionTitle}>{leagueLabel}</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  const hub =
-                    league === 'nfl' || league === 'nba'
-                      ? league
-                      : isSoccerLeague(league)
-                        ? 'soccer'
-                        : league;
-                  navigation.navigate('Games', { league: hub });
-                }}
-                style={styles.seeAllButton}
-              >
-                <Text style={styles.seeAllText}>See All</Text>
-              </TouchableOpacity>
-            </View>
-            {games.slice(0, 3).map((game) => (
-              <TouchableOpacity key={game.id} onPress={() => handleGamePress(game.id)}>
-                <GameCard game={game} />
-              </TouchableOpacity>
-            ))}
-            {showMidRail ? (
-              <NativeFeedAdCard surface="home" screenLabel={`Home_${league}_Rail`} />
-            ) : null}
-          </View>
-        );
-      })}
-
-      {loading && upcomingGames.length === 0 && (
-        <View style={styles.skeletonContainer}>
-          <View style={styles.skeletonCard}>
-            <View style={styles.skeletonLine} />
-            <View style={[styles.skeletonLine, { width: '75%', marginTop: 8 }]} />
-            <View style={[styles.skeletonLine, { width: '60%', marginTop: 8 }]} />
-          </View>
-          <View style={[styles.skeletonCard, { marginTop: 12 }]}>
-            <View style={styles.skeletonLine} />
-            <View style={[styles.skeletonLine, { width: '70%', marginTop: 8 }]} />
-          </View>
-          <View style={styles.centerContainer}>
-            <ActivityIndicator size="small" color={theme.colors.accent} />
-            <Text style={styles.loadingText}>Loading games...</Text>
-          </View>
-        </View>
-      )}
-
-      {!loading && upcomingGames.length === 0 && !loadError && (
-        <View style={styles.centerContainer}>
-          <Text style={styles.emptyText}>No upcoming games</Text>
-        </View>
-      )}
-
-      {adEngine.initialized ? (
-        <View style={styles.homeBannerDock}>
-          <BannerStrip screen="HomeBanner" />
-        </View>
-      ) : null}
       </ScrollView>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  wrapper: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    backgroundColor: theme.colors.backgroundElevated,
-    paddingHorizontal: theme.spacing.md + 4,
-    paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing.sm + 4,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderSubtle,
-  },
-  headerContent: {
-    marginBottom: theme.spacing.xs,
-  },
-  logoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerTextContainer: {
-    flex: 1,
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  lastUpdated: {
-    fontSize: 11,
-    color: theme.colors.textMuted,
-    marginTop: theme.spacing.xs,
-  },
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: theme.spacing.xl,
-  },
-  homeBannerDock: {
-    marginTop: theme.spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: theme.colors.borderSubtle,
-    backgroundColor: theme.colors.backgroundElevated,
-  },
-  heroStrip: {
-    marginHorizontal: theme.spacing.md,
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-    paddingVertical: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.md,
-    backgroundColor: theme.colors.backgroundCard,
-    borderRadius: theme.radii.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  guestBanner: {
-    marginHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-    padding: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    backgroundColor: theme.colors.accentDim,
-    borderWidth: 1,
-    borderColor: theme.colors.borderSubtle,
-  },
-  guestBannerText: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.sm,
-  },
-  guestPremiumLink: {
-    marginBottom: theme.spacing.sm,
-  },
-  guestPremiumLinkText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.accent,
-  },
-  guestBannerBtn: {
-    alignSelf: 'flex-start',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    backgroundColor: theme.colors.accent,
-    minHeight: theme.minTouchSize,
-    justifyContent: 'center',
-  },
-  guestBannerBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.background,
-  },
-  heroGreeting: {
-    fontSize: 13,
-    color: theme.colors.textMuted,
-    marginBottom: 4,
-  },
-  heroHeadline: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: theme.colors.text,
-    letterSpacing: -0.5,
-  },
-  heroSub: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    marginTop: 6,
-    lineHeight: 20,
-  },
-  trustRow: {
-    marginTop: theme.spacing.md,
-  },
-  trustRowContent: {
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
-    paddingRight: theme.spacing.md,
-  },
-  trustPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: theme.colors.backgroundElevated,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: theme.colors.borderSubtle,
-  },
-  trustPillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.textSecondary,
-  },
-  statsWidget: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    marginBottom: theme.spacing.xs,
-  },
-  statsPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: theme.colors.backgroundCard,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: theme.colors.borderSubtle,
-  },
-  statsPillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.textSecondary,
-  },
-  skeletonContainer: {
-    paddingVertical: theme.spacing.sm,
-  },
-  skeletonCard: {
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.backgroundCard,
-    borderRadius: theme.radii.md,
-    borderWidth: 1,
-    borderColor: theme.colors.borderSubtle,
-  },
-  skeletonLine: {
-    height: 14,
-    backgroundColor: theme.colors.borderSubtle,
-    borderRadius: 4,
-    width: '90%',
-  },
-  emptyState: {
-    paddingVertical: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.sm,
-    alignItems: 'center',
-  },
-  emptyStateTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.text,
-    textAlign: 'center',
-  },
-  emptyStateSub: {
-    fontSize: 14,
-    color: theme.colors.textMuted,
-    marginTop: 6,
-    textAlign: 'center',
-  },
-  emptyStateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: theme.spacing.md,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: theme.colors.accent,
-    borderRadius: theme.radii.md,
-  },
-  emptyStateButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: theme.colors.background,
-  },
-  whyPickButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: theme.spacing.xs,
-    marginBottom: theme.spacing.sm,
-    paddingVertical: 6,
-  },
-  whyPickText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.accent,
-  },
-  challengeCTA: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.md,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.backgroundCard,
-    borderRadius: theme.radii.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  challengeCTAText: {
-    flex: 1,
-  },
-  challengeCTATitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: theme.colors.text,
-  },
-  challengeCTASub: {
-    fontSize: 13,
-    color: theme.colors.textMuted,
-    marginTop: 2,
-  },
-  premiumTeaser: {
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.accentDim,
-    borderRadius: theme.radii.md,
-    borderWidth: 1,
-    borderColor: theme.colors.accent,
-    position: 'relative',
-  },
-  premiumTeaserDismiss: {
-    position: 'absolute',
-    top: theme.spacing.sm,
-    right: theme.spacing.sm,
-    zIndex: 1,
-  },
-  premiumTeaserTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: theme.colors.text,
-    marginTop: theme.spacing.xs,
-  },
-  premiumTeaserSub: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    marginTop: 4,
-  },
-  premiumTeaserButton: {
-    alignSelf: 'flex-start',
-    marginTop: theme.spacing.md,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    backgroundColor: theme.colors.accent,
-    borderRadius: theme.radii.sm,
-  },
-  premiumTeaserButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: theme.colors.background,
-  },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    color: theme.colors.accent,
-    marginBottom: 4,
-  },
-  section: {
-    marginTop: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.md,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: theme.spacing.sm + 4,
-    gap: theme.spacing.sm,
-  },
-  liveIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: theme.colors.secondary,
-  },
-  featuredBadgeWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.sm + 4,
-  },
-  featuredBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    backgroundColor: theme.colors.accentDim,
-    borderRadius: theme.radii.xs,
-    borderWidth: 1,
-    borderColor: theme.colors.accent,
-  },
-  featuredBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: theme.colors.accent,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-    flex: 1,
-  },
-  seeAllButton: {
-    paddingHorizontal: theme.spacing.sm + 4,
-    paddingVertical: theme.spacing.xs,
-    minHeight: theme.minTouchSize,
-    justifyContent: 'center',
-  },
-  seeAllText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.accent,
-  },
-  featuredCard: {
-    marginBottom: theme.spacing.sm,
-  },
-  bestPicksCarousel: {
-    paddingVertical: theme.spacing.sm,
-    paddingRight: theme.spacing.md,
-  },
-  forYouCard: {
-    marginBottom: theme.spacing.sm,
-  },
-  forYouPrediction: {
-    marginTop: theme.spacing.xs,
-  },
-  featuredPrediction: {
-    marginTop: -theme.spacing.sm,
-  },
-  errorBanner: {
-    backgroundColor: theme.colors.secondaryDim,
-    padding: theme.spacing.sm + 4,
-    marginHorizontal: theme.spacing.md,
-    marginTop: theme.spacing.sm + 4,
-    borderRadius: theme.radii.md,
-    borderLeftWidth: 4,
-    borderLeftColor: theme.colors.secondary,
-  },
-  errorText: {
-    fontSize: 14,
-    color: theme.colors.secondary,
-    fontWeight: '500',
-  },
-  feedErrorBanner: {
-    backgroundColor: theme.colors.secondaryDim,
-    padding: theme.spacing.sm,
-    marginBottom: theme.spacing.sm,
-    borderRadius: theme.radii.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: theme.spacing.sm,
-  },
-  feedErrorText: {
-    flex: 1,
-    fontSize: 13,
-    color: theme.colors.secondary,
-  },
-  feedRetryBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: theme.spacing.sm,
-  },
-  feedRetryText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.colors.accent,
-  },
-  cacheHint: {
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    marginTop: theme.spacing.xs,
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-    minHeight: 200,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: theme.colors.textMuted,
-    marginTop: theme.spacing.sm + 4,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: theme.colors.textMuted,
-  },
-});
