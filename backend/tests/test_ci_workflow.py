@@ -50,3 +50,10 @@ def test_mobile_overrides_patch_high_audit_findings():
     pkg = (REPO_ROOT / "mobile" / "package.json").read_text(encoding="utf-8")
     assert '"@xmldom/xmldom": "^0.9.10"' in pkg
     assert '"tar": "^7.5.19"' in pkg
+
+
+def test_ci_enforces_sixty_percent_coverage():
+    ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    pytest_ini = (REPO_ROOT / "pytest.ini").read_text(encoding="utf-8")
+    assert "--cov-fail-under=60" in ci
+    assert "--cov-fail-under=60" in pytest_ini

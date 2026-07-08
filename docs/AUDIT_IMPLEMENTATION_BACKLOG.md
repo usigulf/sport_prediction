@@ -92,7 +92,7 @@ Master backlog from technical due diligence (2026-07-04).
 | PH2-004 | Uptime probe script + cron example | Imp #20 | done |
 | PH2-005 | Offsite DB backup configured on VPS | Weakness #4 | blocked |
 | PH2-006 | Split god screens (HomeScreen) | Weakness #14, Imp #32 | done |
-| PH2-007 | 60%+ test coverage | Imp #71 | pending |
+| PH2-007 | 60%+ test coverage | Imp #71 | done |
 | PH2-008 | Annual subscription plan | Imp #41 | pending |
 | PH2-009 | Staging environment | Weakness #50, Imp #58 | pending |
 | PH2-010 | Prometheus metrics | Weakness #28, Imp #60 | pending |

@@ -56,18 +56,22 @@ def test_get_prediction_free_user(client, auth_headers, test_game, test_predicti
 
 def test_get_prediction_exceeds_daily_limit(client, auth_headers, test_game, test_prediction, db):
     """Test free user exceeding daily prediction limit"""
-    from app.services.cache_service import CacheService
+    from uuid import uuid4
+
     from app.models.user import User
-    
-    # Simulate exceeding daily limit
-    cache = CacheService()
+    from app.services.free_tier_limits import (
+        FREE_TIER_DAILY_PREDICTION_LIMIT,
+        FreeTierPredictionLimiter,
+    )
+
     user = db.query(User).filter(User.email == "test@example.com").first()
-    cache_key = f"daily_predictions:{user.id}:{datetime.now().date()}"
-    cache.set(cache_key, 10, ttl=86400)  # Set to limit
-    
+    limiter = FreeTierPredictionLimiter()
+    for _ in range(FREE_TIER_DAILY_PREDICTION_LIMIT):
+        limiter.record_prediction_view(user.id, uuid4())
+
     response = client.get(
         f"/api/v1/games/{test_game.id}/predictions",
-        headers=auth_headers
+        headers=auth_headers,
     )
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert "limit" in response.json()["detail"].lower()

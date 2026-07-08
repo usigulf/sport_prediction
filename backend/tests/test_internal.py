@@ -153,9 +153,9 @@ def test_sportradar_health_requires_secret(client):
 
 
 def test_clearsports_health_not_configured(monkeypatch, client):
-    monkeypatch.delenv("CLEARSPORTS_API_KEY", raising=False)
-    monkeypatch.setenv("CLEARSPORTS_API_KEY", "")
-    get_settings.cache_clear()
+    settings = get_settings()
+    monkeypatch.setattr(settings, "clearsports_api_key", "")
+    monkeypatch.setattr("app.api.internal.get_settings", lambda: settings)
     r = client.get("/internal/health/clearsports", headers=_headers())
     assert r.status_code == status.HTTP_200_OK
     body = r.json()

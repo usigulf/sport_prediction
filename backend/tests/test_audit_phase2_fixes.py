@@ -87,3 +87,10 @@ def test_offsite_backup_setup_and_verify_scripts():
 def test_crontab_includes_backup_verify():
     crontab = (REPO_ROOT / "deploy" / "crontab.example").read_text(encoding="utf-8")
     assert "verify_db_backup.sh" in crontab
+
+
+def test_coverage_gate_sixty_percent():
+    pytest_ini = (REPO_ROOT / "pytest.ini").read_text(encoding="utf-8")
+    ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert "--cov-fail-under=60" in pytest_ini
+    assert "--cov-fail-under=60" in ci
