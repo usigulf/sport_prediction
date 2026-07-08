@@ -109,3 +109,4 @@ tmp/
 temp/
 *.tmp
 .env.production
+.env.staging

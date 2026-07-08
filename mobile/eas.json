@@ -19,6 +19,16 @@
         "EXPO_PUBLIC_BETA_SOCCER_ONLY": "false"
       }
     },
+    "staging": {
+      "distribution": "internal",
+      "channel": "staging",
+      "node": "20.18.1",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api-staging.octobetiq.com/api/v1",
+        "EXPO_PUBLIC_BETA_SOCCER_ONLY": "false",
+        "EXPO_PUBLIC_ODDS_DISPLAY_ENABLED": "true"
+      }
+    },
     "production": {
       "autoIncrement": true,
       "channel": "production",

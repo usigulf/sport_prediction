@@ -96,7 +96,11 @@ app.include_router(internal_router)
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "service": "sports-prediction-api"}
+    return {
+        "status": "healthy",
+        "service": "sports-prediction-api",
+        "environment": settings.environment,
+    }
 
 
 def _get_ws_token(websocket: WebSocket):

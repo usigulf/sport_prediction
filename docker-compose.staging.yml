@@ -1,0 +1,46 @@
+# Staging overlay — isolated API + DB on the same VPS as production (PH2-009).
+#
+# Shares prod postgres/redis containers; uses database sportsprediction_staging and Redis DB 1.
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d api-staging
+#   ./scripts/deploy_staging_api.sh
+
+services:
+  api-staging:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sport-prediction-staging-api
+    env_file:
+      - path: .env.staging
+        required: false
+    environment:
+      ENVIRONMENT: staging
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/sportsprediction_staging
+      REDIS_URL: redis://redis:6379/1
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      OPENAPI_DOCS_ENABLED: "true"
+      LOG_LEVEL: DEBUG
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env.staging}
+      PUSH_CRON_SECRET: ${PUSH_CRON_SECRET:-}
+      EXPLANATION_MODEL_DIR: /models
+      INTERNAL_ALLOWED_CIDRS: ${INTERNAL_ALLOWED_CIDRS:-127.0.0.1/32,172.16.0.0/12}
+      CORS_ORIGINS: '["https://api-staging.octobetiq.com","http://localhost:19006"]'
+    ports:
+      - "127.0.0.1:8001:8000"
+    volumes:
+      - ./ml/models:/models:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+    networks:
+      - sport-prediction-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
+      retries: 3
