@@ -75,7 +75,7 @@
   },
   "private": true,
   "overrides": {
-    "@xmldom/xmldom": "^0.9.10",
+    "@xmldom/xmldom": "0.8.10",
     "tar": "^7.5.19"
   }
 }
