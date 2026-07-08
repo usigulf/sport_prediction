@@ -199,9 +199,7 @@ export const PaywallScreen: React.FC = () => {
 
   const purchaseViaStore = useCallback(
     async (tierId: 'premium'): Promise<boolean> => {
-      const pkg =
-        packages.find((p) => p.tier === tierId && p.billingPeriod === billingPeriod) ??
-        packages.find((p) => p.tier === tierId);
+      const pkg = packages.find((p) => p.tier === tierId && p.billingPeriod === billingPeriod);
       if (!pkg) return false;
       const res = await purchasePackage(pkg.raw);
       if (res.cancelled) return true;
@@ -298,6 +296,17 @@ export const PaywallScreen: React.FC = () => {
     [storeBillingReady, purchaseViaStore, dispatch, offeringsError, loadOfferings, handleRestore, guestPreview, navigation, billingPeriod],
   );
 
+  const monthlyPkg = packages.find((p) => p.tier === 'premium' && p.billingPeriod === 'monthly');
+  const annualPkg = packages.find((p) => p.tier === 'premium' && p.billingPeriod === 'annual');
+  /** Hide annual until ASC + RevenueCat product exists (avoid review mismatch on iOS IAP). */
+  const annualBillingAvailable = !storeBillingReady || Boolean(annualPkg);
+
+  useEffect(() => {
+    if (!annualBillingAvailable && billingPeriod === 'annual') {
+      setBillingPeriod('monthly');
+    }
+  }, [annualBillingAvailable, billingPeriod]);
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -309,8 +318,6 @@ export const PaywallScreen: React.FC = () => {
   const appVersion =
     Constants.expoConfig?.version ?? (Constants as { nativeAppVersion?: string }).nativeAppVersion ?? '—';
 
-  const monthlyPkg = packages.find((p) => p.tier === 'premium' && p.billingPeriod === 'monthly');
-  const annualPkg = packages.find((p) => p.tier === 'premium' && p.billingPeriod === 'annual');
   const storePremiumMonthlyPrice = monthlyPkg?.priceString;
   const storePremiumAnnualPrice = annualPkg?.priceString;
   const premiumDisplayPrice =
@@ -373,22 +380,24 @@ export const PaywallScreen: React.FC = () => {
             Monthly
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.billingOption, billingPeriod === 'annual' && styles.billingOptionActive]}
-          onPress={() => setBillingPeriod('annual')}
-          accessibilityRole="button"
-          accessibilityState={{ selected: billingPeriod === 'annual' }}
-        >
-          <Text
-            style={[
-              styles.billingOptionText,
-              billingPeriod === 'annual' && styles.billingOptionTextActive,
-            ]}
+        {annualBillingAvailable ? (
+          <TouchableOpacity
+            style={[styles.billingOption, billingPeriod === 'annual' && styles.billingOptionActive]}
+            onPress={() => setBillingPeriod('annual')}
+            accessibilityRole="button"
+            accessibilityState={{ selected: billingPeriod === 'annual' }}
           >
-            Annual
-          </Text>
-          <Text style={styles.billingSavings}>Save {annualSavingsPct}%</Text>
-        </TouchableOpacity>
+            <Text
+              style={[
+                styles.billingOptionText,
+                billingPeriod === 'annual' && styles.billingOptionTextActive,
+              ]}
+            >
+              Annual
+            </Text>
+            <Text style={styles.billingSavings}>Save {annualSavingsPct}%</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       {TIERS.map((tier) => {
@@ -520,11 +529,15 @@ export const PaywallScreen: React.FC = () => {
             priceLabel: premiumMonthlyPriceWithPeriod(storePremiumMonthlyPrice),
             trialNote: '7-day free trial for eligible new subscribers, then auto-renews',
           },
-          {
-            title: 'Premium Annual',
-            lengthLabel: '1 year',
-            priceLabel: premiumAnnualPriceWithPeriod(storePremiumAnnualPrice),
-          },
+          ...(annualBillingAvailable
+            ? [
+                {
+                  title: 'Premium Annual',
+                  lengthLabel: '1 year',
+                  priceLabel: premiumAnnualPriceWithPeriod(storePremiumAnnualPrice),
+                },
+              ]
+            : []),
         ]}
       />
       {!storeBillingReady && Platform.OS !== 'ios' ? (

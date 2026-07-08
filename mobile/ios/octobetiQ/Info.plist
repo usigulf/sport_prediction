@@ -27,6 +27,7 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
+          <string>octobetiq</string>
           <string>com.sportsprediction.app</string>
         </array>
       </dict>

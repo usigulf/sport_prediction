@@ -11,10 +11,8 @@ const TEST_APP_ANDROID = 'ca-app-pub-3940256099942544~3347511713';
 const SOCCER_BETA_DESCRIPTION =
   'Informational AI soccer picks across major international competitions. Tracked model accuracy. Not betting advice.';
 
-// RevenueCat public SDK key. Safe to ship in-app (publishable, not a secret).
-// Override per platform with EXPO_PUBLIC_REVENUECAT_IOS_KEY / _ANDROID_KEY (EAS secrets).
-// TODO: replace with platform-specific appl_/goog_ keys before production.
-const REVENUECAT_DEFAULT_KEY = 'test_PQaTluwkYojJCmXTsqDpgGtCAwD';
+// RevenueCat public SDK key — set EXPO_PUBLIC_REVENUECAT_IOS_KEY in EAS production env.
+const REVENUECAT_DEFAULT_KEY = '';
 
 module.exports = ({ config }) => {
   const base = appJson.expo ?? config;

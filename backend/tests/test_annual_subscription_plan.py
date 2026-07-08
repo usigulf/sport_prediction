@@ -72,6 +72,7 @@ def test_paywall_supports_annual_billing_toggle():
     assert "billingPeriod" in paywall
     assert "billingToggle" in paywall
     assert "Premium Annual" in paywall
+    assert "annualBillingAvailable" in paywall
 
 
 def test_purchases_detects_annual_packages():

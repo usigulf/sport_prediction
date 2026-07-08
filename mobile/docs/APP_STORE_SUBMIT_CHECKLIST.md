@@ -12,6 +12,7 @@ Use the **Complete** TestFlight build already uploaded. Do **not** wait for a ne
 
 ```bash
 ./scripts/verify_pre_asc_prod.sh
+./scripts/verify_pre_asc_mobile.sh
 # On VPS (push + ClearSports): ./scripts/verify_pre_asc_prod.sh .env.production
 ```
 
@@ -111,7 +112,13 @@ npx eas-cli build:version:set --platform ios
 # (integer only — NOT 1.0.1)
 ```
 
-Marketing version **1.0.1** is set in `app.json` + `ios/octobetiQ/Info.plist`. Next successful build will be **1.0.1 (31)** for ASC version 1.0.1.
+Marketing version **1.0.1** is set in `app.json` + `ios/octobetiQ/Info.plist`. Next successful build will be **1.0.1 (38+)** for ASC version 1.0.1.
+
+**Pre-submit code fixes (1.0.1):**
+- Annual paywall toggle hidden until `com.octobetiq.premium.annual` is in RevenueCat/ASC (monthly-only safe for review).
+- `aps-environment` = `production` in entitlements.
+- Deep link scheme `octobetiq://` in Info.plist.
+- No Test Store RevenueCat fallback in production builds (`app.config.js`).
 
 ---
 
