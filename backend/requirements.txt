@@ -64,6 +64,8 @@ pandas==2.2.3
     # via -r requirements.in
 pillow==12.3.0
     # via -r requirements.in
+prometheus-client==0.23.1
+    # via -r requirements.in
 psycopg2-binary==2.9.12
     # via -r requirements.in
 pyasn1==0.6.3

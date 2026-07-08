@@ -126,6 +126,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     # Disable OpenAPI docs (Swagger / ReDoc) in production. Set OPENAPI_DOCS_ENABLED=false in production.
     openapi_docs_enabled: bool = True
+    prometheus_metrics_enabled: bool = True
     # Optional: secret for internal cron endpoints (e.g. push triggers). If set, require X-Cron-Secret header.
     push_cron_secret: Optional[str] = None
     # Optional: comma-separated CIDRs allowed to access /internal/* (defense in depth).

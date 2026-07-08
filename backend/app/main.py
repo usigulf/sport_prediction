@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 
 from app.config import get_settings
 from app.database import SessionLocal
+from app.monitoring.prometheus_metrics import setup_prometheus_metrics
 from app.services.live_websocket_auth import authenticate_live_websocket, get_ws_token
 from app.services.live_websocket_hub import live_ws_hub
 
@@ -87,6 +88,9 @@ app.add_middleware(
 
 # Exception handlers
 setup_exception_handlers(app)
+
+if getattr(settings, "prometheus_metrics_enabled", True):
+    setup_prometheus_metrics(app)
 
 # Include routers
 app.include_router(api_router, prefix=settings.api_v1_prefix)
