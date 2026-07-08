@@ -119,6 +119,7 @@ export interface OfferingPackage {
   priceString: string;
   /** Best-effort tier inferred from product/package naming. */
   tier: NormalizedTier;
+  billingPeriod: 'monthly' | 'annual';
   raw: PurchasesPackage;
 }
 
@@ -141,7 +142,21 @@ function resolveCurrentOffering(
 
 function tierForPackage(pkg: PurchasesPackage): NormalizedTier {
   const hay = `${pkg.identifier} ${pkg.product?.identifier ?? ''}`.toLowerCase();
+  if (hay.includes('plus') || hay.includes('pro')) return 'premium';
   return 'premium';
+}
+
+function billingPeriodForPackage(pkg: PurchasesPackage): 'monthly' | 'annual' {
+  const hay = `${pkg.identifier} ${pkg.product?.identifier ?? ''}`.toLowerCase();
+  if (
+    hay.includes('annual') ||
+    hay.includes('yearly') ||
+    hay.includes('year') ||
+    hay.includes('.annual')
+  ) {
+    return 'annual';
+  }
+  return 'monthly';
 }
 
 /** Packages from the current offering. Empty when RC isn't configured/available. */
@@ -180,6 +195,7 @@ export async function getOfferingPackages(): Promise<OfferingPackage[]> {
       identifier: p.identifier,
       priceString: p.product?.priceString ?? '',
       tier: tierForPackage(p),
+      billingPeriod: billingPeriodForPackage(p),
       raw: p,
     }));
   } catch (e) {

@@ -138,6 +138,7 @@ class Settings(BaseSettings):
     stripe_secret_key: Optional[str] = None
     stripe_webhook_secret: Optional[str] = None  # Stripe signing secret for checkout.session.completed
     stripe_price_id_premium: Optional[str] = None  # price_xxx for Premium monthly
+    stripe_price_id_premium_annual: Optional[str] = None  # price_xxx for Premium annual
     stripe_price_id_premium_plus: Optional[str] = None  # price_xxx for Pro (tier premium_plus)
     # Host deploy/payment-pages/*.html on your domain (match nginx canonical host www vs apex).
     stripe_success_url: str = "https://www.octobetiq.com/payment/success"

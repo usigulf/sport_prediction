@@ -23,9 +23,14 @@ import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { theme } from '../constants/theme';
 import { PLAN_MATRIX } from '../constants/planFeatures';
 import {
+  displayPremiumAnnualPrice,
   displayPremiumMonthlyPrice,
+  premiumAnnualPriceWithPeriod,
+  premiumAnnualSavingsPercent,
+  PREMIUM_ANNUAL_PRICE_LABEL,
   PREMIUM_MONTHLY_PRICE_LABEL,
   premiumMonthlyPriceWithPeriod,
+  type BillingPeriod,
 } from '../constants/subscriptionPricing';
 import { normalizeSubscriptionTier, type NormalizedTier } from '../utils/subscription';
 import {
@@ -100,6 +105,7 @@ export const PaywallScreen: React.FC = () => {
   const [packages, setPackages] = useState<OfferingPackage[]>([]);
   const [offeringsError, setOfferingsError] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(false);
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
   const scrollRef = useRef<ScrollView>(null);
 
   // Store billing (App Store / Play Billing via RevenueCat) is the compliant
@@ -193,7 +199,9 @@ export const PaywallScreen: React.FC = () => {
 
   const purchaseViaStore = useCallback(
     async (tierId: 'premium'): Promise<boolean> => {
-      const pkg = packages.find((p) => p.tier === 'premium');
+      const pkg =
+        packages.find((p) => p.tier === tierId && p.billingPeriod === billingPeriod) ??
+        packages.find((p) => p.tier === tierId);
       if (!pkg) return false;
       const res = await purchasePackage(pkg.raw);
       if (res.cancelled) return true;
@@ -207,7 +215,7 @@ export const PaywallScreen: React.FC = () => {
       }
       return true;
     },
-    [packages, applyTier],
+    [packages, applyTier, billingPeriod],
   );
 
   const handleRestore = useCallback(async () => {
@@ -266,7 +274,7 @@ export const PaywallScreen: React.FC = () => {
         }
         // Web / Android fallback: Stripe checkout when store billing unavailable.
         const { url } = await withTimeout(
-          apiService.createCheckoutSession(tierId),
+          apiService.createCheckoutSession(tierId, billingPeriod),
           CHECKOUT_TIMEOUT_MS,
         );
         if (!url) {
@@ -287,7 +295,7 @@ export const PaywallScreen: React.FC = () => {
         setCheckoutLoadingTier(null);
       }
     },
-    [storeBillingReady, purchaseViaStore, dispatch, offeringsError, loadOfferings, handleRestore, guestPreview, navigation],
+    [storeBillingReady, purchaseViaStore, dispatch, offeringsError, loadOfferings, handleRestore, guestPreview, navigation, billingPeriod],
   );
 
   if (loading) {
@@ -301,8 +309,16 @@ export const PaywallScreen: React.FC = () => {
   const appVersion =
     Constants.expoConfig?.version ?? (Constants as { nativeAppVersion?: string }).nativeAppVersion ?? '—';
 
-  const storePremiumPrice = packages.find((p) => p.tier === 'premium')?.priceString;
-  const premiumDisplayPrice = displayPremiumMonthlyPrice(storePremiumPrice);
+  const monthlyPkg = packages.find((p) => p.tier === 'premium' && p.billingPeriod === 'monthly');
+  const annualPkg = packages.find((p) => p.tier === 'premium' && p.billingPeriod === 'annual');
+  const storePremiumMonthlyPrice = monthlyPkg?.priceString;
+  const storePremiumAnnualPrice = annualPkg?.priceString;
+  const premiumDisplayPrice =
+    billingPeriod === 'annual'
+      ? displayPremiumAnnualPrice(storePremiumAnnualPrice)
+      : displayPremiumMonthlyPrice(storePremiumMonthlyPrice);
+  const premiumDisplayPeriod = billingPeriod === 'annual' ? '/year' : '/month';
+  const annualSavingsPct = premiumAnnualSavingsPercent();
 
   return (
     <ScrollView
@@ -341,6 +357,40 @@ export const PaywallScreen: React.FC = () => {
             : 'You\'re on a paid plan. Manage below.'}
       </Text>
 
+      <View style={styles.billingToggle}>
+        <TouchableOpacity
+          style={[styles.billingOption, billingPeriod === 'monthly' && styles.billingOptionActive]}
+          onPress={() => setBillingPeriod('monthly')}
+          accessibilityRole="button"
+          accessibilityState={{ selected: billingPeriod === 'monthly' }}
+        >
+          <Text
+            style={[
+              styles.billingOptionText,
+              billingPeriod === 'monthly' && styles.billingOptionTextActive,
+            ]}
+          >
+            Monthly
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.billingOption, billingPeriod === 'annual' && styles.billingOptionActive]}
+          onPress={() => setBillingPeriod('annual')}
+          accessibilityRole="button"
+          accessibilityState={{ selected: billingPeriod === 'annual' }}
+        >
+          <Text
+            style={[
+              styles.billingOptionText,
+              billingPeriod === 'annual' && styles.billingOptionTextActive,
+            ]}
+          >
+            Annual
+          </Text>
+          <Text style={styles.billingSavings}>Save {annualSavingsPct}%</Text>
+        </TouchableOpacity>
+      </View>
+
       {TIERS.map((tier) => {
         const isCurrent =
           currentTier === tier.id ||
@@ -349,7 +399,16 @@ export const PaywallScreen: React.FC = () => {
         const loadingThis = checkoutLoadingTier === tier.id;
         const showSubscribe = isPaid && !isCurrent;
         const displayPrice =
-          tier.id === 'premium' ? premiumDisplayPrice : tier.price;
+          tier.id === 'premium'
+            ? premiumDisplayPrice
+            : tier.price;
+        const displayPeriod = tier.id === 'premium' ? premiumDisplayPeriod : tier.period;
+        const subscribeLabel =
+          tier.id === 'premium' && billingPeriod === 'annual'
+            ? 'Subscribe annual'
+            : guestPreview
+              ? 'Sign up for free trial'
+              : 'Start 7-day free trial';
 
         const cardBody = (
           <>
@@ -357,8 +416,13 @@ export const PaywallScreen: React.FC = () => {
               <Text style={styles.tierName}>{tier.name}</Text>
               <View style={styles.priceRow}>
                 <Text style={styles.price}>{displayPrice}</Text>
-                <Text style={styles.period}>{tier.period}</Text>
+                <Text style={styles.period}>{displayPeriod}</Text>
               </View>
+              {tier.id === 'premium' && billingPeriod === 'annual' ? (
+                <Text style={styles.annualHint}>
+                  {PREMIUM_ANNUAL_PRICE_LABEL}/year vs {PREMIUM_MONTHLY_PRICE_LABEL}/mo monthly
+                </Text>
+              ) : null}
               {isCurrent && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>Current plan</Text>
@@ -378,9 +442,7 @@ export const PaywallScreen: React.FC = () => {
                   <Text style={[styles.ctaText, isCurrent && styles.ctaTextCurrent]}>
                     {isCurrent
                       ? 'Current plan'
-                      : guestPreview
-                        ? 'Sign up for free trial'
-                        : 'Start 7-day free trial'}
+                      : subscribeLabel}
                   </Text>
                 )}
               </View>
@@ -453,10 +515,15 @@ export const PaywallScreen: React.FC = () => {
       <SubscriptionLegalFooter
         plans={[
           {
-            title: 'Premium',
+            title: 'Premium Monthly',
             lengthLabel: '1 month',
-            priceLabel: premiumMonthlyPriceWithPeriod(storePremiumPrice),
+            priceLabel: premiumMonthlyPriceWithPeriod(storePremiumMonthlyPrice),
             trialNote: '7-day free trial for eligible new subscribers, then auto-renews',
+          },
+          {
+            title: 'Premium Annual',
+            lengthLabel: '1 year',
+            priceLabel: premiumAnnualPriceWithPeriod(storePremiumAnnualPrice),
           },
         ]}
       />
@@ -520,6 +587,44 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: theme.colors.textSecondary,
     marginBottom: 24,
+  },
+  billingToggle: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+  },
+  billingOption: {
+    flex: 1,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSubtle,
+    backgroundColor: theme.colors.backgroundCard,
+    alignItems: 'center',
+  },
+  billingOptionActive: {
+    borderColor: theme.colors.accent,
+    backgroundColor: theme.colors.accentDim,
+  },
+  billingOptionText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+  },
+  billingOptionTextActive: {
+    color: theme.colors.text,
+  },
+  billingSavings: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: theme.colors.accent,
+    marginTop: 2,
+  },
+  annualHint: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    marginTop: 4,
   },
   card: {
     backgroundColor: theme.colors.backgroundCard,

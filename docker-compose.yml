@@ -91,6 +91,7 @@ services:
       # If unset here, env_file can still supply them unless an empty key in another file overrides.
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_PRICE_ID_PREMIUM: ${STRIPE_PRICE_ID_PREMIUM:-}
+      STRIPE_PRICE_ID_PREMIUM_ANNUAL: ${STRIPE_PRICE_ID_PREMIUM_ANNUAL:-}
       STRIPE_PRICE_ID_PREMIUM_PLUS: ${STRIPE_PRICE_ID_PREMIUM_PLUS:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
       # Sportradar: set in .env and/or .env.production (see env_file above), not only .env.production with compose substitution.

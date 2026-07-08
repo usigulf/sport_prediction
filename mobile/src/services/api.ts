@@ -849,10 +849,13 @@ class ApiService {
   }
 
   // Subscription (Stripe Checkout). tier: premium = Premium, premium_plus = Pro.
-  async createCheckoutSession(tier: 'premium' | 'premium_plus' = 'premium') {
+  async createCheckoutSession(
+    tier: 'premium' | 'premium_plus' = 'premium',
+    billingPeriod: 'monthly' | 'annual' = 'monthly',
+  ) {
     return this.request<{ url: string }>('/subscription/create-checkout', {
       method: 'POST',
-      body: { tier },
+      body: { tier, billing_period: billingPeriod },
       requireAuth: true,
     });
   }

@@ -42,11 +42,17 @@ class CreateCheckoutBody(BaseModel):
         default="premium",
         description="Stripe price: premium or premium_plus (Pro)",
     )
+    billing_period: Literal["monthly", "annual"] = Field(
+        default="monthly",
+        description="Premium billing interval (annual uses STRIPE_PRICE_ID_PREMIUM_ANNUAL)",
+    )
 
 
-def _price_id_for_tier(tier: str) -> str | None:
+def _price_id_for_tier(tier: str, billing_period: str = "monthly") -> str | None:
     if tier == "premium_plus":
         return settings.stripe_price_id_premium_plus
+    if billing_period == "annual":
+        return settings.stripe_price_id_premium_annual or settings.stripe_price_id_premium
     return settings.stripe_price_id_premium
 
 
@@ -72,6 +78,8 @@ def _tier_from_stripe_subscription(sub: dict, settings_obj) -> str | None:
         pid = price.get("id")
         if pid and pid == settings_obj.stripe_price_id_premium_plus:
             return "premium_plus"
+        if pid and pid == settings_obj.stripe_price_id_premium_annual:
+            return "premium"
         if pid and pid == settings_obj.stripe_price_id_premium:
             return "premium"
     return None
@@ -138,13 +146,22 @@ async def create_checkout_session(
     """
     if stripe is None:
         raise HTTPException(status_code=503, detail="Stripe not installed. pip install stripe")
-    price_id = _price_id_for_tier(body.tier)
+    price_id = _price_id_for_tier(body.tier, body.billing_period)
     if not settings.stripe_secret_key or not price_id:
+        price_env = (
+            "STRIPE_PRICE_ID_PREMIUM_PLUS"
+            if body.tier == "premium_plus"
+            else (
+                "STRIPE_PRICE_ID_PREMIUM_ANNUAL"
+                if body.billing_period == "annual"
+                else "STRIPE_PRICE_ID_PREMIUM"
+            )
+        )
         raise HTTPException(
             status_code=503,
             detail=(
                 "Payments not configured. Set STRIPE_SECRET_KEY and "
-                f"STRIPE_PRICE_ID_{'PREMIUM_PLUS' if body.tier == 'premium_plus' else 'PREMIUM'}."
+                f"{price_env}."
             ),
         )
     stripe.api_key = settings.stripe_secret_key
@@ -162,7 +179,7 @@ async def create_checkout_session(
         "subscription_tier": body.tier,
     }
     create_kwargs["subscription_data"] = {"metadata": sub_meta}
-    if body.tier == "premium":
+    if body.tier == "premium" and body.billing_period == "monthly":
         create_kwargs["subscription_data"]["trial_period_days"] = 7
     try:
         session = stripe.checkout.Session.create(**create_kwargs)
