@@ -96,6 +96,7 @@ Master backlog from technical due diligence (2026-07-04).
 | PH2-008 | Annual subscription plan | Imp #41 | done |
 | PH2-009 | Staging environment | Weakness #50, Imp #58 | done |
 | PH2-010 | Prometheus metrics | Weakness #28, Imp #60 | done |
+| PH2-011 | Staging public URL (DNS + TLS + nginx) | PH2-009 | blocked |
 
 ---
 

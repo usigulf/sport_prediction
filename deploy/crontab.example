@@ -57,3 +57,6 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # API uptime probe (/health + /ready) every 5 minutes
 */5 * * * * /root/sport_prediction/scripts/check_api_health.sh >>/var/log/api_health.log 2>&1
+
+# Staging API uptime (after ./scripts/deploy_staging_public_url.sh)
+# */10 * * * * /root/sport_prediction/scripts/check_staging_health.sh >>/var/log/staging_health.log 2>&1

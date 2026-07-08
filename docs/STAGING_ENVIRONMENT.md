@@ -11,6 +11,7 @@ Production postgres/redis containers are shared; only the API process and DB nam
 | `scripts/setup_staging_env.sh` | Create `.env.staging` with unique JWT/cron secrets |
 | `scripts/ensure_staging_database.sh` | `CREATE DATABASE sportsprediction_staging` (idempotent) |
 | `scripts/deploy_staging_api.sh` | Build, migrate, start `api-staging`, verify `/health` |
+| `scripts/deploy_staging_public_url.sh` | DNS check, nginx, Certbot TLS, public `/health` verify |
 | `scripts/check_staging_health.sh` | Uptime probe for staging URL |
 
 ## First-time VPS setup
@@ -27,16 +28,14 @@ git pull
 chmod +x scripts/deploy_staging_api.sh scripts/ensure_staging_database.sh scripts/setup_staging_env.sh
 ./scripts/deploy_staging_api.sh
 
-# 3. DNS: api-staging.octobetiq.com → VPS IP
+# 3. DNS (Namecheap → Advanced DNS):
+#    Type A | Host api-staging | Value <VPS_IP> | TTL Automatic
 
-# 4. TLS + nginx
-sudo certbot certonly --nginx -d api-staging.octobetiq.com
-sudo cp deploy/nginx-octobetiq-staging-api.conf.example /etc/nginx/sites-available/octobetiq-staging-api
-sudo ln -sf /etc/nginx/sites-available/octobetiq-staging-api /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
+# 4. TLS + nginx (from laptop or VPS after DNS propagates)
+./scripts/deploy_staging_public_url.sh
 
 # 5. Verify public
-curl -fsS https://api-staging.octobetiq.com/health
+./scripts/check_staging_health.sh
 ```
 
 `/health` returns `"environment": "staging"`. OpenAPI docs are enabled at `/docs` on staging only.

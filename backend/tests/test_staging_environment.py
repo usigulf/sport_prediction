@@ -15,6 +15,7 @@ def test_staging_compose_overlay_exists():
 def test_staging_deploy_scripts_exist():
     for name in (
         "deploy_staging_api.sh",
+        "deploy_staging_public_url.sh",
         "setup_staging_env.sh",
         "ensure_staging_database.sh",
         "check_staging_health.sh",
@@ -37,6 +38,17 @@ def test_staging_nginx_example():
     )
     assert "api-staging.octobetiq.com" in nginx
     assert "127.0.0.1:8001" in nginx
+
+
+def test_staging_public_url_deploy_script():
+    script = (REPO_ROOT / "scripts" / "deploy_staging_public_url.sh").read_text(encoding="utf-8")
+    assert "api-staging.octobetiq.com" in script
+    assert "certbot" in script
+    bootstrap = (
+        REPO_ROOT / "deploy" / "nginx-octobetiq-staging-api-http-bootstrap.conf.example"
+    ).read_text(encoding="utf-8")
+    assert "listen 80" in bootstrap
+    assert "127.0.0.1:8001" in bootstrap
 
 
 def test_health_includes_environment(client):
