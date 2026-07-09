@@ -9,12 +9,12 @@ Legend: ✅ done · 🟡 partial · ❌ not implemented · 🚫 blocked (externa
 
 | Metric | Weaknesses (50) | Improvements (100) | Combined (150) |
 |--------|-----------------|--------------------|----------------|
-| ✅ Done | 32 | 43 | 75 |
+| ✅ Done | 32 | 45 | 77 |
 | 🟡 Partial | 16 | 27 | 43 |
-| ❌ Open | 0 | 21 | 21 |
+| ❌ Open | 0 | 19 | 19 |
 | 🚫 Blocked | 2 | 9 | 11 |
 
-**Implementable coverage:** 69.4% — `(done + 0.5×partial) / (150 − blocked)`
+**Implementable coverage:** 70.9% — `(done + 0.5×partial) / (150 − blocked)`
 
 Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added for subscription utils.
 
@@ -158,7 +158,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I75 | Mobile Jest tests for subscription utils | ✅ | done | mobile subscription.test.ts + CI |
 | I76 | E2E Detox for paywall flow | 🟡 | partial | mobile/e2e/paywall.e2e.ts + docs/DETOX_E2E.md skeleton |
 | I77 | Feature flags service (LaunchDarkly/PostHog) | ✅ | done | backend/app/services/feature_flags.py, GET /config/feature-flags |
-| I78 | API v2 planning doc | ❌ | open | No API v2 planning doc |
+| I78 | API v2 planning doc | ✅ | done | docs/API_V2_PLAN.md |
 | I79 | OpenAPI client codegen for mobile | ❌ | open | mobile uses hand-written api.ts |
 | I80 | Delete dead code paths | 🟡 | partial | archive/; legacy services/users |
 | I81 | GDPR data export endpoint | ✅ | done | GET /user/me/export, gdpr_export_service.py |
@@ -174,7 +174,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I91 | Proprietary historical feature store | ❌ | open | Feature store |
 | I92 | User pick tracking vs model (Brier per user) | ❌ | open | Per-user Brier tracking |
 | I93 | Community predictions vs model | ❌ | open | Community predictions |
-| I94 | API for third-party accuracy audits | ❌ | open | Third-party audit API |
+| I94 | API for third-party accuracy audits | ✅ | done | GET /stats/public-audit |
 | I95 | Academic partnership for methodology paper | 🚫 | blocked | Academic partnership — external |
 | I96 | Sport-specific model teams (hire) | 🚫 | blocked | Hiring — external |
 | I97 | Real-time injury feed integration | ❌ | open | Real-time injury feed |
