@@ -9,12 +9,12 @@ Legend: ✅ done · 🟡 partial · ❌ not implemented · 🚫 blocked (externa
 
 | Metric | Weaknesses (50) | Improvements (100) | Combined (150) |
 |--------|-----------------|--------------------|----------------|
-| ✅ Done | 32 | 50 | 82 |
-| 🟡 Partial | 16 | 32 | 48 |
-| ❌ Open | 0 | 9 | 9 |
+| ✅ Done | 32 | 51 | 83 |
+| 🟡 Partial | 16 | 34 | 50 |
+| ❌ Open | 0 | 6 | 6 |
 | 🚫 Blocked | 2 | 9 | 11 |
 
-**Implementable coverage:** 76.3% — `(done + 0.5×partial) / (150 − blocked)`
+**Implementable coverage:** 77.7% — `(done + 0.5×partial) / (150 − blocked)`
 
 Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added for subscription utils.
 
@@ -142,8 +142,8 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I59 | Blue/green deploy | 🟡 | partial | scripts/deploy_api_blue_green.sh — nginx swap manual |
 | I60 | Prometheus metrics + Grafana dashboards | ✅ | done | Prometheus + Grafana compose profile |
 | I61 | Odds display (informational, not affiliate-first) | 🟡 | partial | odds_service + MarketOddsCard behind flag |
-| I62 | Line movement charts | ❌ | open | Line movement charts |
-| I63 | Closing line value tracker | ❌ | open | CLV tracker |
+| I62 | Line movement charts | 🟡 | partial | GET /games/{id}/line-movement + odds_snapshots on market-odds fetch |
+| I63 | Closing line value tracker | 🟡 | partial | CLV in GET /user/me/picks/brier from odds_snapshots |
 | I64 | “Model vs market” dashboard | ✅ | done | GET /stats/model-vs-market, web/model-vs-market.html |
 | I65 | Player props (when licensed) | 🟡 | partial | player_props_service behind FEATURE_PLAYER_PROPS |
 | I66 | Parlay correlation warnings | ✅ | done | parlay_correlation_service.py, POST /tools/parlay-correlation |
@@ -172,7 +172,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I89 | Rewarded ads vs premium messaging test | 🟡 | partial | rewarded_ads_messaging experiment bucket |
 | I90 | Ad density test on free tier | 🟡 | partial | ad_density experiment bucket |
 | I91 | Proprietary historical feature store | ❌ | open | Feature store |
-| I92 | User pick tracking vs model (Brier per user) | ❌ | open | Per-user Brier tracking |
+| I92 | User pick tracking vs model (Brier per user) | ✅ | done | POST /user/me/picks, GET /user/me/picks/brier, user_brier_service.py |
 | I93 | Community predictions vs model | ❌ | open | Community predictions |
 | I94 | API for third-party accuracy audits | ✅ | done | GET /stats/public-audit |
 | I95 | Academic partnership for methodology paper | 🚫 | blocked | Academic partnership — external |

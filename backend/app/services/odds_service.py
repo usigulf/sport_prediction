@@ -495,7 +495,7 @@ def get_market_odds_for_game(db: Session, game: Game) -> dict[str, Any]:
 
     prediction = PredictionService(db).get_latest_prediction(str(game.id))
     now = datetime.now(timezone.utc)
-    return {
+    payload = {
         "available": True,
         "provider": provider,
         "sport_key": sport_key,
@@ -505,6 +505,13 @@ def get_market_odds_for_game(db: Session, game: Game) -> dict[str, Any]:
         "disclaimer": DISCLAIMER,
         "fetched_at_iso": now.isoformat(),
     }
+    try:
+        from app.services.odds_snapshot_service import maybe_record_odds_snapshot
+
+        maybe_record_odds_snapshot(db, game, payload)
+    except Exception:
+        logger.exception("Failed to record odds snapshot for game %s", game.id)
+    return payload
 
 
 def load_game_for_odds(db: Session, game_id: str) -> Game | None:

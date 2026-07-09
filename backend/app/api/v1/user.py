@@ -13,10 +13,13 @@ from app.api.deps import get_current_user
 from app.config import get_settings
 from app.services.subscription_cancel_service import cancel_external_subscriptions_for_user
 from app.services.gdpr_export_service import build_user_data_export
+from app.services.user_brier_service import build_user_brier_summary, record_user_pick
 from app.schemas.user import UserResponse
+from app.models.game import Game
 from app.models.user import User
 from app.models.user_favorite import UserFavorite
 from app.models.user_prediction_view import UserPredictionView
+from app.models.user_pick import UserPick
 from app.models.user_push_token import UserPushToken
 from app.models.push_reminder_sent import PushReminderSent
 from app.models.team import Team
@@ -267,6 +270,58 @@ class ReferralApplyBody(BaseModel):
     referral_code: str = Field(..., min_length=8, max_length=64)
 
 
+class UserPickBody(BaseModel):
+    game_id: str
+    outcome: str = Field(..., pattern="^(home|away|draw)$")
+    probability: float = Field(..., ge=0.01, le=0.99)
+    market_home_implied_prob: Optional[float] = Field(None, ge=0.0, le=1.0)
+    market_away_implied_prob: Optional[float] = Field(None, ge=0.0, le=1.0)
+
+
+@router.post("/me/picks")
+async def submit_user_pick(
+    body: UserPickBody,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Record or update the user's pick for a game (I92 — Brier tracking)."""
+    try:
+        game_uuid = UUID(body.game_id.strip())
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid game_id") from e
+    game = db.query(Game).filter(Game.id == game_uuid).first()
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    try:
+        pick = record_user_pick(
+            db,
+            user_id=current_user.id,
+            game=game,
+            outcome=body.outcome,
+            probability=body.probability,
+            market_home_implied=body.market_home_implied_prob,
+            market_away_implied=body.market_away_implied_prob,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return {
+        "id": str(pick.id),
+        "game_id": str(pick.game_id),
+        "outcome": pick.outcome,
+        "probability": float(pick.probability),
+        "created_at": datetime_to_iso(pick.created_at),
+    }
+
+
+@router.get("/me/picks/brier")
+async def get_user_brier_stats(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Per-user Brier score vs model on finished games + CLV rollup (I92, I63)."""
+    return build_user_brier_summary(db, current_user.id)
+
+
 @router.get("/me/export")
 async def export_my_data(
     current_user: User = Depends(get_current_user),
@@ -338,6 +393,7 @@ async def delete_account(
     db.query(UserPushToken).filter(UserPushToken.user_id == user_id).delete()
     db.query(PushReminderSent).filter(PushReminderSent.user_id == user_id).delete()
     db.query(UserPredictionView).filter(UserPredictionView.user_id == user_id).delete()
+    db.query(UserPick).filter(UserPick.user_id == user_id).delete()
     db.query(UserFavorite).filter(UserFavorite.user_id == user_id).delete()
     db.query(User).filter(User.id == user_id).delete()
     db.commit()

@@ -40,6 +40,7 @@ from app.services.share_referral_service import (
     build_share_web_url,
 )
 from app.services.odds_service import get_market_odds_for_game, load_game_for_odds
+from app.services.odds_snapshot_service import build_line_movement_series
 from app.schemas.odds import MarketOddsResponse
 from app.config import get_settings
 from app.utils.subscription_tiers import is_free_tier_user
@@ -512,6 +513,22 @@ async def get_market_odds(
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
     return get_market_odds_for_game(db, game)
+
+
+@router.get("/{game_id}/line-movement")
+async def get_line_movement(
+    game_id: str,
+    db: Session = Depends(get_db),
+    _: None = Depends(rate_limit_predictions),
+):
+    """
+    Historical consensus odds snapshots for line movement charts (I62).
+    Populated when market-odds is fetched while odds providers are configured.
+    """
+    game = load_game_for_odds(db, game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    return build_line_movement_series(db, game)
 
 
 @router.get("/{game_id}/live-predictions")

@@ -141,6 +141,14 @@ Master backlog from technical due diligence (2026-07-04).
 | PH5-004 | Monetization experiment buckets | I88–I90 | done |
 | PH5-005 | Server feature flags hook (mobile) | I77 | done |
 
+## Phase 6 — User tracking & odds history
+
+| ID | Task | Audit ref | Status |
+|----|------|-----------|--------|
+| PH6-001 | User pick recording + Brier vs model API | I92 | done |
+| PH6-002 | Odds snapshots + line movement endpoint | I62 | done |
+| PH6-003 | CLV rollup on user Brier stats | I63 | done |
+
 ---
 
 ## Completed
