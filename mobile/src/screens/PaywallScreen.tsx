@@ -45,7 +45,7 @@ import { SubscriptionLegalFooter } from '../components/SubscriptionLegalFooter';
 import { PaywallHero } from '../components/paywall/PaywallHero';
 import { useServerFeatureFlags } from '../hooks/useServerFeatureFlags';
 import { useLayout } from '../hooks/useLayout';
-import { trialDaysFromServer } from '../utils/resolvedFeatureFlags';
+import { trialDaysFromServer, introOfferLabel } from '../utils/resolvedFeatureFlags';
 import { captureRoutesEnabled } from '../navigation/screenshotNavigation';
 import { openIosManageSubscriptions } from '../utils/manageSubscriptions';
 import { trackSubscriptionActivated } from '../services/productAnalytics';
@@ -114,6 +114,7 @@ export const PaywallScreen: React.FC = () => {
   const serverFlags = useServerFeatureFlags();
   const { isWide, contentMaxWidth, horizontalPadding } = useLayout();
   const trialDays = trialDaysFromServer(serverFlags);
+  const introOfferText = introOfferLabel(serverFlags);
 
   // Store billing (App Store / Play Billing via RevenueCat) is the compliant
   // path when the native SDK + a configured offering are present; otherwise we
@@ -367,6 +368,11 @@ export const PaywallScreen: React.FC = () => {
       ) : null}
       <View style={isWide ? { width: contentMaxWidth, alignSelf: 'center' } : undefined}>
       <PaywallHero serverFlags={serverFlags} />
+      {introOfferText ? (
+        <View style={styles.introOfferBanner}>
+          <Text style={styles.introOfferText}>{introOfferText}</Text>
+        </View>
+      ) : null}
       <Text style={styles.title}>Choose your plan</Text>
       <Text style={styles.subtitle}>
         {contextBannerText
@@ -703,6 +709,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: theme.colors.textSecondary,
     lineHeight: 20,
+  },
+  introOfferBanner: {
+    backgroundColor: theme.colors.secondaryDim,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    marginBottom: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.secondary,
+  },
+  introOfferText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.secondary,
+    textAlign: 'center',
   },
   cardHeader: {
     marginBottom: 12,

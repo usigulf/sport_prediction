@@ -41,6 +41,10 @@ import {
   mondayBasedIndexInWeek,
   weekRangeLabel,
 } from '../utils/soccerWeek';
+import { FeedSkeleton } from '../components/feed/FeedSkeleton';
+import { FeedErrorBanner } from '../components/feed/FeedErrorBanner';
+import { FeedEmptyState } from '../components/feed/FeedEmptyState';
+import { PredictionDisclaimer } from '../components/PredictionDisclaimer';
 import { useUpcomingGamesQuery } from '../hooks/useUpcomingGamesQuery';
 
 /** BetQL-style sub-views within Games (per sport). */
@@ -503,12 +507,15 @@ export const GamesScreen: React.FC = () => {
                 </View>
               ) : null}
               {loadError ? (
-                <View style={styles.errorBanner}>
-                  <Text style={styles.errorText}>{loadError}</Text>
-                  {cachedAt && upcomingGames.length > 0 ? (
-                    <Text style={styles.cacheHint}>Offline – showing cached data from {formatCachedAt(cachedAt)}</Text>
-                  ) : null}
-                </View>
+                <FeedErrorBanner
+                  message={loadError}
+                  onRetry={() => void refetchGames()}
+                  cacheHint={
+                    cachedAt && upcomingGames.length > 0
+                      ? `Offline – showing cached data from ${formatCachedAt(cachedAt)}`
+                      : null
+                  }
+                />
               ) : null}
               {!loadError && cachedAt && upcomingGames.length > 0 ? (
                 <View style={styles.updatedBar}>
@@ -518,25 +525,35 @@ export const GamesScreen: React.FC = () => {
             </>
           }
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
-                {loading
-                  ? 'Loading games...'
-                  : selectedLeague === 'soccer'
-                    ? 'No games scheduled for this day. Try another day with the week arrows.'
-                    : 'No games found'}
-              </Text>
-            </View>
+            loading ? (
+              <FeedSkeleton count={5} variant="row" />
+            ) : (
+              <FeedEmptyState
+                icon="football-outline"
+                title={
+                  selectedLeague === 'soccer'
+                    ? 'No games this day'
+                    : 'No games found'
+                }
+                subtitle={
+                  selectedLeague === 'soccer'
+                    ? 'Try another day with the week arrows above.'
+                    : 'Check back later or try a different league filter.'
+                }
+              />
+            )
+          }
+          ListFooterComponent={
+            upcomingGames.length > 0 ? (
+              <PredictionDisclaimer compact style={styles.disclaimer} />
+            ) : null
           }
         />
       )}
 
       {gamesView === 'trending' && (
         trendingLoading && trendingPicks.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <ActivityIndicator size="large" color={theme.colors.accent} />
-            <Text style={styles.emptyText}>Loading trending picks...</Text>
-          </View>
+          <FeedSkeleton count={4} variant="row" />
         ) : (
           <FlatList
             data={trendingPicks}
@@ -545,9 +562,16 @@ export const GamesScreen: React.FC = () => {
             contentContainerStyle={styles.listContent}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No trending picks for this league right now.</Text>
-              </View>
+              <FeedEmptyState
+                icon="trending-up-outline"
+                title="No trending picks"
+                subtitle="Nothing trending for this league right now. Check back closer to kickoff."
+              />
+            }
+            ListFooterComponent={
+              trendingPicks.length > 0 ? (
+                <PredictionDisclaimer compact style={styles.disclaimer} />
+              ) : null
             }
           />
         )
@@ -854,6 +878,11 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: theme.spacing.sm,
+  },
+  disclaimer: {
+    marginTop: theme.spacing.md,
+    marginHorizontal: theme.spacing.sm,
+    marginBottom: theme.spacing.lg,
   },
   emptyContainer: {
     flex: 1,

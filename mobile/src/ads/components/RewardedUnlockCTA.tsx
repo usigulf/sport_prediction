@@ -14,6 +14,8 @@ import { AD_UNITS } from '../config/adUnits';
 import { AD_PLATFORM_SUPPORTED, ADS_NATIVE_MODULE_AVAILABLE } from '../constants';
 import { loadGoogleMobileAdsModule } from '../native/loadGma';
 import { theme } from '../../constants/theme';
+import { useServerFeatureFlags } from '../../hooks/useServerFeatureFlags';
+import { rewardedAdsCopy } from '../../utils/resolvedFeatureFlags';
 
 type Props = {
   gameId: string;
@@ -31,6 +33,12 @@ export const RewardedUnlockCTA: React.FC<Props> = ({
 }) => {
   const engine = useAdEngine();
   const unlock = useRewardedUnlock();
+  const serverFlags = useServerFeatureFlags();
+  const unlockMinutes = engine.nextRewardedUnlockMinutes();
+  const copy = rewardedAdsCopy(serverFlags, unlockMinutes);
+  const premiumFocus =
+    (serverFlags.experiments?.rewarded_ads_messaging || 'rewarded_unlock').toLowerCase() ===
+    'premium_focus';
   const [busy, setBusy] = useState(false);
   const handledRef = useRef(false);
 
@@ -87,32 +95,43 @@ export const RewardedUnlockCTA: React.FC<Props> = ({
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.title}>Unlock full AI analysis</Text>
+      <Text style={styles.title}>{copy.title}</Text>
       <Text style={styles.sub}>
-        Optional: watch a short video to reveal confidence details and richer context for about{' '}
-        {engine.nextRewardedUnlockMinutes()} minutes. Basic pick info stays available without this.
+        {copy.body}
         {!ADS_NATIVE_MODULE_AVAILABLE ? ' (Expo Go: use a dev build to test video ads.)' : ''}
       </Text>
       <TouchableOpacity
         style={styles.primary}
-        onPress={onWatch}
-        disabled={busy}
+        onPress={premiumFocus ? onSubscribePress : onWatch}
+        disabled={busy && !premiumFocus}
         accessibilityRole="button"
-        accessibilityLabel="Watch ad to unlock full AI analysis"
+        accessibilityLabel={copy.primaryCta}
       >
-        {busy ? (
+        {busy && !premiumFocus ? (
           <ActivityIndicator color={theme.colors.background} />
         ) : (
           <>
-            <Ionicons name="play-circle" size={22} color={theme.colors.background} />
+            <Ionicons
+              name={premiumFocus ? 'star' : 'play-circle'}
+              size={22}
+              color={theme.colors.background}
+            />
             <Text style={styles.primaryText}>
-              {ADS_NATIVE_MODULE_AVAILABLE ? 'Watch ad to unlock' : 'Open subscription'}
+              {premiumFocus
+                ? copy.primaryCta
+                : ADS_NATIVE_MODULE_AVAILABLE
+                  ? copy.primaryCta
+                  : 'Open subscription'}
             </Text>
           </>
         )}
       </TouchableOpacity>
-      <TouchableOpacity style={styles.secondary} onPress={onSubscribePress}>
-        <Text style={styles.secondaryText}>Or subscribe for unlimited access</Text>
+      <TouchableOpacity
+        style={styles.secondary}
+        onPress={premiumFocus ? onWatch : onSubscribePress}
+        disabled={busy}
+      >
+        <Text style={styles.secondaryText}>{copy.secondaryCta}</Text>
       </TouchableOpacity>
     </View>
   );

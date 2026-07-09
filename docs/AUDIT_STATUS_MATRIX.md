@@ -9,12 +9,12 @@ Legend: ✅ done · 🟡 partial · ❌ not implemented · 🚫 blocked (externa
 
 | Metric | Weaknesses (50) | Improvements (100) | Combined (150) |
 |--------|-----------------|--------------------|----------------|
-| ✅ Done | 32 | 56 | 88 |
-| 🟡 Partial | 16 | 35 | 51 |
+| ✅ Done | 33 | 59 | 92 |
+| 🟡 Partial | 15 | 32 | 47 |
 | ❌ Open | 0 | 0 | 0 |
 | 🚫 Blocked | 2 | 9 | 11 |
 
-**Implementable coverage:** 81.7% — `(done + 0.5×partial) / (150 − blocked)`
+**Implementable coverage:** 83.1% — `(done + 0.5×partial) / (150 − blocked)`
 
 Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added for subscription utils.
 
@@ -37,7 +37,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | W11 | Redis no auth | ✅ | done | docker-compose.yml Redis requirepass |
 | W12 | Leaderboard O(all games) query | ✅ | done | backend/app/services/leaderboard_service.py |
 | W13 | WebSocket per-client DB polling | 🟡 | partial | backend/app/services/live_websocket_hub.py — one poller per game, Redis pub/sub |
-| W14 | God screens 1000+ lines | 🟡 | partial | HomeScreen split; GameDetail favorites via useFavorites; PaywallHero extracted |
+| W14 | God screens 1000+ lines | ✅ | done | GameDetail split into hook + section components; PaywallHero extracted |
 | W15 | No password reset flow | ✅ | done | backend/app/services/password_reset_service.py, mobile ForgotPasswordScreen |
 | W16 | Push may register before consent | ✅ | done | mobile/src/utils/pushNotifications.ts, backend/tests/test_push_consent_order.py |
 | W17 | Minimal accessibility | 🟡 | partial | VoiceOver on tabs/cards/GameDetail favorites; carousel labels added |
@@ -119,7 +119,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I36 | Fix push consent order (after onboarding opt-in) | ✅ | done | push consent order |
 | I37 | Native Manage Subscriptions link (iOS 15+) | ✅ | done | mobile manageSubscriptions.ts |
 | I38 | Paywall hero redesign + social proof | ✅ | done | PaywallHero + accuracy pill + dynamic trial days |
-| I39 | Consistent skeleton/error/empty components | 🟡 | partial | FeedSkeleton/FeedErrorBanner/FeedEmptyState; Favorites + LiveHub wired |
+| I39 | Consistent skeleton/error/empty components | 🟡 | partial | FeedSkeleton/FeedErrorBanner/FeedEmptyState on Favorites, LiveHub, Games |
 | I40 | Guest paywall preview (read-only) | ✅ | done | guest paywall preview |
 | I41 | Annual plan ($199/yr) | 🟡 | partial | annual plan code; ASC IAP blocked |
 | I42 | Referral: “invite friend, 7 extra trial days” | 🟡 | partial | referral/apply tracking; bonus days need ASC/Stripe promo |
@@ -163,14 +163,14 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I80 | Delete dead code paths | 🟡 | partial | archive/; legacy services/users |
 | I81 | GDPR data export endpoint | ✅ | done | GET /user/me/export, gdpr_export_service.py |
 | I82 | CCPA opt-out flow | ✅ | done | POST /user/me/privacy/ccpa-opt-out |
-| I83 | Gambling disclaimer audit on all screens | 🟡 | partial | PredictionDisclaimer on mini cards, Favorites, LiveHub, PaywallHero |
+| I83 | Gambling disclaimer audit on all screens | 🟡 | partial | PredictionDisclaimer on mini cards, Favorites, LiveHub, Paywall, GameDetail, Games |
 | I84 | Age gate if expanding content | ✅ | done | mobile AgeGateScreen + ageGateStorage.ts |
 | I85 | App Privacy nutrition label review quarterly | 🚫 | blocked | Quarterly ASC privacy label — manual process |
 | I86 | A/B test trial length (7 vs 14 days) | 🟡 | partial | trial_length_days wired in PaywallScreen via useServerFeatureFlags |
 | I87 | A/B test price ($19.99 vs $29.99) | 🟡 | partial | paywall_price_tier in flags; RevenueCat price still primary |
-| I88 | Intro offer for lapsed users | 🟡 | partial | intro_offer_variant bucket exposed; mobile not wired |
-| I89 | Rewarded ads vs premium messaging test | 🟡 | partial | rewarded_ads_messaging bucket exposed; mobile not wired |
-| I90 | Ad density test on free tier | 🟡 | partial | ad_density helper; AdEngine still uses local rules |
+| I88 | Intro offer for lapsed users | ✅ | done | intro_offer_variant winback banner on PaywallScreen |
+| I89 | Rewarded ads vs premium messaging test | ✅ | done | rewarded_ads_messaging A/B copy in RewardedUnlockCTA |
+| I90 | Ad density test on free tier | ✅ | done | ad_density server flag floors native ad spacing in AdEngine |
 | I91 | Proprietary historical feature store | ✅ | done | game_feature_snapshots, feature_store_service.py, GET /stats/feature-store |
 | I92 | User pick tracking vs model (Brier per user) | ✅ | done | POST /user/me/picks, GET /user/me/picks/brier, user_brier_service.py |
 | I93 | Community predictions vs model | ✅ | done | GET /stats/community-vs-model, community_predictions_service.py |

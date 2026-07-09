@@ -21,6 +21,8 @@ import {
 import { DEFAULT_AD_RULES, type AdRulesFile } from '../config/defaultAdRules';
 import { AD_PLATFORM_SUPPORTED } from '../constants';
 import type { AdFormat, AudienceSegment } from '../types';
+import { useServerFeatureFlags } from '../../hooks/useServerFeatureFlags';
+import { adDensitySpacing } from '../../utils/resolvedFeatureFlags';
 
 const RULES_OVERRIDE_KEY = '@octobetiQ/ad_rules_override_v1';
 const ENGAGEMENT_CACHE = '@octobetiQ/engagement_score_v1';
@@ -116,6 +118,8 @@ export const AdEngineProvider: React.FC<{ children: React.ReactNode }> = ({
   const [rulesState, setRulesState] = useState<AdRulesFile>(DEFAULT_AD_RULES);
   const [nativeHome, setNativeHome] = useState(0);
   const [nativeLive, setNativeLive] = useState(0);
+  const serverFlags = useServerFeatureFlags();
+  const densityFloor = adDensitySpacing(serverFlags);
 
   const lastInterstitialMs = useRef(0);
   const interstitialsThisSession = useRef(0);
@@ -187,13 +191,13 @@ export const AdEngineProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const spacingForHome = useCallback(() => {
     const { homeMin, homeMax } = segRules.nativeFeedSpacing;
-    return hashSpacing(homeMin, homeMax, nativeHome + 977);
-  }, [nativeHome, segRules.nativeFeedSpacing]);
+    return Math.max(hashSpacing(homeMin, homeMax, nativeHome + 977), densityFloor);
+  }, [densityFloor, nativeHome, segRules.nativeFeedSpacing]);
 
   const spacingForLiveHub = useCallback(() => {
     const { liveHubMin, liveHubMax } = segRules.nativeFeedSpacing;
-    return hashSpacing(liveHubMin, liveHubMax, nativeLive + 431);
-  }, [nativeLive, segRules.nativeFeedSpacing]);
+    return Math.max(hashSpacing(liveHubMin, liveHubMax, nativeLive + 431), densityFloor);
+  }, [densityFloor, nativeLive, segRules.nativeFeedSpacing]);
 
   const shouldAttemptInterstitial = useCallback((): boolean => {
     const now = Date.now();

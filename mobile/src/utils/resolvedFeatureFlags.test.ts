@@ -1,7 +1,9 @@
 import {
   adDensitySpacing,
+  introOfferLabel,
   isOddsDisplayEnabled,
   isPlayerPropsEnabled,
+  rewardedAdsCopy,
   trialDaysFromServer,
 } from '../utils/resolvedFeatureFlags';
 
@@ -27,8 +29,29 @@ describe('resolvedFeatureFlags', () => {
   });
 
   it('maps ad density to spacing', () => {
+    expect(adDensitySpacing({ experiments: { ad_density: 'reduced' } })).toBe(10);
     expect(adDensitySpacing({ experiments: { ad_density: 'low' } })).toBe(10);
     expect(adDensitySpacing({ experiments: { ad_density: 'high' } })).toBe(4);
     expect(adDensitySpacing({})).toBe(6);
+  });
+
+  it('maps rewarded ads messaging variants', () => {
+    const premium = rewardedAdsCopy(
+      { experiments: { rewarded_ads_messaging: 'premium_focus' } },
+      15,
+    );
+    expect(premium.primaryCta).toContain('Premium');
+    const rewarded = rewardedAdsCopy(
+      { experiments: { rewarded_ads_messaging: 'rewarded_unlock' } },
+      15,
+    );
+    expect(rewarded.primaryCta).toContain('Watch ad');
+  });
+
+  it('shows intro offer label for winback bucket', () => {
+    expect(introOfferLabel({ experiments: { intro_offer_variant: 'winback_20pct' } })).toMatch(
+      /20%/,
+    );
+    expect(introOfferLabel({})).toBeNull();
   });
 });
