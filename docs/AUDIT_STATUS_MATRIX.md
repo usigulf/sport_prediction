@@ -9,12 +9,12 @@ Legend: ✅ done · 🟡 partial · ❌ not implemented · 🚫 blocked (externa
 
 | Metric | Weaknesses (50) | Improvements (100) | Combined (150) |
 |--------|-----------------|--------------------|----------------|
-| ✅ Done | 33 | 61 | 94 |
-| 🟡 Partial | 15 | 30 | 45 |
+| ✅ Done | 33 | 62 | 95 |
+| 🟡 Partial | 15 | 29 | 44 |
 | ❌ Open | 0 | 0 | 0 |
 | 🚫 Blocked | 2 | 9 | 11 |
 
-**Implementable coverage:** 83.8% — `(done + 0.5×partial) / (150 − blocked)`
+**Implementable coverage:** 84.2% — `(done + 0.5×partial) / (150 − blocked)`
 
 Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added for subscription utils.
 
@@ -149,8 +149,8 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I66 | Parlay correlation warnings | ✅ | done | parlay_correlation_service.py, POST /tools/parlay-correlation |
 | I67 | Email digest: daily picks | 🟡 | partial | email_digest_service.py + /internal/email-digest/run; SMTP required |
 | I68 | Watchlist sync across devices | ✅ | done | useFavorites React Query + sync notice + team-filtered games |
-| I69 | iPad-optimized layouts | 🟡 | partial | useLayout on Paywall, Home, GameDetail, Profile; carousel uses content width |
-| I70 | Widget: today’s top pick | 🟡 | partial | GET /feed/widget/top-pick + mobile/ios/TopPickWidget Swift template |
+| I69 | iPad-optimized layouts | ✅ | done | WideContent + useLayout on Home, GameDetail, Paywall, Profile, Games, Favorites, LiveHub |
+| I70 | Widget: today’s top pick | 🟡 | partial | widget API + Swift template w/ disclaimer; scripts/verify_widget_api.sh; Xcode target embed manual |
 | I71 | Raise coverage to 60%+ | ✅ | done | CI coverage ≥60% |
 | I72 | Stripe webhook test suite | ✅ | done | backend/tests/test_stripe_webhook.py |
 | I73 | Monetization bypass regression tests | 🟡 | partial | free tier + share tests; no dedicated paywall bypass suite |

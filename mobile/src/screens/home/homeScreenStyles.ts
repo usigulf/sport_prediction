@@ -418,4 +418,9 @@ export const homeScreenStyles = StyleSheet.create({
     fontSize: 16,
     color: theme.colors.textMuted,
   },
+  homeDisclaimer: {
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
+  },
 });

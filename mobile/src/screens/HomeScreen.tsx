@@ -138,6 +138,7 @@ export const HomeScreen: React.FC = () => {
           forYouLoading={forYouLoading}
           forYouError={forYouError}
           onRetryForYou={() => void loadForYou()}
+          onRetryGames={() => void refetchGames()}
           trendingPicks={trendingPicks}
           trendingLoading={trendingLoading}
           trendingError={trendingError}

@@ -46,6 +46,7 @@ import { FeedErrorBanner } from '../components/feed/FeedErrorBanner';
 import { FeedEmptyState } from '../components/feed/FeedEmptyState';
 import { PredictionDisclaimer } from '../components/PredictionDisclaimer';
 import { useUpcomingGamesQuery } from '../hooks/useUpcomingGamesQuery';
+import { WideContent } from '../components/WideContent';
 
 /** BetQL-style sub-views within Games (per sport). */
 type GamesViewType = 'model' | 'trending' | 'props';
@@ -333,7 +334,7 @@ export const GamesScreen: React.FC = () => {
   ];
 
   return (
-    <View style={styles.container}>
+    <WideContent style={styles.container}>
       {/* Sport strip (BetQL: sport-first) */}
       <View style={styles.headerSection}>
         <View style={styles.headerTextRow}>
@@ -671,7 +672,7 @@ export const GamesScreen: React.FC = () => {
           </Pressable>
         </Pressable>
       </Modal>
-    </View>
+    </WideContent>
   );
 };
 

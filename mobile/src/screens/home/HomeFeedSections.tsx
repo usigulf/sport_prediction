@@ -5,13 +5,16 @@ import {
   TouchableOpacity,
   Animated,
   FlatList,
-  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { GameCard } from '../../components/GameCard';
 import { PredictionCard } from '../../components/PredictionCard';
 import { BestPickMiniCard, CARD_WIDTH_WITH_MARGIN, type BestPickItem } from '../../components/BestPickMiniCard';
 import { BestPicksCarousel } from '../../components/BestPicksCarousel';
+import { FeedSkeleton } from '../../components/feed/FeedSkeleton';
+import { FeedErrorBanner } from '../../components/feed/FeedErrorBanner';
+import { FeedEmptyState } from '../../components/feed/FeedEmptyState';
+import { PredictionDisclaimer } from '../../components/PredictionDisclaimer';
 import { PREMIUM_TRIAL_DAYS } from '../../constants/subscriptionPricing';
 import { PREMIUM_PAYWALL_CONTEXT } from '../../constants/premiumCopy';
 import { compareLeagueDisplayOrder, isSoccerLeague } from '../../constants/leagues';
@@ -44,6 +47,7 @@ type Props = {
   forYouLoading: boolean;
   forYouError: string | null;
   onRetryForYou: () => void;
+  onRetryGames: () => void;
   trendingPicks: BestPickItem[];
   trendingLoading: boolean;
   trendingError: string | null;
@@ -61,19 +65,24 @@ export function HomeGamesErrorBanner({
   loadError,
   cachedAt,
   upcomingCount,
+  onRetry,
 }: {
   loadError: string | null;
   cachedAt: string | null;
   upcomingCount: number;
+  onRetry?: () => void;
 }) {
   if (!loadError) return null;
   return (
-    <View style={styles.errorBanner}>
-      <Text style={styles.errorText}>{loadError}</Text>
-      {cachedAt && upcomingCount > 0 ? (
-        <Text style={styles.cacheHint}>Showing cached data from {formatCachedAt(cachedAt)}</Text>
-      ) : null}
-    </View>
+    <FeedErrorBanner
+      message={loadError}
+      onRetry={onRetry}
+      cacheHint={
+        cachedAt && upcomingCount > 0
+          ? `Showing cached data from ${formatCachedAt(cachedAt)}`
+          : null
+      }
+    />
   );
 }
 
@@ -110,32 +119,18 @@ export function HomeForYouSection({
         ) : null}
       </View>
       {forYouError ? (
-        <View style={styles.feedErrorBanner}>
-          <Text style={styles.feedErrorText}>{forYouError}</Text>
-          <TouchableOpacity onPress={onRetryForYou} style={styles.feedRetryBtn}>
-            <Text style={styles.feedRetryText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
+        <FeedErrorBanner message={forYouError} onRetry={onRetryForYou} />
       ) : null}
       {forYouLoading && forYouPicks.length === 0 && !forYouError ? (
-        <View style={styles.skeletonContainer}>
-          {[1, 2, 3].map((i) => (
-            <View key={i} style={styles.skeletonCard}>
-              <View style={styles.skeletonLine} />
-              <View style={[styles.skeletonLine, { width: '70%', marginTop: 8 }]} />
-              <View style={[styles.skeletonLine, { width: '50%', marginTop: 8 }]} />
-            </View>
-          ))}
-        </View>
+        <FeedSkeleton count={3} variant="row" />
       ) : forYouPicks.length === 0 && !forYouError ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyStateTitle}>No high-confidence picks right now</Text>
-          <Text style={styles.emptyStateSub}>Check back before game time for fresh AI picks.</Text>
-          <TouchableOpacity style={styles.emptyStateButton} onPress={() => navigation.navigate('Games')}>
-            <Text style={styles.emptyStateButtonText}>Browse all games</Text>
-            <Ionicons name="arrow-forward" size={18} color={theme.colors.background} />
-          </TouchableOpacity>
-        </View>
+        <FeedEmptyState
+          icon="star-outline"
+          title="No high-confidence picks right now"
+          subtitle="Check back before game time for fresh AI picks."
+          actionLabel="Browse all games"
+          onAction={() => navigation.navigate('Games')}
+        />
       ) : (
         <Animated.View style={{ opacity: bestPicksFade }}>
           <BestPicksCarousel
@@ -171,22 +166,10 @@ export function HomeTrendingSection({
         <Text style={styles.sectionTitle}>LIVE PICKS</Text>
       </View>
       {trendingError ? (
-        <View style={styles.feedErrorBanner}>
-          <Text style={styles.feedErrorText}>{trendingError}</Text>
-          <TouchableOpacity onPress={onRetryTrending} style={styles.feedRetryBtn}>
-            <Text style={styles.feedRetryText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
+        <FeedErrorBanner message={trendingError} onRetry={onRetryTrending} />
       ) : null}
       {trendingLoading && trendingPicks.length === 0 && !trendingError ? (
-        <View style={styles.skeletonContainer}>
-          {[1, 2].map((i) => (
-            <View key={i} style={styles.skeletonCard}>
-              <View style={styles.skeletonLine} />
-              <View style={[styles.skeletonLine, { width: '70%', marginTop: 8 }]} />
-            </View>
-          ))}
-        </View>
+        <FeedSkeleton count={2} variant="row" />
       ) : trendingPicks.length > 0 ? (
         <FlatList
           data={trendingPicks.slice(0, 4)}
@@ -224,6 +207,7 @@ export function HomeFeedSections({
   forYouLoading,
   forYouError,
   onRetryForYou,
+  onRetryGames,
   trendingPicks,
   trendingLoading,
   trendingError,
@@ -252,6 +236,7 @@ export function HomeFeedSections({
         loadError={loadError}
         cachedAt={cachedAt}
         upcomingCount={upcomingGames.length}
+        onRetry={onRetryGames}
       />
       <HomeForYouSection
         navigation={navigation}
@@ -409,27 +394,18 @@ export function HomeFeedSections({
           );
         })}
       {loading && upcomingGames.length === 0 ? (
-        <View style={styles.skeletonContainer}>
-          <View style={styles.skeletonCard}>
-            <View style={styles.skeletonLine} />
-            <View style={[styles.skeletonLine, { width: '75%', marginTop: 8 }]} />
-            <View style={[styles.skeletonLine, { width: '60%', marginTop: 8 }]} />
-          </View>
-          <View style={[styles.skeletonCard, { marginTop: 12 }]}>
-            <View style={styles.skeletonLine} />
-            <View style={[styles.skeletonLine, { width: '70%', marginTop: 8 }]} />
-          </View>
-          <View style={styles.centerContainer}>
-            <ActivityIndicator size="small" color={theme.colors.accent} />
-            <Text style={styles.loadingText}>Loading games...</Text>
-          </View>
-        </View>
+        <FeedSkeleton count={3} variant="card" />
       ) : null}
       {!loading && upcomingGames.length === 0 && !loadError ? (
-        <View style={styles.centerContainer}>
-          <Text style={styles.emptyText}>No upcoming games</Text>
-        </View>
+        <FeedEmptyState
+          icon="calendar-outline"
+          title="No upcoming games"
+          subtitle="Pull to refresh or browse by sport in the Games tab."
+          actionLabel="Browse games"
+          onAction={() => navigation.navigate('Games')}
+        />
       ) : null}
+      <PredictionDisclaimer compact style={styles.homeDisclaimer} />
     </>
   );
 }

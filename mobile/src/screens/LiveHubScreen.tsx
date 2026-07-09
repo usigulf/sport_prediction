@@ -33,6 +33,7 @@ import {
 import { LIVE_HUB_SUBTITLE } from '../constants/leagues';
 import { soccerBetaFetchParams } from '../utils/soccerBetaFetch';
 import { useIntervalWhen } from '../hooks/useIntervalWhen';
+import { WideContent } from '../components/WideContent';
 
 const LIVE_POLL_MS = 60_000;
 
@@ -140,7 +141,7 @@ export const LiveHubScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <WideContent style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Live Hub</Text>
         <Text style={styles.subtitle}>{LIVE_HUB_SUBTITLE}</Text>
@@ -170,7 +171,7 @@ export const LiveHubScreen: React.FC = () => {
       <View style={[styles.bannerDock, { paddingBottom: insets.bottom }]}>
         <BannerStrip screen="LiveHubBanner" />
       </View>
-    </View>
+    </WideContent>
   );
 };
 

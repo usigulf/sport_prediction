@@ -18,6 +18,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { AVAILABLE_LEAGUES } from '../constants/leagues';
 import { theme } from '../constants/theme';
+import { WideContent } from '../components/WideContent';
 import {
   useFavoriteGames,
   useFavoriteMutations,
@@ -86,26 +87,26 @@ export const FavoritesScreen: React.FC = () => {
 
   if (loading && !favorites) {
     return (
-      <View style={styles.container}>
+      <WideContent style={styles.container}>
         <FeedSkeleton count={4} />
-      </View>
+      </WideContent>
     );
   }
 
   if (error && isEmpty) {
     return (
-      <View style={styles.container}>
+      <WideContent style={styles.container}>
         <FeedErrorBanner
           message={getUserFriendlyMessage(error)}
           onRetry={() => void onRefresh()}
         />
-      </View>
+      </WideContent>
     );
   }
 
   if (isEmpty) {
     return (
-      <View style={styles.container}>
+      <WideContent style={styles.container}>
         <FeedEmptyState
           icon="heart-outline"
           title="No favorites yet"
@@ -126,12 +127,12 @@ export const FavoritesScreen: React.FC = () => {
           ))}
         </View>
         <PredictionDisclaimer compact style={styles.disclaimer} />
-      </View>
+      </WideContent>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <WideContent style={styles.container}>
       {syncNotice ? (
         <View style={styles.syncBanner}>
           <Text style={styles.syncText}>{syncNotice}</Text>
@@ -228,7 +229,7 @@ export const FavoritesScreen: React.FC = () => {
           </View>
         }
       />
-    </View>
+    </WideContent>
   );
 };
 
