@@ -14,6 +14,7 @@ from app.services.trust_metrics_service import (
     methodology_blurb,
 )
 from app.services.model_training import load_metrics_json
+from app.services.model_vs_market_service import build_model_vs_market_summary
 from app.config import get_settings
 
 router = APIRouter(prefix="/stats", tags=["stats"])
@@ -137,6 +138,15 @@ async def get_public_audit_bundle(db: Session = Depends(get_db)):
         "methodology": methodology_blurb(),
         "contact": "accuracy@octobetiq.com",
     }
+
+
+@router.get("/model-vs-market")
+async def get_model_vs_market(db: Session = Depends(get_db)):
+    """
+    Model accuracy vs live market consensus on upcoming games (I64).
+    Display-only — supports web dashboard and in-app transparency.
+    """
+    return build_model_vs_market_summary(db)
 
 
 @router.get("/coverage")

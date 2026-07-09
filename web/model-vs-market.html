@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>octobetiQ — Model vs market</title>
+  <style>
+    :root { --bg: #0b1020; --text: #f1f5f9; --accent: #38bdf8; --muted: #94a3b8; }
+    body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 1.5rem; }
+    h1 { font-size: 1.5rem; margin: 0 0 .5rem; }
+    .muted { color: var(--muted); font-size: .9rem; line-height: 1.5; }
+    .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin: 1.5rem 0; }
+    .card { border: 1px solid rgba(148,163,184,.2); border-radius: 10px; padding: 1rem; }
+    .pct { font-size: 1.75rem; font-weight: 700; color: var(--accent); }
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; margin-top: 1rem; }
+    th, td { text-align: left; padding: .5rem; border-bottom: 1px solid rgba(148,163,184,.15); }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <h1>Model vs market</h1>
+  <p class="muted" id="disclaimer">Loading…</p>
+  <div class="grid" id="stats"></div>
+  <h2>Upcoming edges (sample)</h2>
+  <table><thead><tr><th>Matchup</th><th>Model</th><th>Market</th><th>Edge</th></tr></thead><tbody id="edges"></tbody></table>
+  <p class="muted" style="margin-top:2rem"><a href="https://octobetiq.com">octobetiq.com</a> · <a href="/scorecard.html">Weekly scorecard</a></p>
+  <script>
+    (async () => {
+      const r = await fetch('https://api.octobetiq.com/api/v1/stats/model-vs-market');
+      if (!r.ok) { document.getElementById('disclaimer').textContent = 'Data temporarily unavailable.'; return; }
+      const d = await r.json();
+      document.getElementById('disclaimer').textContent = d.disclaimer || '';
+      const all = d.model_accuracy_all_time || {};
+      const r30 = d.model_accuracy_rolling_30d || {};
+      document.getElementById('stats').innerHTML = [
+        ['All-time accuracy', (all.accuracy_pct != null ? all.accuracy_pct + '%' : '—'), all.total_games + ' games'],
+        ['30-day accuracy', (r30.accuracy_pct != null ? r30.accuracy_pct + '%' : '—'), r30.total_games + ' games'],
+        ['Upcoming w/ odds', d.upcoming_with_odds, 'of ' + d.upcoming_sampled + ' sampled'],
+        ['Avg |edge|', d.avg_abs_home_edge_pct != null ? d.avg_abs_home_edge_pct + '%' : '—', 'home win prob vs market'],
+      ].map(([label, val, sub]) => `<div class="card"><div class="muted">${label}</div><div class="pct">${val}</div><div class="muted">${sub}</div></div>`).join('');
+      const tbody = document.getElementById('edges');
+      (d.upcoming_edges || []).forEach(e => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${e.matchup}</td><td>${((e.model_home_win_prob||0)*100).toFixed(1)}%</td><td>${((e.market_home_implied_prob||0)*100).toFixed(1)}%</td><td>${e.home_edge_pct}%</td>`;
+        tbody.appendChild(tr);
+      });
+      if (!tbody.children.length) tbody.innerHTML = '<tr><td colspan="4" class="muted">No live odds edges right now.</td></tr>';
+    })();
+  </script>
+</body>
+</html>

@@ -272,4 +272,13 @@ def run_walk_forward_backtest(
 
         report["groups"][group] = group_report
 
+    report["market_benchmark"] = {
+        "status": "not_available",
+        "reason": (
+            "Historical closing lines are not persisted in the database. "
+            "Use GET /stats/model-vs-market for live model-vs-consensus edges on upcoming games."
+        ),
+        "live_endpoint": "/api/v1/stats/model-vs-market",
+    }
+
     return report

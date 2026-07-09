@@ -42,7 +42,9 @@ import { ChallengesScreen } from '../screens/ChallengesScreen';
 import { CreateChallengeScreen } from '../screens/CreateChallengeScreen';
 import { ChallengeDetailScreen } from '../screens/ChallengeDetailScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
+import { AgeGateScreen } from '../screens/AgeGateScreen';
 import { GuestProfileScreen } from '../screens/GuestProfileScreen';
+import { getAgeGateConfirmed } from '../utils/ageGateStorage';
 import { trackScreenView } from '../services/productAnalytics';
 
 // Types
@@ -348,8 +350,31 @@ function AuthenticatedStack({ showOnboarding }: { showOnboarding: boolean }) {
 
 export function AppNavigator() {
   const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const [ageGateChecked, setAgeGateChecked] = useState(false);
+  const [ageGateOk, setAgeGateOk] = useState(false);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (skipOnboardingForCapture) {
+        if (!cancelled) {
+          setAgeGateOk(true);
+          setAgeGateChecked(true);
+        }
+        return;
+      }
+      const confirmed = await getAgeGateConfirmed();
+      if (!cancelled) {
+        setAgeGateOk(confirmed);
+        setAgeGateChecked(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -377,6 +402,18 @@ export function AppNavigator() {
 
   const navigationKey = isAuthenticated ? 'authenticated' : 'guest';
   const routeNameRef = useRef<string | undefined>(undefined);
+
+  if (!ageGateChecked) {
+    return (
+      <View style={styles.gate}>
+        <ActivityIndicator size="large" color={theme.colors.accent} />
+      </View>
+    );
+  }
+
+  if (!ageGateOk) {
+    return <AgeGateScreen onConfirmed={() => setAgeGateOk(true)} />;
+  }
 
   return (
     <NavigationContainer

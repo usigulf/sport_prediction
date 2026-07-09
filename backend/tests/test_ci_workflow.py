@@ -59,8 +59,15 @@ def test_ci_runs_mobile_jest():
     assert "npm test" in ci
 
 
+def test_ci_has_postgres_integration_job():
+    ci = (REPO_ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    assert "backend-postgres:" in ci
+    assert "TEST_DATABASE_URL" in ci
+
+
 def test_ci_enforces_sixty_percent_coverage():
     ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
     pytest_ini = (REPO_ROOT / "pytest.ini").read_text(encoding="utf-8")
     assert "--cov-fail-under=60" in ci
     assert "--cov-fail-under=60" in pytest_ini
+    assert "not postgres" in ci

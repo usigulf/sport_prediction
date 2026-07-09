@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>octobetiQ — Weekly scorecard</title>
+  <style>
+    :root { --bg: #0b1020; --text: #f1f5f9; --accent: #22c55e; --muted: #94a3b8; }
+    body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 1.5rem; max-width: 42rem; margin-inline: auto; }
+    h1 { font-size: 1.5rem; }
+    .pct { font-size: 2.5rem; font-weight: 700; color: var(--accent); }
+    .muted { color: var(--muted); line-height: 1.55; }
+    section { margin: 1.5rem 0; padding: 1rem; border: 1px solid rgba(148,163,184,.2); border-radius: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Weekly transparent scorecard</h1>
+  <p class="muted">Public audit data — pre-game picks vs final results. Not betting advice.</p>
+  <section>
+    <div class="muted">Rolling 30-day accuracy</div>
+    <div class="pct" id="acc30">—</div>
+    <div class="muted" id="meta30"></div>
+  </section>
+  <section>
+    <div class="muted">All-time tracked accuracy</div>
+    <div class="pct" id="accAll">—</div>
+    <div class="muted" id="metaAll"></div>
+  </section>
+  <p class="muted" id="updated"></p>
+  <p class="muted"><a href="/model-vs-market.html" style="color:#38bdf8">Model vs market</a> · <a href="https://octobetiq.com" style="color:#38bdf8">octobetiq.com</a></p>
+  <script>
+    (async () => {
+      const r = await fetch('https://api.octobetiq.com/api/v1/stats/public-audit');
+      if (!r.ok) return;
+      const d = await r.json();
+      const r30 = d.accuracy_rolling_30d || {};
+      const all = d.accuracy_all_time || {};
+      document.getElementById('acc30').textContent = r30.accuracy_pct != null ? r30.accuracy_pct + '%' : '—';
+      document.getElementById('meta30').textContent = `${r30.total_games || 0} finished games in window`;
+      document.getElementById('accAll').textContent = all.accuracy_pct != null ? all.accuracy_pct + '%' : '—';
+      document.getElementById('metaAll').textContent = `${all.total_games || 0} games scored since launch`;
+      document.getElementById('updated').textContent = 'Updated ' + (d.computed_at_iso || '').replace('T', ' ').slice(0, 19) + ' UTC';
+    })();
+  </script>
+</body>
+</html>

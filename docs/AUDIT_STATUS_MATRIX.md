@@ -9,12 +9,12 @@ Legend: ✅ done · 🟡 partial · ❌ not implemented · 🚫 blocked (externa
 
 | Metric | Weaknesses (50) | Improvements (100) | Combined (150) |
 |--------|-----------------|--------------------|----------------|
-| ✅ Done | 32 | 45 | 77 |
-| 🟡 Partial | 16 | 27 | 43 |
-| ❌ Open | 0 | 19 | 19 |
+| ✅ Done | 32 | 48 | 80 |
+| 🟡 Partial | 16 | 29 | 45 |
+| ❌ Open | 0 | 14 | 14 |
 | 🚫 Blocked | 2 | 9 | 11 |
 
-**Implementable coverage:** 70.9% — `(done + 0.5×partial) / (150 − blocked)`
+**Implementable coverage:** 73.7% — `(done + 0.5×partial) / (150 − blocked)`
 
 Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added for subscription utils.
 
@@ -55,7 +55,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | W29 | Account delete doesn’t cancel billing | ✅ | done | backend/app/services/subscription_cancel_service.py |
 | W30 | Inconsistent subscription tier checks | ✅ | done | backend/app/utils/subscription_tiers.py |
 | W31 | Guests can’t see paywall in production | ✅ | done | mobile PaywallScreen guest preview |
-| W32 | $29.99 without odds/EV tooling | 🟡 | partial | backend/app/services/odds_service.py edge_pct; FEATURE_ODDS_DISPLAY flag |
+| W32 | $29.99 without odds/EV tooling | 🟡 | partial | odds_service edge_pct + /stats/model-vs-market dashboard |
 | W33 | No annual subscription | 🟡 | partial | Annual Stripe + Paywall gating; ASC product com.octobetiq.premium.annual blocked |
 | W34 | No referral program | 🟡 | partial | backend/app/api/v1/user.py referral/apply, share_referral_service.py |
 | W35 | No product analytics pipeline | 🟡 | partial | mobile/src/services/productAnalytics.ts — needs POSTHOG key in prod |
@@ -109,7 +109,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I26 | Commit `metrics.json` schema example | 🟡 | partial | backend/models/metrics.json example |
 | I27 | Archive stale `ml/` and Rust services | 🟡 | partial | archive/README.md |
 | I28 | Update ARCHITECTURE.md to match reality | 🟡 | partial | ARCHITECTURE.md |
-| I29 | Market odds as benchmark in backtest | ❌ | open | walk_forward_backtest no market benchmark yet |
+| I29 | Market odds as benchmark in backtest | 🟡 | partial | walk_forward_backtest market_benchmark note + /stats/model-vs-market live |
 | I30 | Per-league calibration minimum samples | ✅ | done | model_training calibration mins |
 | I31 | React Query for server state | ✅ | done | mobile React Query hooks |
 | I32 | Split HomeScreen into feature components | ✅ | done | mobile/src/screens/home/HomeFeedSections.tsx |
@@ -129,7 +129,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I46 | Trial-ending push + email | 🟡 | partial | send_trial_ending_reminders push; email via digest when SMTP set |
 | I47 | App Store review prompt after positive accuracy session | ✅ | done | mobile storeReview.ts |
 | I48 | Public embed: accuracy widget for octobetiq.com | ✅ | done | web/widgets/accuracy-widget.html |
-| I49 | Blog: weekly transparent scorecard | ❌ | open | No blog/scorecard CMS |
+| I49 | Blog: weekly transparent scorecard | 🟡 | partial | web/scorecard.html weekly public-audit scorecard |
 | I50 | Android Play Store launch | 🚫 | blocked | Play Store listing + Google Play Console |
 | I51 | Managed Postgres (RDS/DO managed) | 🚫 | blocked | Managed Postgres — docs/scripts only; needs cloud account |
 | I52 | Celery/ARQ job queue | 🟡 | partial | job_queue_service.py + internal endpoints |
@@ -144,7 +144,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I61 | Odds display (informational, not affiliate-first) | 🟡 | partial | odds_service + MarketOddsCard behind flag |
 | I62 | Line movement charts | ❌ | open | Line movement charts |
 | I63 | Closing line value tracker | ❌ | open | CLV tracker |
-| I64 | “Model vs market” dashboard | ❌ | open | Model vs market dashboard |
+| I64 | “Model vs market” dashboard | ✅ | done | GET /stats/model-vs-market, web/model-vs-market.html |
 | I65 | Player props (when licensed) | 🟡 | partial | player_props_service behind FEATURE_PLAYER_PROPS |
 | I66 | Parlay correlation warnings | ❌ | open | Parlay correlation warnings |
 | I67 | Email digest: daily picks | 🟡 | partial | email_digest_service.py + /internal/email-digest/run; SMTP required |
@@ -154,7 +154,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I71 | Raise coverage to 60%+ | ✅ | done | CI coverage ≥60% |
 | I72 | Stripe webhook test suite | ✅ | done | backend/tests/test_stripe_webhook.py |
 | I73 | Monetization bypass regression tests | 🟡 | partial | free tier + share tests; no dedicated paywall bypass suite |
-| I74 | Integration tests with Postgres in CI | ❌ | open | CI uses SQLite not Postgres service container |
+| I74 | Integration tests with Postgres in CI | ✅ | done | .github/workflows/ci.yml backend-postgres job, test_postgres_integration.py |
 | I75 | Mobile Jest tests for subscription utils | ✅ | done | mobile subscription.test.ts + CI |
 | I76 | E2E Detox for paywall flow | 🟡 | partial | mobile/e2e/paywall.e2e.ts + docs/DETOX_E2E.md skeleton |
 | I77 | Feature flags service (LaunchDarkly/PostHog) | ✅ | done | backend/app/services/feature_flags.py, GET /config/feature-flags |
@@ -164,7 +164,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I81 | GDPR data export endpoint | ✅ | done | GET /user/me/export, gdpr_export_service.py |
 | I82 | CCPA opt-out flow | ✅ | done | POST /user/me/privacy/ccpa-opt-out |
 | I83 | Gambling disclaimer audit on all screens | 🟡 | partial | predictionTrust disclaimers; not audited on every screen |
-| I84 | Age gate if expanding content | ❌ | open | No age gate |
+| I84 | Age gate if expanding content | ✅ | done | mobile AgeGateScreen + ageGateStorage.ts |
 | I85 | App Privacy nutrition label review quarterly | 🚫 | blocked | Quarterly ASC privacy label — manual process |
 | I86 | A/B test trial length (7 vs 14 days) | 🟡 | partial | experiments.trial_length_days in /config/feature-flags |
 | I87 | A/B test price ($19.99 vs $29.99) | 🟡 | partial | experiments.paywall_price_tier in /config/feature-flags |

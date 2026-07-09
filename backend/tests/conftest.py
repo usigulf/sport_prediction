@@ -29,15 +29,28 @@ from app.core.security import get_password_hash
 from uuid import uuid4
 from datetime import datetime, timedelta
 
-# Test database (in-memory SQLite — isolated per engine instance)
-SQLALCHEMY_DATABASE_URL = "sqlite://"
-
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
+# Test database: SQLite in-memory by default; Postgres when TEST_DATABASE_URL is set (CI I74).
+_TEST_DB = os.getenv("TEST_DATABASE_URL", "").strip()
+if _TEST_DB.startswith("postgresql"):
+    SQLALCHEMY_DATABASE_URL = _TEST_DB
+    engine = create_engine(SQLALCHEMY_DATABASE_URL)
+else:
+    SQLALCHEMY_DATABASE_URL = "sqlite://"
+    engine = create_engine(
+        SQLALCHEMY_DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def pytest_collection_modifyitems(config, items):
+    """Skip postgres-marked tests unless TEST_DATABASE_URL points at PostgreSQL."""
+    use_pg = _TEST_DB.startswith("postgresql")
+    skip_pg = pytest.mark.skip(reason="TEST_DATABASE_URL not set to postgresql")
+    for item in items:
+        if "postgres" in item.keywords and not use_pg:
+            item.add_marker(skip_pg)
 
 
 @pytest.fixture(autouse=True)

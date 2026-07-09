@@ -121,6 +121,16 @@ Master backlog from technical due diligence (2026-07-04).
 | PH3-017 | Accuracy embed widget | I48 | done |
 | PH3-018 | Audit status matrix generator | — | done |
 
+## Phase 4 — Odds transparency & CI hardening
+
+| ID | Task | Audit ref | Status |
+|----|------|-----------|--------|
+| PH4-001 | Model vs market API + web dashboard | I64, W32 | done |
+| PH4-002 | Walk-forward market benchmark note | I29 | done |
+| PH4-003 | Postgres integration tests in CI | I74 | done |
+| PH4-004 | Age gate (17+) | I84 | done |
+| PH4-005 | Weekly scorecard web page | I49 | done |
+
 ---
 
 ## Completed
