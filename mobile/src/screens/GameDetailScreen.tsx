@@ -32,7 +32,9 @@ import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useLiveUpdates } from '../hooks/useLiveUpdates';
 import { theme } from '../constants/theme';
-import { PLAYER_PROPS_ENABLED, ODDS_DISPLAY_ENABLED } from '../constants/featureFlags';
+import { useServerFeatureFlags } from '../hooks/useServerFeatureFlags';
+import { isOddsDisplayEnabled, isPlayerPropsEnabled } from '../utils/resolvedFeatureFlags';
+import { useFavoriteMutations, useFavoriteTeamIds } from '../hooks/useFavorites';
 import { PREMIUM_PROPS_UNLOCK_CONTEXT } from '../constants/premiumCopy';
 import { GuestSignupCard } from '../components/GuestSignupCard';
 import { formatLeagueLabel } from '../utils/predictionDisplay';
@@ -48,11 +50,6 @@ import { useGameExitInterstitial } from '../ads/hooks/useGameExitInterstitial';
 import { useAdEngine } from '../ads/engine/AdEngineContext';
 import { trackSharePick } from '../services/productAnalytics';
 import { SharePickCard, buildSharePickCardData } from '../components/SharePickCard';
-
-interface FavoritesResponse {
-  teams?: { id: string; name: string }[];
-  leagues?: { id: string; name: string }[];
-}
 
 export interface PlayerPropItem {
   player_name: string;
@@ -83,8 +80,12 @@ export const GameDetailScreen: React.FC = () => {
 
   const [refreshing, setRefreshing] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
-  const [favoriteTeamIds, setFavoriteTeamIds] = useState<Set<string>>(new Set());
   const [addingTeamId, setAddingTeamId] = useState<string | null>(null);
+  const serverFlags = useServerFeatureFlags();
+  const oddsDisplayEnabled = isOddsDisplayEnabled(serverFlags);
+  const playerPropsEnabled = isPlayerPropsEnabled(serverFlags);
+  const favoriteTeamIds = useFavoriteTeamIds();
+  const { addTeam } = useFavoriteMutations();
   const [subscriptionTier, setSubscriptionTier] = useState<string>('free');
   const [playerProps, setPlayerProps] = useState<PlayerPropItem[]>([]);
   const [playerPropsLoading, setPlayerPropsLoading] = useState(false);
@@ -102,25 +103,6 @@ export const GameDetailScreen: React.FC = () => {
     setShowExplanation(false);
     dispatch(clearPredictionForGameChange());
     loadGameData();
-  }, [gameId, isAuthenticated]);
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setFavoriteTeamIds(new Set());
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      try {
-        const favs = (await apiService.getFavorites()) as FavoritesResponse;
-        if (!cancelled && favs?.teams) {
-          setFavoriteTeamIds(new Set(favs.teams.map((t) => t.id)));
-        }
-      } catch (_) {
-        // ignore
-      }
-    })();
-    return () => { cancelled = true; };
   }, [gameId, isAuthenticated]);
 
   useEffect(() => {
@@ -143,7 +125,7 @@ export const GameDetailScreen: React.FC = () => {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    if (!PLAYER_PROPS_ENABLED || !hasPremiumAccess(subscriptionTier)) return;
+    if (!playerPropsEnabled || !hasPremiumAccess(subscriptionTier)) return;
     let cancelled = false;
     setPlayerPropsError(null);
     setPlayerPropsLoading(true);
@@ -166,10 +148,10 @@ export const GameDetailScreen: React.FC = () => {
       }
     })();
     return () => { cancelled = true; };
-  }, [gameId, subscriptionTier]);
+  }, [gameId, subscriptionTier, playerPropsEnabled]);
 
   useEffect(() => {
-    if (!ODDS_DISPLAY_ENABLED) {
+    if (!oddsDisplayEnabled) {
       setMarketOdds(null);
       return;
     }
@@ -183,7 +165,7 @@ export const GameDetailScreen: React.FC = () => {
       }
     })();
     return () => { cancelled = true; };
-  }, [gameId]);
+  }, [gameId, oddsDisplayEnabled]);
 
   /** When the server writes a new prediction (WS signals), refresh game + prediction so analysis text matches. */
   useEffect(() => {
@@ -210,7 +192,7 @@ export const GameDetailScreen: React.FC = () => {
     setRefreshing(true);
     try {
       await loadGameData();
-      if (ODDS_DISPLAY_ENABLED) {
+      if (oddsDisplayEnabled) {
         try {
           const res = await apiService.getMarketOdds(gameId);
           setMarketOdds(res);
@@ -234,8 +216,7 @@ export const GameDetailScreen: React.FC = () => {
     if (favoriteTeamIds.has(teamId) || addingTeamId) return;
     setAddingTeamId(teamId);
     try {
-      await apiService.addFavoriteTeam(teamId);
-      setFavoriteTeamIds((prev) => new Set(prev).add(teamId));
+      await addTeam.mutateAsync(teamId);
     } catch (e) {
       Alert.alert('Could not add favorite', getUserFriendlyMessage(e));
     } finally {
@@ -353,6 +334,12 @@ export const GameDetailScreen: React.FC = () => {
               ]}
               onPress={() => addTeamToFavorites(currentGame.home_team!.id)}
               disabled={favoriteTeamIds.has(currentGame.home_team.id) || !!addingTeamId}
+              accessibilityRole="button"
+              accessibilityLabel={
+                favoriteTeamIds.has(currentGame.home_team.id)
+                  ? `${currentGame.home_team.name} in favorites`
+                  : `Add ${currentGame.home_team.name} to favorites`
+              }
             >
               <Text style={styles.favButtonGreenText}>
                 {favoriteTeamIds.has(currentGame.home_team.id)
@@ -392,6 +379,12 @@ export const GameDetailScreen: React.FC = () => {
               ]}
               onPress={() => addTeamToFavorites(currentGame.away_team!.id)}
               disabled={favoriteTeamIds.has(currentGame.away_team.id) || !!addingTeamId}
+              accessibilityRole="button"
+              accessibilityLabel={
+                favoriteTeamIds.has(currentGame.away_team.id)
+                  ? `${currentGame.away_team.name} in favorites`
+                  : `Add ${currentGame.away_team.name} to favorites`
+              }
             >
               <Text style={styles.favButtonGreenText}>
                 {favoriteTeamIds.has(currentGame.away_team.id)
@@ -450,7 +443,7 @@ export const GameDetailScreen: React.FC = () => {
             <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
               <Text style={styles.shareButtonText}>Share this pick</Text>
             </TouchableOpacity>
-            {ODDS_DISPLAY_ENABLED && marketOdds?.available ? (
+            {oddsDisplayEnabled && marketOdds?.available ? (
               <MarketOddsCard
                 homeTeamName={homeName}
                 awayTeamName={awayName}
@@ -561,7 +554,7 @@ export const GameDetailScreen: React.FC = () => {
       )}
 
       {/* Player Props (hidden until licensed data — see featureFlags) */}
-      {PLAYER_PROPS_ENABLED ? (
+      {playerPropsEnabled ? (
       <View style={styles.infoSection}>
         <Text style={styles.sectionTitle}>
           {playerPropsNamed ? 'Player props' : 'Player props (model est.)'}

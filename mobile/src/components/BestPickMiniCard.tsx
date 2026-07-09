@@ -10,6 +10,7 @@ import { theme } from '../constants/theme';
 import { leagueBadgeSource } from '../constants/sportLogos';
 import { teamLogoUriCandidates } from '../utils/teamLogoUrl';
 import { confidenceToPickStrength } from './PredictionCard';
+import { PredictionDisclaimer } from './PredictionDisclaimer';
 import { formatLeagueLabel } from '../utils/leagueDisplay';
 
 export interface BestPickItem {
@@ -54,12 +55,19 @@ export const BestPickMiniCard: React.FC<BestPickMiniCardProps> = ({ pick, onPres
     abbreviation: pick.away_team?.abbreviation,
     logo_url: pick.away_team?.logo_url,
   });
+  const a11yLabel = locked
+    ? `${matchup}, sign up to unlock pick`
+    : pred
+      ? `${matchup}, ${Math.round(probHome * 100)} percent home win probability`
+      : matchup;
 
   return (
     <TouchableOpacity
       style={styles.card}
       onPress={onPress}
       activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel={a11yLabel}
     >
       <View style={styles.header}>
         <View style={styles.sportIconWrap}>
@@ -108,6 +116,7 @@ export const BestPickMiniCard: React.FC<BestPickMiniCardProps> = ({ pick, onPres
           </View>
         </>
       )}
+      {!locked ? <PredictionDisclaimer league={pick.league} compact style={styles.disclaimer} /> : null}
     </TouchableOpacity>
   );
 };
@@ -232,5 +241,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: theme.colors.accent,
+  },
+  disclaimer: {
+    marginTop: 6,
   },
 });

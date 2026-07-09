@@ -159,6 +159,16 @@ Master backlog from technical due diligence (2026-07-04).
 | PH7-004 | Ensemble gating policy | I99 | done |
 | PH7-005 | iOS widget API + Swift template | I70 | done |
 
+## Phase 8 — Mobile UX polish
+
+| ID | Task | Audit ref | Status |
+|----|------|-----------|--------|
+| PH8-001 | Shared feed skeleton/error/empty components | I39 | done |
+| PH8-002 | Paywall hero + social proof | I38 | done |
+| PH8-003 | Favorites React Query + sync notice | I68 | done |
+| PH8-004 | PredictionDisclaimer + carousel a11y | I83, I34 | done |
+| PH8-005 | Server flags wired (trial, odds, props) | I86, I61 | done |
+
 ---
 
 ## Completed

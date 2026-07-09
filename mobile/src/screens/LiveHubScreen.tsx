@@ -9,13 +9,16 @@ import {
   FlatList,
   RefreshControl,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { GameCard } from '../components/GameCard';
+import { FeedSkeleton } from '../components/feed/FeedSkeleton';
+import { FeedErrorBanner } from '../components/feed/FeedErrorBanner';
+import { FeedEmptyState } from '../components/feed/FeedEmptyState';
+import { PredictionDisclaimer } from '../components/PredictionDisclaimer';
 import { apiService } from '../services/api';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
@@ -143,14 +146,10 @@ export const LiveHubScreen: React.FC = () => {
         <Text style={styles.subtitle}>{LIVE_HUB_SUBTITLE}</Text>
       </View>
       {error ? (
-        <View style={styles.errorBanner}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
+        <FeedErrorBanner message={error} onRetry={load} />
       ) : null}
       {loading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={theme.colors.accent} />
-        </View>
+        <FeedSkeleton count={4} />
       ) : (
         <FlatList
           style={styles.listFlex}
@@ -160,12 +159,12 @@ export const LiveHubScreen: React.FC = () => {
           contentContainerStyle={[styles.listContent, { paddingBottom: 72 + insets.bottom }]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <Ionicons name="calendar-outline" size={48} color={theme.colors.textMuted} />
-              <Text style={styles.emptyText}>No games today</Text>
-              <Text style={styles.emptySubtext}>Check back later or browse Games tab.</Text>
-            </View>
+            <FeedEmptyState
+              title="No games today"
+              subtitle="Check back later or browse the Games tab."
+            />
           }
+          ListFooterComponent={<PredictionDisclaimer compact style={styles.disclaimer} />}
         />
       )}
       <View style={[styles.bannerDock, { paddingBottom: insets.bottom }]}>
@@ -264,5 +263,10 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 14,
     color: theme.colors.secondary,
+  },
+  disclaimer: {
+    marginTop: theme.spacing.md,
+    marginHorizontal: theme.spacing.sm,
+    marginBottom: theme.spacing.lg,
   },
 });

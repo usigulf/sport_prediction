@@ -42,6 +42,10 @@ import {
   type OfferingPackage,
 } from '../services/purchases';
 import { SubscriptionLegalFooter } from '../components/SubscriptionLegalFooter';
+import { PaywallHero } from '../components/paywall/PaywallHero';
+import { useServerFeatureFlags } from '../hooks/useServerFeatureFlags';
+import { useLayout } from '../hooks/useLayout';
+import { trialDaysFromServer } from '../utils/resolvedFeatureFlags';
 import { captureRoutesEnabled } from '../navigation/screenshotNavigation';
 import { openIosManageSubscriptions } from '../utils/manageSubscriptions';
 import { trackSubscriptionActivated } from '../services/productAnalytics';
@@ -107,6 +111,9 @@ export const PaywallScreen: React.FC = () => {
   const [restoring, setRestoring] = useState(false);
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
   const scrollRef = useRef<ScrollView>(null);
+  const serverFlags = useServerFeatureFlags();
+  const { isWide, contentMaxWidth, horizontalPadding } = useLayout();
+  const trialDays = trialDaysFromServer(serverFlags);
 
   // Store billing (App Store / Play Billing via RevenueCat) is the compliant
   // path when the native SDK + a configured offering are present; otherwise we
@@ -331,7 +338,10 @@ export const PaywallScreen: React.FC = () => {
     <ScrollView
       ref={scrollRef}
       style={styles.container}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[
+        styles.content,
+        isWide && { paddingHorizontal: horizontalPadding, alignItems: 'center' },
+      ]}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
     >
@@ -355,6 +365,8 @@ export const PaywallScreen: React.FC = () => {
           </Text>
         </View>
       ) : null}
+      <View style={isWide ? { width: contentMaxWidth, alignSelf: 'center' } : undefined}>
+      <PaywallHero serverFlags={serverFlags} />
       <Text style={styles.title}>Choose your plan</Text>
       <Text style={styles.subtitle}>
         {contextBannerText
@@ -370,6 +382,7 @@ export const PaywallScreen: React.FC = () => {
           onPress={() => setBillingPeriod('monthly')}
           accessibilityRole="button"
           accessibilityState={{ selected: billingPeriod === 'monthly' }}
+          accessibilityLabel="Monthly billing"
         >
           <Text
             style={[
@@ -386,6 +399,7 @@ export const PaywallScreen: React.FC = () => {
             onPress={() => setBillingPeriod('annual')}
             accessibilityRole="button"
             accessibilityState={{ selected: billingPeriod === 'annual' }}
+            accessibilityLabel="Annual billing"
           >
             <Text
               style={[
@@ -417,7 +431,7 @@ export const PaywallScreen: React.FC = () => {
             ? 'Subscribe annual'
             : guestPreview
               ? 'Sign up for free trial'
-              : 'Start 7-day free trial';
+              : `Start ${trialDays}-day free trial`;
 
         const cardBody = (
           <>
@@ -464,7 +478,7 @@ export const PaywallScreen: React.FC = () => {
             <Pressable
               key={tier.id}
               accessibilityRole="button"
-              accessibilityLabel="Subscribe to Premium with 7-day free trial"
+              accessibilityLabel={`Subscribe to Premium with ${trialDays}-day free trial`}
               disabled={loadingThis}
               onPress={() => handleSubscribe(tier.id)}
               android_ripple={{ color: 'rgba(0,255,159,0.25)' }}
@@ -520,6 +534,7 @@ export const PaywallScreen: React.FC = () => {
           <Text style={styles.manageButtonText}>Manage subscription in App Store</Text>
         </TouchableOpacity>
       ) : null}
+      </View>
 
       <SubscriptionLegalFooter
         plans={[
@@ -527,7 +542,7 @@ export const PaywallScreen: React.FC = () => {
             title: 'Premium Monthly',
             lengthLabel: '1 month',
             priceLabel: premiumMonthlyPriceWithPeriod(storePremiumMonthlyPrice),
-            trialNote: '7-day free trial for eligible new subscribers, then auto-renews',
+            trialNote: `${trialDays}-day free trial for eligible new subscribers, then auto-renews`,
           },
           ...(annualBillingAvailable
             ? [

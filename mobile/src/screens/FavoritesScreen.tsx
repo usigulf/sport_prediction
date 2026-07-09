@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -6,177 +6,228 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
-  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { GameCard } from '../components/GameCard';
-import { apiService } from '../services/api';
+import { FeedSkeleton } from '../components/feed/FeedSkeleton';
+import { FeedErrorBanner } from '../components/feed/FeedErrorBanner';
+import { FeedEmptyState } from '../components/feed/FeedEmptyState';
+import { PredictionDisclaimer } from '../components/PredictionDisclaimer';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { AVAILABLE_LEAGUES } from '../constants/leagues';
 import { theme } from '../constants/theme';
+import {
+  useFavoriteGames,
+  useFavoriteMutations,
+  useFavoritesQuery,
+} from '../hooks/useFavorites';
 
 type FavoritesScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 export const FavoritesScreen: React.FC = () => {
   const navigation = useNavigation<FavoritesScreenNavigationProp>();
-  const [favorites, setFavorites] = useState<any>({ teams: [], leagues: [] });
-  const [games, setGames] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const {
+    data: favorites,
+    isLoading: favoritesLoading,
+    error: favoritesError,
+    refetch: refetchFavorites,
+    syncNotice,
+    clearSyncNotice,
+  } = useFavoritesQuery();
+  const {
+    games,
+    isLoading: gamesLoading,
+    error: gamesError,
+    refetch: refetchGames,
+    isRefetching,
+  } = useFavoriteGames();
+  const { addLeague, removeLeague, removeTeam } = useFavoriteMutations();
 
-  useEffect(() => {
-    loadFavorites();
-  }, []);
-
-  const loadFavorites = async () => {
-    try {
-      setLoading(true);
-      const favs = (await apiService.getFavorites()) as { teams?: { id: string; name: string }[]; leagues?: { id: string; name: string }[] };
-      setFavorites(favs);
-
-      // Load upcoming games for all favorite leagues (or no filter if none)
-      const leagueIds = favs.leagues?.map((l: { id: string }) => l.id) ?? [];
-      const gamesData = await apiService.getUpcomingGames({
-        leagues: leagueIds.length > 0 ? leagueIds.join(',') : undefined,
-        limit: 30,
-      });
-      setGames(gamesData.games || []);
-    } catch (error) {
-      Alert.alert('Error', getUserFriendlyMessage(error));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddLeague = async (leagueId: string) => {
-    try {
-      await apiService.addFavoriteLeague(leagueId);
-      await loadFavorites();
-    } catch (error) {
-      Alert.alert('Could not add league', getUserFriendlyMessage(error));
-    }
-  };
-
-  const handleRemoveLeague = async (leagueCode: string) => {
-    try {
-      await apiService.removeFavoriteLeague(leagueCode);
-      await loadFavorites();
-    } catch (error) {
-      Alert.alert('Could not remove league', getUserFriendlyMessage(error));
-    }
-  };
-
-  const handleRemoveTeam = async (teamId: string) => {
-    try {
-      await apiService.removeFavoriteTeam(teamId);
-      await loadFavorites();
-    } catch (error) {
-      Alert.alert('Could not remove favorite', getUserFriendlyMessage(error));
-    }
-  };
+  const loading = favoritesLoading || gamesLoading;
+  const error = favoritesError || gamesError;
+  const teams = favorites?.teams ?? [];
+  const leagues = favorites?.leagues ?? [];
+  const isEmpty = teams.length === 0 && leagues.length === 0;
 
   const onRefresh = async () => {
-    setRefreshing(true);
-    await loadFavorites();
-    setRefreshing(false);
+    clearSyncNotice();
+    await Promise.all([refetchFavorites(), refetchGames()]);
   };
 
   const handleGamePress = (gameId: string) => {
     navigation.navigate('GameDetail', { gameId });
   };
 
-  if (loading) {
+  const handleAddLeague = async (leagueId: string) => {
+    try {
+      await addLeague.mutateAsync(leagueId);
+    } catch (e) {
+      // surfaced via mutation error state if needed
+    }
+  };
+
+  const handleRemoveLeague = async (leagueCode: string) => {
+    try {
+      await removeLeague.mutateAsync(leagueCode);
+    } catch (_) {
+      /* ignore */
+    }
+  };
+
+  const handleRemoveTeam = async (teamId: string) => {
+    try {
+      await removeTeam.mutateAsync(teamId);
+    } catch (_) {
+      /* ignore */
+    }
+  };
+
+  if (loading && !favorites) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.loadingText}>Loading favorites...</Text>
+      <View style={styles.container}>
+        <FeedSkeleton count={4} />
+      </View>
+    );
+  }
+
+  if (error && isEmpty) {
+    return (
+      <View style={styles.container}>
+        <FeedErrorBanner
+          message={getUserFriendlyMessage(error)}
+          onRetry={() => void onRefresh()}
+        />
+      </View>
+    );
+  }
+
+  if (isEmpty) {
+    return (
+      <View style={styles.container}>
+        <FeedEmptyState
+          icon="heart-outline"
+          title="No favorites yet"
+          subtitle="Add teams from a game detail screen, or add leagues below."
+        />
+        <View style={styles.addLeagueSection}>
+          <Text style={styles.sectionLabel}>Add a league</Text>
+          {AVAILABLE_LEAGUES.map((league) => (
+            <TouchableOpacity
+              key={league.id}
+              style={styles.addLeagueButton}
+              onPress={() => void handleAddLeague(league.id)}
+              accessibilityRole="button"
+              accessibilityLabel={`Add ${league.name} to favorites`}
+            >
+              <Text style={styles.addLeagueButtonText}>{league.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <PredictionDisclaimer compact style={styles.disclaimer} />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      {favorites.teams?.length === 0 && favorites.leagues?.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>No Favorites Yet</Text>
-          <Text style={styles.emptyText}>
-            Add teams from a game detail screen (tap a game, then tap the star next to a team), or add leagues below to see upcoming games.
-          </Text>
-          <View style={styles.addLeagueSection}>
-            <Text style={styles.sectionLabel}>Add a league</Text>
-            {AVAILABLE_LEAGUES.map((league) => (
-              <TouchableOpacity
-                key={league.id}
-                style={styles.addLeagueButton}
-                onPress={() => handleAddLeague(league.id)}
-              >
-                <Text style={styles.addLeagueButtonText}>{league.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+      {syncNotice ? (
+        <View style={styles.syncBanner}>
+          <Text style={styles.syncText}>{syncNotice}</Text>
+          <TouchableOpacity onPress={clearSyncNotice} accessibilityLabel="Dismiss sync notice">
+            <Text style={styles.syncDismiss}>OK</Text>
+          </TouchableOpacity>
         </View>
-      ) : (
-        <FlatList
-          data={games}
-          renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => handleGamePress(item.id)}>
-              <GameCard game={item} />
-            </TouchableOpacity>
-          )}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          ListHeaderComponent={
-            <View style={styles.header}>
-              <Text style={styles.headerTitle}>Favorite Teams</Text>
-              {favorites.teams?.length > 0 && (
-                <View style={styles.teamChips}>
-                  {favorites.teams.map((t: { id: string; name: string }) => (
-                    <View key={t.id} style={styles.chipRow}>
-                      <Text style={styles.chipText}>{t.name}</Text>
-                      <TouchableOpacity
-                        onPress={() => handleRemoveTeam(t.id)}
-                        style={styles.removeChip}
-                      >
-                        <Text style={styles.removeChipText}>Remove</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-              )}
-              <Text style={styles.sectionLabel}>Favorite Leagues</Text>
-              <View style={styles.leagueRowWrap}>
-                {favorites.leagues?.map((l: { id: string; name: string }) => (
-                  <View key={l.id} style={styles.chipRow}>
-                    <Text style={styles.chipText}>{l.name}</Text>
+      ) : null}
+      {error ? (
+        <FeedErrorBanner
+          message={getUserFriendlyMessage(error)}
+          onRetry={() => void onRefresh()}
+        />
+      ) : null}
+      <FlatList
+        data={games}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            onPress={() => handleGamePress(item.id)}
+            accessibilityRole="button"
+            accessibilityLabel={`Open game ${item.home_team?.name ?? 'Home'} vs ${item.away_team?.name ?? 'Away'}`}
+          >
+            <GameCard game={item} />
+          </TouchableOpacity>
+        )}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={() => void onRefresh()} />
+        }
+        ListEmptyComponent={
+          loading ? (
+            <FeedSkeleton count={3} />
+          ) : (
+            <FeedEmptyState
+              title="No upcoming games"
+              subtitle="Pull to refresh or add more leagues."
+            />
+          )
+        }
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <Text style={styles.headerTitle} accessibilityRole="header">
+              Favorite Teams
+            </Text>
+            {teams.length > 0 ? (
+              <View style={styles.teamChips}>
+                {teams.map((t) => (
+                  <View key={t.id} style={styles.chipRow}>
+                    <Text style={styles.chipText}>{t.name}</Text>
                     <TouchableOpacity
-                      onPress={() => handleRemoveLeague(l.id)}
+                      onPress={() => void handleRemoveTeam(t.id)}
                       style={styles.removeChip}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remove ${t.name} from favorites`}
                     >
                       <Text style={styles.removeChipText}>Remove</Text>
                     </TouchableOpacity>
                   </View>
                 ))}
-                {AVAILABLE_LEAGUES.filter(
-                  (al) => !favorites.leagues?.some((fl: { id: string }) => fl.id === al.id)
-                ).map((league) => (
-                  <TouchableOpacity
-                    key={league.id}
-                    style={styles.addLeagueChip}
-                    onPress={() => handleAddLeague(league.id)}
-                  >
-                    <Text style={styles.addLeagueChipText}>+ {league.name}</Text>
-                  </TouchableOpacity>
-                ))}
               </View>
-              <Text style={styles.sectionLabel}>Upcoming Games</Text>
+            ) : null}
+            <Text style={styles.sectionLabel}>Favorite Leagues</Text>
+            <View style={styles.leagueRowWrap}>
+              {leagues.map((l) => (
+                <View key={l.id} style={styles.chipRow}>
+                  <Text style={styles.chipText}>{l.name}</Text>
+                  <TouchableOpacity
+                    onPress={() => void handleRemoveLeague(l.id)}
+                    style={styles.removeChip}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${l.name} league`}
+                  >
+                    <Text style={styles.removeChipText}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {AVAILABLE_LEAGUES.filter(
+                (al) => !leagues.some((fl) => fl.id === al.id),
+              ).map((league) => (
+                <TouchableOpacity
+                  key={league.id}
+                  style={styles.addLeagueChip}
+                  onPress={() => void handleAddLeague(league.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Add ${league.name}`}
+                >
+                  <Text style={styles.addLeagueChipText}>+ {league.name}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
-          }
-        />
-      )}
+            <Text style={styles.sectionLabel}>Upcoming Games</Text>
+            <PredictionDisclaimer compact style={styles.disclaimer} />
+          </View>
+        }
+      />
     </View>
   );
 };
@@ -185,71 +236,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: theme.colors.textMuted,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-    marginBottom: theme.spacing.sm,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: theme.spacing.md,
-  },
-  addLeagueSection: {
-    marginTop: theme.spacing.sm,
-    width: '100%',
-    maxWidth: 280,
-  },
-  addLeagueButton: {
-    backgroundColor: theme.colors.accentDim,
-    paddingVertical: 10,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    marginBottom: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.accent,
-  },
-  addLeagueButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: theme.colors.accent,
-  },
-  leagueRowWrap: {
-    marginTop: theme.spacing.xs,
-  },
-  addLeagueChip: {
-    alignSelf: 'flex-start',
-    backgroundColor: theme.colors.accentDim,
-    paddingVertical: 6,
-    paddingHorizontal: theme.spacing.sm + 4,
-    borderRadius: theme.radii.md,
-    marginBottom: 6,
-    borderWidth: 1,
-    borderColor: theme.colors.accent,
-  },
-  addLeagueChipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.colors.accent,
   },
   listContent: {
     padding: theme.spacing.sm,
@@ -301,5 +287,66 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     marginTop: theme.spacing.sm + 4,
     marginBottom: theme.spacing.xs,
+  },
+  leagueRowWrap: {
+    marginTop: theme.spacing.xs,
+  },
+  addLeagueChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: theme.colors.accentDim,
+    paddingVertical: 6,
+    paddingHorizontal: theme.spacing.sm + 4,
+    borderRadius: theme.radii.md,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+  },
+  addLeagueChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.accent,
+  },
+  addLeagueSection: {
+    paddingHorizontal: theme.spacing.lg,
+    width: '100%',
+    maxWidth: 320,
+    alignSelf: 'center',
+  },
+  addLeagueButton: {
+    backgroundColor: theme.colors.accentDim,
+    paddingVertical: 10,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    marginBottom: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+  },
+  addLeagueButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.accent,
+  },
+  syncBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: theme.colors.accentDim,
+    padding: theme.spacing.sm + 4,
+    margin: theme.spacing.sm,
+    borderRadius: theme.radii.md,
+  },
+  syncText: {
+    flex: 1,
+    fontSize: 13,
+    color: theme.colors.text,
+  },
+  syncDismiss: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.accent,
+    paddingHorizontal: theme.spacing.sm,
+  },
+  disclaimer: {
+    marginTop: theme.spacing.sm,
   },
 });

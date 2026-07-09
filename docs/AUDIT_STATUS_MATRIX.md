@@ -9,12 +9,12 @@ Legend: ✅ done · 🟡 partial · ❌ not implemented · 🚫 blocked (externa
 
 | Metric | Weaknesses (50) | Improvements (100) | Combined (150) |
 |--------|-----------------|--------------------|----------------|
-| ✅ Done | 32 | 54 | 86 |
-| 🟡 Partial | 16 | 37 | 53 |
+| ✅ Done | 32 | 56 | 88 |
+| 🟡 Partial | 16 | 35 | 51 |
 | ❌ Open | 0 | 0 | 0 |
 | 🚫 Blocked | 2 | 9 | 11 |
 
-**Implementable coverage:** 80.9% — `(done + 0.5×partial) / (150 − blocked)`
+**Implementable coverage:** 81.7% — `(done + 0.5×partial) / (150 − blocked)`
 
 Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added for subscription utils.
 
@@ -37,10 +37,10 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | W11 | Redis no auth | ✅ | done | docker-compose.yml Redis requirepass |
 | W12 | Leaderboard O(all games) query | ✅ | done | backend/app/services/leaderboard_service.py |
 | W13 | WebSocket per-client DB polling | 🟡 | partial | backend/app/services/live_websocket_hub.py — one poller per game, Redis pub/sub |
-| W14 | God screens 1000+ lines | 🟡 | partial | HomeScreen split; GameDetailScreen/PaywallScreen still large |
+| W14 | God screens 1000+ lines | 🟡 | partial | HomeScreen split; GameDetail favorites via useFavorites; PaywallHero extracted |
 | W15 | No password reset flow | ✅ | done | backend/app/services/password_reset_service.py, mobile ForgotPasswordScreen |
 | W16 | Push may register before consent | ✅ | done | mobile/src/utils/pushNotifications.ts, backend/tests/test_push_consent_order.py |
-| W17 | Minimal accessibility | 🟡 | partial | VoiceOver on tabs/cards; not exhaustive |
+| W17 | Minimal accessibility | 🟡 | partial | VoiceOver on tabs/cards/GameDetail favorites; carousel labels added |
 | W18 | No offline/NetInfo UX | ✅ | done | mobile/src/components/OfflineBanner.tsx |
 | W19 | Heuristic picks indistinguishable from ML in UI | ✅ | done | backend/app/utils/prediction_source.py, mobile PredictionCard |
 | W20 | Soccer draw not model-trained | ✅ | done | backend/app/services/model_training.py soccer 1X2 |
@@ -61,7 +61,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | W35 | No product analytics pipeline | 🟡 | partial | mobile/src/services/productAnalytics.ts — needs POSTHOG key in prod |
 | W36 | Keywords typo “ports” on live listing | 🚫 | blocked | Live ASC keywords — requires App Store Connect login |
 | W37 | No full-text search | ✅ | done | backend/app/services/game_search_service.py, GET /games/search |
-| W38 | Duplicate tier/profile fetches per screen | 🟡 | partial | React Query hooks reduce refetch; GameDetailScreen still heavy |
+| W38 | Duplicate tier/profile fetches per screen | 🟡 | partial | React Query favorites + upcoming; GameDetail still Redux for predictions |
 | W39 | Silent error swallowing on feeds | ✅ | done | mobile HomeFeedSections error+retry |
 | W40 | OpenAPI exposed in prod config default | ✅ | done | backend/app/config.py auto-disables OpenAPI in production |
 | W41 | 4 workers × inconsistent in-memory revocation | ✅ | done | backend/app/services/token_revocation_service.py Redis jti denylist; prod requires REDIS_URL |
@@ -114,12 +114,12 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I31 | React Query for server state | ✅ | done | mobile React Query hooks |
 | I32 | Split HomeScreen into feature components | ✅ | done | mobile/src/screens/home/HomeFeedSections.tsx |
 | I33 | NetInfo + offline banner | ✅ | done | OfflineBanner + NetInfo |
-| I34 | VoiceOver labels on tabs, cards, carousels | 🟡 | partial | GameCard/Landing accessibility labels |
+| I34 | VoiceOver labels on tabs, cards, carousels | 🟡 | partial | GameCard/Landing/BestPickMiniCard/GameDetail favorite a11y labels |
 | I35 | Password reset flow | ✅ | done | password reset flow |
 | I36 | Fix push consent order (after onboarding opt-in) | ✅ | done | push consent order |
 | I37 | Native Manage Subscriptions link (iOS 15+) | ✅ | done | mobile manageSubscriptions.ts |
-| I38 | Paywall hero redesign + social proof | 🟡 | partial | PaywallScreen hero copy |
-| I39 | Consistent skeleton/error/empty components | 🟡 | partial | PremiumFeatureEmptyState; not all screens |
+| I38 | Paywall hero redesign + social proof | ✅ | done | PaywallHero + accuracy pill + dynamic trial days |
+| I39 | Consistent skeleton/error/empty components | 🟡 | partial | FeedSkeleton/FeedErrorBanner/FeedEmptyState; Favorites + LiveHub wired |
 | I40 | Guest paywall preview (read-only) | ✅ | done | guest paywall preview |
 | I41 | Annual plan ($199/yr) | 🟡 | partial | annual plan code; ASC IAP blocked |
 | I42 | Referral: “invite friend, 7 extra trial days” | 🟡 | partial | referral/apply tracking; bonus days need ASC/Stripe promo |
@@ -148,8 +148,8 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I65 | Player props (when licensed) | 🟡 | partial | player_props_service behind FEATURE_PLAYER_PROPS |
 | I66 | Parlay correlation warnings | ✅ | done | parlay_correlation_service.py, POST /tools/parlay-correlation |
 | I67 | Email digest: daily picks | 🟡 | partial | email_digest_service.py + /internal/email-digest/run; SMTP required |
-| I68 | Watchlist sync across devices | 🟡 | partial | favorites API sync; no conflict resolution UI |
-| I69 | iPad-optimized layouts | 🟡 | partial | iPad screenshots; layouts not fully optimized |
+| I68 | Watchlist sync across devices | ✅ | done | useFavorites React Query + sync notice + team-filtered games |
+| I69 | iPad-optimized layouts | 🟡 | partial | useLayout hook; Paywall wide layout; carousel still phone-width |
 | I70 | Widget: today’s top pick | 🟡 | partial | GET /feed/widget/top-pick + mobile/ios/TopPickWidget Swift template |
 | I71 | Raise coverage to 60%+ | ✅ | done | CI coverage ≥60% |
 | I72 | Stripe webhook test suite | ✅ | done | backend/tests/test_stripe_webhook.py |
@@ -163,14 +163,14 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I80 | Delete dead code paths | 🟡 | partial | archive/; legacy services/users |
 | I81 | GDPR data export endpoint | ✅ | done | GET /user/me/export, gdpr_export_service.py |
 | I82 | CCPA opt-out flow | ✅ | done | POST /user/me/privacy/ccpa-opt-out |
-| I83 | Gambling disclaimer audit on all screens | 🟡 | partial | predictionTrust disclaimers; not audited on every screen |
+| I83 | Gambling disclaimer audit on all screens | 🟡 | partial | PredictionDisclaimer on mini cards, Favorites, LiveHub, PaywallHero |
 | I84 | Age gate if expanding content | ✅ | done | mobile AgeGateScreen + ageGateStorage.ts |
 | I85 | App Privacy nutrition label review quarterly | 🚫 | blocked | Quarterly ASC privacy label — manual process |
-| I86 | A/B test trial length (7 vs 14 days) | 🟡 | partial | experiments.trial_length_days in /config/feature-flags |
-| I87 | A/B test price ($19.99 vs $29.99) | 🟡 | partial | experiments.paywall_price_tier in /config/feature-flags |
-| I88 | Intro offer for lapsed users | 🟡 | partial | intro_offer_variant experiment bucket in /config/feature-flags |
-| I89 | Rewarded ads vs premium messaging test | 🟡 | partial | rewarded_ads_messaging experiment bucket |
-| I90 | Ad density test on free tier | 🟡 | partial | ad_density experiment bucket |
+| I86 | A/B test trial length (7 vs 14 days) | 🟡 | partial | trial_length_days wired in PaywallScreen via useServerFeatureFlags |
+| I87 | A/B test price ($19.99 vs $29.99) | 🟡 | partial | paywall_price_tier in flags; RevenueCat price still primary |
+| I88 | Intro offer for lapsed users | 🟡 | partial | intro_offer_variant bucket exposed; mobile not wired |
+| I89 | Rewarded ads vs premium messaging test | 🟡 | partial | rewarded_ads_messaging bucket exposed; mobile not wired |
+| I90 | Ad density test on free tier | 🟡 | partial | ad_density helper; AdEngine still uses local rules |
 | I91 | Proprietary historical feature store | ✅ | done | game_feature_snapshots, feature_store_service.py, GET /stats/feature-store |
 | I92 | User pick tracking vs model (Brier per user) | ✅ | done | POST /user/me/picks, GET /user/me/picks/brier, user_brier_service.py |
 | I93 | Community predictions vs model | ✅ | done | GET /stats/community-vs-model, community_predictions_service.py |

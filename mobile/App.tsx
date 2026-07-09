@@ -35,6 +35,7 @@ import {
 } from './src/utils/pushNotificationHandlers';
 import { recordAppLaunch } from './src/utils/storeReview';
 import { trackAppOpened } from './src/services/productAnalytics';
+import { fetchServerFeatureFlags } from './src/hooks/useServerFeatureFlags';
 import { RewardedUnlockProvider } from './src/ads/engine/RewardedUnlockContext';
 import { AdEngineProvider } from './src/ads/engine/AdEngineContext';
 
@@ -112,6 +113,7 @@ function AppContent() {
         if (!cancelled) {
           setAppReady(true);
           await SplashScreen.hideAsync().catch(() => {});
+          void fetchServerFeatureFlags();
         }
       }
       if (cancelled) return;
