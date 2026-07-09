@@ -75,6 +75,11 @@ const CarouselCard = React.memo<CarouselCardProps>(function CarouselCard({
   const locked = Boolean(pick.guest_locked);
   const stars = pred && !locked ? confidenceToPickStrength(pred.confidence_level) : 0;
   const probHome = pred && !locked ? pred.home_win_probability : 0;
+  const a11yLabel = locked
+    ? `${matchup}, sign up to unlock pick`
+    : pred
+      ? `${matchup}, ${Math.round(probHome * 100)} percent home win probability`
+      : matchup;
 
   return (
     <View style={[styles.cardWrap, { width: cardWidth + CARD_MARGIN }]}>
@@ -85,6 +90,9 @@ const CarouselCard = React.memo<CarouselCardProps>(function CarouselCard({
           onSetFeatured?.();
         }}
         activeOpacity={0.9}
+        accessibilityRole="button"
+        accessibilityLabel={a11yLabel}
+        accessibilityHint="Opens game details"
       >
         <View style={styles.header}>
           <View style={styles.sportIconWrap}>

@@ -2,7 +2,10 @@ import {
   adDensitySpacing,
   introOfferLabel,
   isOddsDisplayEnabled,
+  isPaywallDiscountTier,
   isPlayerPropsEnabled,
+  paywallPricePromoLabel,
+  paywallReferenceMonthlyPrice,
   rewardedAdsCopy,
   trialDaysFromServer,
 } from '../utils/resolvedFeatureFlags';
@@ -53,5 +56,14 @@ describe('resolvedFeatureFlags', () => {
       /20%/,
     );
     expect(introOfferLabel({})).toBeNull();
+  });
+
+  it('maps paywall price experiment buckets', () => {
+    const discount = { experiments: { paywall_price_tier: 'discount' } };
+    expect(isPaywallDiscountTier(discount)).toBe(true);
+    expect(paywallPricePromoLabel(discount)).toMatch(/\$19\.99/);
+    expect(paywallReferenceMonthlyPrice(discount)).toBe('$29.99');
+    expect(isPaywallDiscountTier({})).toBe(false);
+    expect(paywallPricePromoLabel({})).toBeNull();
   });
 });

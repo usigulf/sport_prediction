@@ -169,6 +169,14 @@ Master backlog from technical due diligence (2026-07-04).
 | PH8-004 | PredictionDisclaimer + carousel a11y | I83, I34 | done |
 | PH8-005 | Server flags wired (trial, odds, props) | I86, I61 | done |
 
+## Phase 9 — Experiments & gating hardening
+
+| ID | Task | Audit ref | Status |
+|----|------|-----------|--------|
+| PH9-001 | Paywall price-tier experiment UI | I87 | done |
+| PH9-002 | Premium gating regression suite | I73 | done |
+| PH9-003 | Carousel + paywall a11y / Detox IDs | I34, W17, I76 | done |
+
 ---
 
 ## Completed

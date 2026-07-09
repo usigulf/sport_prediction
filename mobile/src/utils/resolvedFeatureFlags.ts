@@ -56,3 +56,21 @@ export function introOfferLabel(flags: ServerFeatureFlags): string | null {
   if (variant === 'winback_20pct') return 'Welcome back — 20% off your first month';
   return null;
 }
+
+/** Experiment bucket for paywall price messaging (I87). Store/RevenueCat remains source of truth at checkout. */
+export const PAYWALL_EXPERIMENT_MONTHLY_LABEL = '$19.99';
+
+export function isPaywallDiscountTier(flags: ServerFeatureFlags): boolean {
+  return (flags.experiments?.paywall_price_tier || 'standard').toLowerCase() === 'discount';
+}
+
+export function paywallPricePromoLabel(flags: ServerFeatureFlags): string | null {
+  if (!isPaywallDiscountTier(flags)) return null;
+  return `Limited-time offer — ${PAYWALL_EXPERIMENT_MONTHLY_LABEL}/mo tier for new subscribers`;
+}
+
+/** Reference list price shown struck-through when user is in the discount experiment bucket. */
+export function paywallReferenceMonthlyPrice(flags: ServerFeatureFlags): string | null {
+  if (!isPaywallDiscountTier(flags)) return null;
+  return '$29.99';
+}

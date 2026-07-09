@@ -45,7 +45,7 @@ import { SubscriptionLegalFooter } from '../components/SubscriptionLegalFooter';
 import { PaywallHero } from '../components/paywall/PaywallHero';
 import { useServerFeatureFlags } from '../hooks/useServerFeatureFlags';
 import { useLayout } from '../hooks/useLayout';
-import { trialDaysFromServer, introOfferLabel } from '../utils/resolvedFeatureFlags';
+import { trialDaysFromServer, introOfferLabel, paywallPricePromoLabel, paywallReferenceMonthlyPrice } from '../utils/resolvedFeatureFlags';
 import { captureRoutesEnabled } from '../navigation/screenshotNavigation';
 import { openIosManageSubscriptions } from '../utils/manageSubscriptions';
 import { trackSubscriptionActivated } from '../services/productAnalytics';
@@ -115,6 +115,8 @@ export const PaywallScreen: React.FC = () => {
   const { isWide, contentMaxWidth, horizontalPadding } = useLayout();
   const trialDays = trialDaysFromServer(serverFlags);
   const introOfferText = introOfferLabel(serverFlags);
+  const pricePromoText = paywallPricePromoLabel(serverFlags);
+  const referenceMonthlyPrice = paywallReferenceMonthlyPrice(serverFlags);
 
   // Store billing (App Store / Play Billing via RevenueCat) is the compliant
   // path when the native SDK + a configured offering are present; otherwise we
@@ -373,6 +375,11 @@ export const PaywallScreen: React.FC = () => {
           <Text style={styles.introOfferText}>{introOfferText}</Text>
         </View>
       ) : null}
+      {pricePromoText ? (
+        <View style={styles.pricePromoBanner} testID="paywall-price-promo">
+          <Text style={styles.pricePromoText}>{pricePromoText}</Text>
+        </View>
+      ) : null}
       <Text style={styles.title}>Choose your plan</Text>
       <Text style={styles.subtitle}>
         {contextBannerText
@@ -444,6 +451,9 @@ export const PaywallScreen: React.FC = () => {
             <View style={styles.cardHeader}>
               <Text style={styles.tierName}>{tier.name}</Text>
               <View style={styles.priceRow}>
+                {tier.id === 'premium' && referenceMonthlyPrice && billingPeriod === 'monthly' ? (
+                  <Text style={styles.referencePrice}>{referenceMonthlyPrice}</Text>
+                ) : null}
                 <Text style={styles.price}>{displayPrice}</Text>
                 <Text style={styles.period}>{displayPeriod}</Text>
               </View>
@@ -483,6 +493,7 @@ export const PaywallScreen: React.FC = () => {
           return (
             <Pressable
               key={tier.id}
+              testID={tier.id === 'premium' ? 'paywall-premium-card' : undefined}
               accessibilityRole="button"
               accessibilityLabel={`Subscribe to Premium with ${trialDays}-day free trial`}
               disabled={loadingThis}
@@ -723,6 +734,26 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.secondary,
     textAlign: 'center',
+  },
+  pricePromoBanner: {
+    backgroundColor: theme.colors.accentDim,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    marginBottom: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+  },
+  pricePromoText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.accent,
+    textAlign: 'center',
+  },
+  referencePrice: {
+    fontSize: 16,
+    color: theme.colors.textMuted,
+    textDecorationLine: 'line-through',
+    marginRight: theme.spacing.xs,
   },
   cardHeader: {
     marginBottom: 12,

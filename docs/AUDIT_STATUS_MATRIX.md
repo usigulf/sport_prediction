@@ -9,12 +9,12 @@ Legend: ✅ done · 🟡 partial · ❌ not implemented · 🚫 blocked (externa
 
 | Metric | Weaknesses (50) | Improvements (100) | Combined (150) |
 |--------|-----------------|--------------------|----------------|
-| ✅ Done | 33 | 62 | 95 |
-| 🟡 Partial | 15 | 29 | 44 |
+| ✅ Done | 34 | 65 | 99 |
+| 🟡 Partial | 14 | 26 | 40 |
 | ❌ Open | 0 | 0 | 0 |
 | 🚫 Blocked | 2 | 9 | 11 |
 
-**Implementable coverage:** 84.2% — `(done + 0.5×partial) / (150 − blocked)`
+**Implementable coverage:** 85.6% — `(done + 0.5×partial) / (150 − blocked)`
 
 Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added for subscription utils.
 
@@ -40,7 +40,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | W14 | God screens 1000+ lines | ✅ | done | GameDetail split into hook + section components; PaywallHero extracted |
 | W15 | No password reset flow | ✅ | done | backend/app/services/password_reset_service.py, mobile ForgotPasswordScreen |
 | W16 | Push may register before consent | ✅ | done | mobile/src/utils/pushNotifications.ts, backend/tests/test_push_consent_order.py |
-| W17 | Minimal accessibility | 🟡 | partial | VoiceOver on tabs/cards/GameDetail favorites; carousel labels added |
+| W17 | Minimal accessibility | ✅ | done | VoiceOver on tabs, GameCard, mini cards, carousel, Paywall, GameDetail favorites |
 | W18 | No offline/NetInfo UX | ✅ | done | mobile/src/components/OfflineBanner.tsx |
 | W19 | Heuristic picks indistinguishable from ML in UI | ✅ | done | backend/app/utils/prediction_source.py, mobile PredictionCard |
 | W20 | Soccer draw not model-trained | ✅ | done | backend/app/services/model_training.py soccer 1X2 |
@@ -114,7 +114,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I31 | React Query for server state | ✅ | done | mobile React Query hooks |
 | I32 | Split HomeScreen into feature components | ✅ | done | mobile/src/screens/home/HomeFeedSections.tsx |
 | I33 | NetInfo + offline banner | ✅ | done | OfflineBanner + NetInfo |
-| I34 | VoiceOver labels on tabs, cards, carousels | 🟡 | partial | GameCard/Landing/BestPickMiniCard/GameDetail favorite a11y labels |
+| I34 | VoiceOver labels on tabs, cards, carousels | ✅ | done | a11y labels on GameCard, BestPickMiniCard, BestPicksCarousel, GameDetail favorites |
 | I35 | Password reset flow | ✅ | done | password reset flow |
 | I36 | Fix push consent order (after onboarding opt-in) | ✅ | done | push consent order |
 | I37 | Native Manage Subscriptions link (iOS 15+) | ✅ | done | mobile manageSubscriptions.ts |
@@ -153,10 +153,10 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I70 | Widget: today’s top pick | 🟡 | partial | widget API + Swift template w/ disclaimer; scripts/verify_widget_api.sh; Xcode target embed manual |
 | I71 | Raise coverage to 60%+ | ✅ | done | CI coverage ≥60% |
 | I72 | Stripe webhook test suite | ✅ | done | backend/tests/test_stripe_webhook.py |
-| I73 | Monetization bypass regression tests | 🟡 | partial | free tier + share tests; no dedicated paywall bypass suite |
+| I73 | Monetization bypass regression tests | ✅ | done | backend/tests/test_premium_gating.py — auth, quota, share-pick bypass |
 | I74 | Integration tests with Postgres in CI | ✅ | done | .github/workflows/ci.yml backend-postgres job, test_postgres_integration.py |
 | I75 | Mobile Jest tests for subscription utils | ✅ | done | mobile subscription.test.ts + CI |
-| I76 | E2E Detox for paywall flow | 🟡 | partial | mobile/e2e/paywall.e2e.ts + docs/DETOX_E2E.md skeleton |
+| I76 | E2E Detox for paywall flow | 🟡 | partial | mobile/e2e/paywall.e2e.ts + testIDs; Detox build required |
 | I77 | Feature flags service (LaunchDarkly/PostHog) | ✅ | done | backend/app/services/feature_flags.py, GET /config/feature-flags |
 | I78 | API v2 planning doc | ✅ | done | docs/API_V2_PLAN.md |
 | I79 | OpenAPI client codegen for mobile | ✅ | done | export_openapi.py, docs/OPENAPI_CODEGEN.md, mobile codegen:api |
@@ -166,8 +166,8 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I83 | Gambling disclaimer audit on all screens | ✅ | done | PredictionDisclaimer on picks, feeds, paywall, GameDetail, Games, Profile, SharePickCard |
 | I84 | Age gate if expanding content | ✅ | done | mobile AgeGateScreen + ageGateStorage.ts |
 | I85 | App Privacy nutrition label review quarterly | 🚫 | blocked | Quarterly ASC privacy label — manual process |
-| I86 | A/B test trial length (7 vs 14 days) | 🟡 | partial | trial_length_days wired in PaywallScreen via useServerFeatureFlags |
-| I87 | A/B test price ($19.99 vs $29.99) | 🟡 | partial | paywall_price_tier in flags; RevenueCat price still primary |
+| I86 | A/B test trial length (7 vs 14 days) | ✅ | done | trial_length_days wired in PaywallScreen + PaywallHero via useServerFeatureFlags |
+| I87 | A/B test price ($19.99 vs $29.99) | 🟡 | partial | paywall_price_tier promo banner + reference price; RevenueCat checkout primary |
 | I88 | Intro offer for lapsed users | ✅ | done | intro_offer_variant winback banner on PaywallScreen |
 | I89 | Rewarded ads vs premium messaging test | ✅ | done | rewarded_ads_messaging A/B copy in RewardedUnlockCTA |
 | I90 | Ad density test on free tier | ✅ | done | ad_density server flag floors native ad spacing in AdEngine |
