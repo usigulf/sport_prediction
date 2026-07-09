@@ -1,7 +1,7 @@
 services:
   # PostgreSQL with TimescaleDB
   postgres:
-    image: timescale/timescaledb:2.14.2-pg15
+    image: timescale/timescaledb:2.25.2-pg15
     container_name: sport-prediction-postgres
     # Raise ceiling so API pool(s) + Grafana/metrics + one-off scripts do not hit "too many clients".
     command: ["postgres", "-c", "max_connections=150"]
