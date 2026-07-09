@@ -13,7 +13,7 @@ from app.database import get_db
 from app.config import get_settings
 from app.models.game import Game
 from app.models.game_player_spotlight import GamePlayerSpotlight
-from app.services.push_trigger_service import send_game_starting_reminders, send_high_confidence_picks, send_post_game_results
+from app.services.push_trigger_service import send_game_starting_reminders, send_high_confidence_picks, send_post_game_results, send_trial_ending_reminders
 from app.services.prediction_inference_service import run_prediction_job
 from app.services.model_training import train_and_save
 from app.services.sportradar_nfl_service import fetch_nfl_standings_json
@@ -169,10 +169,12 @@ async def run_push_triggers(
     n_reminders = send_game_starting_reminders(db)
     n_picks = send_high_confidence_picks(db)
     n_post_game = send_post_game_results(db)
+    n_trial = send_trial_ending_reminders(db)
     return {
         "game_reminders_sent": n_reminders,
         "high_confidence_picks_sent": n_picks,
         "post_game_results_sent": n_post_game,
+        "trial_ending_sent": n_trial,
     }
 
 
@@ -456,3 +458,45 @@ async def clearsports_health(_: None = Depends(_require_cron_secret)):
     else:
         out["us_sports_provider"] = "none"
     return out
+
+
+class EnqueueJobBody(BaseModel):
+    job_type: str = Field(..., min_length=1, max_length=64)
+    payload: dict = Field(default_factory=dict)
+
+
+@router.post("/jobs/enqueue")
+async def enqueue_internal_job(
+    body: EnqueueJobBody,
+    _: None = Depends(_require_cron_secret),
+):
+    """Enqueue background work (Redis list; Imp #52)."""
+    from app.services.job_queue_service import enqueue_job
+
+    job_id = enqueue_job(body.job_type, body.payload)
+    return {"job_id": job_id, "status": "pending"}
+
+
+@router.post("/jobs/process-one")
+async def process_one_job(
+    _: None = Depends(_require_cron_secret),
+):
+    """Dequeue and return one job for worker processing."""
+    from app.services.job_queue_service import dequeue_job
+
+    job = dequeue_job()
+    if not job:
+        return {"processed": False}
+    return {"processed": True, "job": job}
+
+
+@router.post("/email-digest/run")
+async def run_email_digest_cron(
+    db: Session = Depends(get_db),
+    _: None = Depends(_require_cron_secret),
+):
+    """Send daily picks email when FEATURE_EMAIL_DIGEST=true and SMTP configured."""
+    from app.services.email_digest_service import run_daily_email_digest
+
+    sent = run_daily_email_digest(db)
+    return {"emails_sent": sent}

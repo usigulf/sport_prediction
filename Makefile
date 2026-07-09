@@ -87,8 +87,8 @@ clean-all: clean docker-clean ## Clean everything including Docker
 ml-train: ## Train ML models from finished DB games
 	cd backend && python train_model.py --out ../ml/models
 
-ml-evaluate: ## Evaluate ML models
-	cd ml/monitoring && python evaluate_models.py
+ml-evaluate: ## Evaluate ML models (walk-forward summary)
+	cd backend && python scripts/evaluate_models_cli.py
 
 # Monitoring
 monitor: docker-up ## Start monitoring services

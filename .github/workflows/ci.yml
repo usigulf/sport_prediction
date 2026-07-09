@@ -63,5 +63,8 @@ jobs:
           npm ci
           npx tsc --noEmit
 
+      - name: Jest unit tests
+        run: npm test -- --ci
+
       - name: npm audit
         run: npm audit --omit=dev --audit-level=high

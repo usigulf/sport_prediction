@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.constants.soccer import SOCCER_LEAGUES_SET
 from app.models.game import Game
+from app.models.user import User
 from app.models.user_favorite import UserFavorite
 from app.models.user_push_token import UserPushToken
 from app.models.push_reminder_sent import PushReminderSent
@@ -26,6 +27,10 @@ logger = logging.getLogger(__name__)
 REMINDER_GAME_STARTING = "game_starting_2h"
 REMINDER_HIGH_CONFIDENCE = "high_confidence_pick"
 REMINDER_POST_GAME = "post_game_result"
+REMINDER_TRIAL_ENDING = "trial_ending_24h"
+
+# Trial-ending: notify once when trial ends within this window (hours).
+TRIAL_ENDING_WINDOW_HOURS = 24
 
 # Cron runs every ~15 min; games with kickoff in this UTC window get a one-time alert.
 KICKOFF_WINDOW_MIN_MINUTES = 110
@@ -342,4 +347,74 @@ def send_post_game_results(db: Session) -> int:
             )
             _record_sent(db, uid, game.id, REMINDER_POST_GAME)
             sent_count += 1
+    return sent_count
+
+
+def send_trial_ending_reminders(db: Session) -> int:
+    """
+    Notify premium/trialing users ~24h before subscription_trial_end_at (Imp #46).
+    """
+    now = _utc_now()
+    window_end = now + timedelta(hours=TRIAL_ENDING_WINDOW_HOURS)
+    users = (
+        db.query(User)
+        .filter(
+            User.subscription_trial_end_at.isnot(None),
+            User.subscription_trial_end_at >= now.replace(tzinfo=None),
+            User.subscription_trial_end_at <= window_end.replace(tzinfo=None),
+            User.subscription_tier.in_(("premium", "trialing")),
+            User.trial_ending_push_sent_at.is_(None),
+        )
+        .all()
+    )
+    sent_count = 0
+    for user in users:
+        uid = str(user.id)
+        tokens = _tokens_for_user_ids(db, {uid})
+        if not tokens:
+            continue
+        send_expo_push(
+            tokens,
+            "Your Premium trial ends soon",
+            "Your free trial ends in about 24 hours. Manage or cancel in Settings → Subscriptions.",
+            data={"type": "trial_ending"},
+        )
+        user.trial_ending_push_sent_at = now
+        db.commit()
+        sent_count += 1
+    return sent_count
+
+
+def send_trial_ending_reminders(db: Session) -> int:
+    """
+    Notify premium/trialing users ~24h before subscription_trial_end_at (Imp #46).
+    """
+    now = _utc_now()
+    window_end = now + timedelta(hours=TRIAL_ENDING_WINDOW_HOURS)
+    users = (
+        db.query(User)
+        .filter(
+            User.subscription_trial_end_at.isnot(None),
+            User.subscription_trial_end_at >= now.replace(tzinfo=None),
+            User.subscription_trial_end_at <= window_end.replace(tzinfo=None),
+            User.subscription_tier.in_(("premium", "trialing")),
+            User.trial_ending_push_sent_at.is_(None),
+        )
+        .all()
+    )
+    sent_count = 0
+    for user in users:
+        uid = str(user.id)
+        tokens = _tokens_for_user_ids(db, {uid})
+        if not tokens:
+            continue
+        send_expo_push(
+            tokens,
+            "Your Premium trial ends soon",
+            "Your free trial ends in about 24 hours. Manage or cancel in Settings → Subscriptions.",
+            data={"type": "trial_ending"},
+        )
+        user.trial_ending_push_sent_at = now
+        db.commit()
+        sent_count += 1
     return sent_count

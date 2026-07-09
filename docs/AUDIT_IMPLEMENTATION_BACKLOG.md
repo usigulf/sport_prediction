@@ -98,6 +98,29 @@ Master backlog from technical due diligence (2026-07-04).
 | PH2-010 | Prometheus metrics | Weakness #28, Imp #60 | done |
 | PH2-011 | Staging public URL (DNS + TLS + nginx) | PH2-009 | blocked |
 
+## Phase 3 — Full audit completion pass
+
+| ID | Task | Audit ref | Status |
+|----|------|-----------|--------|
+| PH3-001 | GDPR export endpoint | I81 | done |
+| PH3-002 | CCPA opt-out API | I82, W37-adj | done |
+| PH3-003 | Game/team search API | W37 | done |
+| PH3-004 | Stripe billing portal + web subscriber portal | W47 | done |
+| PH3-005 | Referral code apply (tracking) | W34, I42 | done |
+| PH3-006 | Trial-ending push notifications | I46 | done |
+| PH3-007 | Server feature flags + A/B buckets | I77, I86–87 | done |
+| PH3-008 | WebSocket connection limits | W41, I55 | done |
+| PH3-009 | Redis job queue (internal) | W42, I52 | done |
+| PH3-010 | Email digest service + cron | I67 | done |
+| PH3-011 | Docker image pinning | W43 | done |
+| PH3-012 | Blue/green deploy script | I59 | done |
+| PH3-013 | Mobile Jest + CI | W44, I75 | done |
+| PH3-014 | Detox E2E skeleton | I76 | done |
+| PH3-015 | OpenAPI auto-off in production | W40 | done |
+| PH3-016 | Makefile ml-evaluate fix | W49 | done |
+| PH3-017 | Accuracy embed widget | I48 | done |
+| PH3-018 | Audit status matrix generator | — | done |
+
 ---
 
 ## Completed

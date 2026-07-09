@@ -48,8 +48,15 @@ def test_backend_requirements_are_pinned_not_loose():
 
 def test_mobile_overrides_patch_high_audit_findings():
     pkg = (REPO_ROOT / "mobile" / "package.json").read_text(encoding="utf-8")
-    assert '"@xmldom/xmldom": "^0.9.10"' in pkg
+    assert '"@xmldom/xmldom": "0.8.10"' in pkg
     assert '"tar": "^7.5.19"' in pkg
+    assert '"jest"' in pkg
+
+
+def test_ci_runs_mobile_jest():
+    ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert "Jest unit tests" in ci
+    assert "npm test" in ci
 
 
 def test_ci_enforces_sixty_percent_coverage():

@@ -6,7 +6,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 from typing import Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from app.database import get_db
 from app.utils.calendar_window import utc_bounds_for_calendar_day
 from app.api.deps import get_current_user, get_current_user_optional, rate_limit_predictions
@@ -25,6 +25,7 @@ from app.models.prediction import Prediction
 from app.models.user import User
 from app.models.user_prediction_view import UserPredictionView
 from app.services.prediction_service import PredictionService
+from app.services.trust_metrics_service import aggregate_accuracy_from_finished
 from app.services.player_props_service import build_game_player_props
 from app.services.explanation_service import get_model_feature_importance
 from app.services.feature_builder import build_game_features
@@ -42,9 +43,38 @@ from app.services.odds_service import get_market_odds_for_game, load_game_for_od
 from app.schemas.odds import MarketOddsResponse
 from app.config import get_settings
 from app.utils.subscription_tiers import is_free_tier_user
+from app.services.game_search_service import search_games
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+@router.get("/search", response_model=GameListResponse)
+async def search_games_endpoint(
+    q: str = Query(..., min_length=2, max_length=100),
+    limit: int = Query(20, ge=1, le=50),
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+):
+    """Full-text-style search by team name or abbreviation (Weakness #37)."""
+    games = search_games(db, q, limit=limit)
+    items = []
+    for g in games:
+        items.append(
+            GameResponse(
+                id=str(g.id),
+                league=g.league,
+                home_team_id=str(g.home_team_id),
+                away_team_id=str(g.away_team_id),
+                scheduled_time=g.scheduled_time,
+                status=g.status,
+                home_team=team_to_api_dict(g.home_team) if g.home_team else None,
+                away_team=team_to_api_dict(g.away_team) if g.away_team else None,
+                home_score=g.home_score,
+                away_score=g.away_score,
+            )
+        )
+    return GameListResponse(games=items, total=len(items), skip=0, limit=limit)
 
 
 def _game_specific_explanation_factors(game: Game, db: Session) -> list[FeatureImportance]:
@@ -591,6 +621,10 @@ async def share_pick(
         away_prob = float(pred.away_win_probability)
 
     referrer_id = current_user.id if current_user else None
+    roll_30 = aggregate_accuracy_from_finished(
+        db, since=datetime.now(timezone.utc) - timedelta(days=30)
+    )
+    rolling_acc = roll_30.get("accuracy_pct")
     share_url = build_share_web_url(game_uuid, referrer_id)
     deep_link = build_share_deep_link(game_uuid, referrer_id)
     card = build_share_card(
@@ -601,6 +635,7 @@ async def share_pick(
         home_win_probability=home_prob,
         away_win_probability=away_prob,
         referrer_id=referrer_id,
+        rolling_accuracy_pct=rolling_acc,
     )
 
     message = f"Octobet pick: {home_name} vs {away_name}"

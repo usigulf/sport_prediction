@@ -286,17 +286,20 @@ def test_internal_ml_train(client, monkeypatch, tmp_path):
         get_settings.cache_clear()
 
 
+@patch("app.api.internal.send_trial_ending_reminders", return_value=0)
 @patch("app.api.internal.send_game_starting_reminders", return_value=2)
 @patch("app.api.internal.send_high_confidence_picks", return_value=1)
 @patch("app.api.internal.send_post_game_results", return_value=3)
-def test_run_push_triggers(mock_post_game, mock_picks, mock_reminders, client):
+def test_run_push_triggers(mock_post_game, mock_picks, mock_reminders, mock_trial, client):
     r = client.post("/internal/push-triggers/run", headers=_headers())
     assert r.status_code == status.HTTP_200_OK
     assert r.json() == {
         "game_reminders_sent": 2,
         "high_confidence_picks_sent": 1,
         "post_game_results_sent": 3,
+        "trial_ending_sent": 0,
     }
     mock_reminders.assert_called_once()
     mock_picks.assert_called_once()
     mock_post_game.assert_called_once()
+    mock_trial.assert_called_once()

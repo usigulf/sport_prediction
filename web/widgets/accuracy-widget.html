@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>octobetiQ accuracy</title>
+  <style>
+    :root { --bg: #0f172a; --text: #e2e8f0; --accent: #22c55e; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 1rem; }
+    .widget { border: 1px solid rgba(148,163,184,.25); border-radius: 10px; padding: 1rem 1.25rem; max-width: 320px; }
+    h2 { margin: 0 0 .5rem; font-size: 1rem; font-weight: 600; }
+    .pct { font-size: 2rem; font-weight: 700; color: var(--accent); }
+    .meta { font-size: .75rem; opacity: .65; margin-top: .5rem; }
+    .err { color: #f87171; font-size: .85rem; }
+  </style>
+</head>
+<body>
+  <div class="widget" id="widget">
+    <h2>Model accuracy (tracked)</h2>
+    <div class="pct" id="pct">—</div>
+    <div id="detail"></div>
+    <div class="meta">Informational only · <a href="https://octobetiq.com" style="color:#38bdf8">octobetiq.com</a></div>
+  </div>
+  <script>
+    (async () => {
+      const pct = document.getElementById('pct');
+      const detail = document.getElementById('detail');
+      try {
+        const r = await fetch('https://api.octobetiq.com/api/v1/stats/model');
+        if (!r.ok) throw new Error('Stats unavailable');
+        const s = await r.json();
+        const acc = s.overall_accuracy_pct ?? s.accuracy_pct;
+        if (acc != null) pct.textContent = `${Number(acc).toFixed(1)}%`;
+        else pct.textContent = '—';
+        const n = s.sample_size ?? s.games_evaluated;
+        if (n != null) detail.textContent = `Based on ${n} finished games with pre-game picks.`;
+      } catch (e) {
+        pct.textContent = '—';
+        detail.innerHTML = '<span class="err">Accuracy data temporarily unavailable.</span>';
+      }
+    })();
+  </script>
+</body>
+</html>

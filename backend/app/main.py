@@ -15,7 +15,7 @@ from app.config import get_settings
 from app.database import SessionLocal
 from app.monitoring.prometheus_metrics import setup_prometheus_metrics
 from app.services.live_websocket_auth import authenticate_live_websocket, get_ws_token
-from app.services.live_websocket_hub import live_ws_hub
+from app.services.live_websocket_hub import live_ws_hub, WebSocketConnectionLimitError
 
 settings = get_settings()
 
@@ -132,7 +132,12 @@ async def websocket_live_updates(
             return
         game_uuid, _user = auth
         game_key = str(game_uuid)
-        queue = await live_ws_hub.subscribe(game_key)
+        try:
+            queue = await live_ws_hub.subscribe(game_key)
+        except WebSocketConnectionLimitError as exc:
+            await websocket.send_json({"error": str(exc), "code": "connection_limit"})
+            await websocket.close(code=1013)
+            return
 
         while True:
             message = await queue.get()

@@ -3,13 +3,16 @@ User endpoints
 """
 from typing import Optional
 from uuid import UUID
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
 from app.database import get_db
 from app.api.deps import get_current_user
 from app.config import get_settings
 from app.services.subscription_cancel_service import cancel_external_subscriptions_for_user
+from app.services.gdpr_export_service import build_user_data_export
 from app.schemas.user import UserResponse
 from app.models.user import User
 from app.models.user_favorite import UserFavorite
@@ -258,6 +261,65 @@ async def remove_push_token(
         deleted = db.query(UserPushToken).filter(UserPushToken.user_id == current_user.id).delete()
     db.commit()
     return {"message": "Push token(s) removed", "deleted": deleted}
+
+
+class ReferralApplyBody(BaseModel):
+    referral_code: str = Field(..., min_length=8, max_length=64)
+
+
+@router.get("/me/export")
+async def export_my_data(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """GDPR Article 20 — portable export of account data (JSON)."""
+    return build_user_data_export(db, current_user)
+
+
+@router.post("/me/privacy/ccpa-opt-out")
+async def ccpa_opt_out(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """CCPA — record do-not-sell/opt-out preference (we do not sell PII; audit trail)."""
+    now = datetime.now(timezone.utc)
+    current_user.ccpa_opt_out_at = now
+    db.commit()
+    db.refresh(current_user)
+    return {
+        "message": "CCPA opt-out recorded. We do not sell personal information.",
+        "ccpa_opt_out_at": datetime_to_iso(now),
+    }
+
+
+@router.get("/referral/code")
+async def get_referral_code(current_user: User = Depends(get_current_user)):
+    """Referral invite code (user id) for share links."""
+    return {"referral_code": str(current_user.id)}
+
+
+@router.post("/referral/apply")
+async def apply_referral_code(
+    body: ReferralApplyBody,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Attach referrer on first apply (Imp #42 partial — tracking; bonus via ASC/Stripe)."""
+    if getattr(current_user, "referred_by_user_id", None):
+        return {"message": "Referral already applied", "applied": False}
+    code = body.referral_code.strip()
+    if code == str(current_user.id):
+        raise HTTPException(status_code=400, detail="Cannot refer yourself")
+    try:
+        referrer_id = UUID(code)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid referral code") from e
+    referrer = db.query(User).filter(User.id == referrer_id).first()
+    if not referrer:
+        raise HTTPException(status_code=404, detail="Referral code not found")
+    current_user.referred_by_user_id = referrer_id
+    db.commit()
+    return {"message": "Referral recorded", "applied": True, "referrer_id": str(referrer_id)}
 
 
 @router.delete("/me")

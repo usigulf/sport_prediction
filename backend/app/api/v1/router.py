@@ -2,7 +2,7 @@
 Main API router
 """
 from fastapi import APIRouter
-from app.api.v1 import auth, games, user, stats, feed, leaderboards, challenges, subscription, analytics
+from app.api.v1 import auth, games, user, stats, feed, leaderboards, challenges, subscription, analytics, config as config_routes
 
 api_router = APIRouter()
 
@@ -15,3 +15,4 @@ api_router.include_router(leaderboards.router)
 api_router.include_router(challenges.router)
 api_router.include_router(subscription.router)
 api_router.include_router(analytics.router)
+api_router.include_router(config_routes.router)

@@ -1,0 +1,606 @@
+{
+  "weaknesses": [
+    [
+      1,
+      "Free-tier daily limit trivially bypassed"
+    ],
+    [
+      2,
+      "Marketing/docs claim ensemble/deep AI; prod is logistic regression"
+    ],
+    [
+      3,
+      "Single VPS \u2014 total SPOF"
+    ],
+    [
+      4,
+      "No offsite DB backups in cron"
+    ],
+    [
+      5,
+      "`/internal` routes may be internet-exposed"
+    ],
+    [
+      6,
+      "~27% test coverage"
+    ],
+    [
+      7,
+      "No Stripe webhook idempotency"
+    ],
+    [
+      8,
+      "No RevenueCat event deduplication"
+    ],
+    [
+      9,
+      "Demo credentials committed in repo"
+    ],
+    [
+      10,
+      "Cron secret example may be real"
+    ],
+    [
+      11,
+      "Redis no auth"
+    ],
+    [
+      12,
+      "Leaderboard O(all games) query"
+    ],
+    [
+      13,
+      "WebSocket per-client DB polling"
+    ],
+    [
+      14,
+      "God screens 1000+ lines"
+    ],
+    [
+      15,
+      "No password reset flow"
+    ],
+    [
+      16,
+      "Push may register before consent"
+    ],
+    [
+      17,
+      "Minimal accessibility"
+    ],
+    [
+      18,
+      "No offline/NetInfo UX"
+    ],
+    [
+      19,
+      "Heuristic picks indistinguishable from ML in UI"
+    ],
+    [
+      20,
+      "Soccer draw not model-trained"
+    ],
+    [
+      21,
+      "Standings leakage at inference fallback"
+    ],
+    [
+      22,
+      "Explainability likely broken"
+    ],
+    [
+      23,
+      "Stale `ml/` + ARCHITECTURE.md mislead developers/investors"
+    ],
+    [
+      24,
+      "Rust microservices dead weight"
+    ],
+    [
+      25,
+      "CI Ruff never fails (`|| true`)"
+    ],
+    [
+      26,
+      "No dependency security scanning"
+    ],
+    [
+      27,
+      "`deploy_api.sh` no migrations"
+    ],
+    [
+      28,
+      "No Prometheus metrics on API"
+    ],
+    [
+      29,
+      "Account delete doesn\u2019t cancel billing"
+    ],
+    [
+      30,
+      "Inconsistent subscription tier checks"
+    ],
+    [
+      31,
+      "Guests can\u2019t see paywall in production"
+    ],
+    [
+      32,
+      "$29.99 without odds/EV tooling"
+    ],
+    [
+      33,
+      "No annual subscription"
+    ],
+    [
+      34,
+      "No referral program"
+    ],
+    [
+      35,
+      "No product analytics pipeline"
+    ],
+    [
+      36,
+      "Keywords typo \u201cports\u201d on live listing"
+    ],
+    [
+      37,
+      "No full-text search"
+    ],
+    [
+      38,
+      "Duplicate tier/profile fetches per screen"
+    ],
+    [
+      39,
+      "Silent error swallowing on feeds"
+    ],
+    [
+      40,
+      "OpenAPI exposed in prod config default"
+    ],
+    [
+      41,
+      "4 workers \u00d7 inconsistent in-memory revocation"
+    ],
+    [
+      42,
+      "No job queue for long tasks"
+    ],
+    [
+      43,
+      "Unpinned Docker `:latest` tags"
+    ],
+    [
+      44,
+      "Mobile: no unit tests in CI"
+    ],
+    [
+      45,
+      "`premium_plus` tier exists but not marketed"
+    ],
+    [
+      46,
+      "RevenueCat entitlement was `octobetiq Pro` vs `premium` mismatch (fixed in ops, fragile)"
+    ],
+    [
+      47,
+      "No web subscriber portal"
+    ],
+    [
+      48,
+      "Coverage.xml in git"
+    ],
+    [
+      49,
+      "Makefile references non-existent ML scripts"
+    ],
+    [
+      50,
+      "No staging environment"
+    ]
+  ],
+  "improvements": [
+    [
+      1,
+      "Fix daily pick limit on **all** prediction endpoints"
+    ],
+    [
+      2,
+      "Centralize tier gating in one module"
+    ],
+    [
+      3,
+      "Block serving predictions when `model_version` is heuristic/synthetic in prod UI"
+    ],
+    [
+      4,
+      "Add `prediction_source` field to API responses"
+    ],
+    [
+      5,
+      "Rotate demo account password; remove from public scripts"
+    ],
+    [
+      6,
+      "Rotate `PUSH_CRON_SECRET`; placeholder in `.env.example`"
+    ],
+    [
+      7,
+      "Nginx `deny /internal` on public hosts"
+    ],
+    [
+      8,
+      "Set `INTERNAL_ALLOWED_CIDRS=127.0.0.1/32`"
+    ],
+    [
+      9,
+      "Add Stripe + RC webhook idempotency table"
+    ],
+    [
+      10,
+      "Add DB backup to crontab + S3 offsite"
+    ],
+    [
+      11,
+      "Redis requirepass"
+    ],
+    [
+      12,
+      "Run migrations in `deploy_api.sh`"
+    ],
+    [
+      13,
+      "Fail CI on Ruff"
+    ],
+    [
+      14,
+      "Add `pip-audit` + `npm audit` to CI"
+    ],
+    [
+      15,
+      "Pin backend dependencies"
+    ],
+    [
+      16,
+      "Cancel subscriptions on account delete"
+    ],
+    [
+      17,
+      "Remove unsourced \u201c62%+\u201d from web copy"
+    ],
+    [
+      18,
+      "Fix live keywords `ports` \u2192 `sports`"
+    ],
+    [
+      19,
+      "Sentry alerts on webhook failures"
+    ],
+    [
+      20,
+      "Uptime monitoring on `/health` + `/stats/model`"
+    ],
+    [
+      21,
+      "PIT-only features at inference; no current standings fallback in prod"
+    ],
+    [
+      22,
+      "Train native soccer 1X2 model"
+    ],
+    [
+      23,
+      "Walk-forward backtest script"
+    ],
+    [
+      24,
+      "Fix explainability (coefficients from inner LR)"
+    ],
+    [
+      25,
+      "Per-league model dir in explanation endpoint"
+    ],
+    [
+      26,
+      "Commit `metrics.json` schema example"
+    ],
+    [
+      27,
+      "Archive stale `ml/` and Rust services"
+    ],
+    [
+      28,
+      "Update ARCHITECTURE.md to match reality"
+    ],
+    [
+      29,
+      "Market odds as benchmark in backtest"
+    ],
+    [
+      30,
+      "Per-league calibration minimum samples"
+    ],
+    [
+      31,
+      "React Query for server state"
+    ],
+    [
+      32,
+      "Split HomeScreen into feature components"
+    ],
+    [
+      33,
+      "NetInfo + offline banner"
+    ],
+    [
+      34,
+      "VoiceOver labels on tabs, cards, carousels"
+    ],
+    [
+      35,
+      "Password reset flow"
+    ],
+    [
+      36,
+      "Fix push consent order (after onboarding opt-in)"
+    ],
+    [
+      37,
+      "Native Manage Subscriptions link (iOS 15+)"
+    ],
+    [
+      38,
+      "Paywall hero redesign + social proof"
+    ],
+    [
+      39,
+      "Consistent skeleton/error/empty components"
+    ],
+    [
+      40,
+      "Guest paywall preview (read-only)"
+    ],
+    [
+      41,
+      "Annual plan ($199/yr)"
+    ],
+    [
+      42,
+      "Referral: \u201cinvite friend, 7 extra trial days\u201d"
+    ],
+    [
+      43,
+      "Share card: \u201cMy model accuracy this month\u201d"
+    ],
+    [
+      44,
+      "PostHog/Mixpanel integration"
+    ],
+    [
+      45,
+      "Push categories (kickoff, upsets, results)"
+    ],
+    [
+      46,
+      "Trial-ending push + email"
+    ],
+    [
+      47,
+      "App Store review prompt after positive accuracy session"
+    ],
+    [
+      48,
+      "Public embed: accuracy widget for octobetiq.com"
+    ],
+    [
+      49,
+      "Blog: weekly transparent scorecard"
+    ],
+    [
+      50,
+      "Android Play Store launch"
+    ],
+    [
+      51,
+      "Managed Postgres (RDS/DO managed)"
+    ],
+    [
+      52,
+      "Celery/ARQ job queue"
+    ],
+    [
+      53,
+      "SQL aggregation for leaderboards"
+    ],
+    [
+      54,
+      "WebSocket pub/sub via Redis"
+    ],
+    [
+      55,
+      "Connection limits on WS"
+    ],
+    [
+      56,
+      "API autoscaling (2+ instances)"
+    ],
+    [
+      57,
+      "CloudFront/CDN for static"
+    ],
+    [
+      58,
+      "Staging environment"
+    ],
+    [
+      59,
+      "Blue/green deploy"
+    ],
+    [
+      60,
+      "Prometheus metrics + Grafana dashboards"
+    ],
+    [
+      61,
+      "Odds display (informational, not affiliate-first)"
+    ],
+    [
+      62,
+      "Line movement charts"
+    ],
+    [
+      63,
+      "Closing line value tracker"
+    ],
+    [
+      64,
+      "\u201cModel vs market\u201d dashboard"
+    ],
+    [
+      65,
+      "Player props (when licensed)"
+    ],
+    [
+      66,
+      "Parlay correlation warnings"
+    ],
+    [
+      67,
+      "Email digest: daily picks"
+    ],
+    [
+      68,
+      "Watchlist sync across devices"
+    ],
+    [
+      69,
+      "iPad-optimized layouts"
+    ],
+    [
+      70,
+      "Widget: today\u2019s top pick"
+    ],
+    [
+      71,
+      "Raise coverage to 60%+"
+    ],
+    [
+      72,
+      "Stripe webhook test suite"
+    ],
+    [
+      73,
+      "Monetization bypass regression tests"
+    ],
+    [
+      74,
+      "Integration tests with Postgres in CI"
+    ],
+    [
+      75,
+      "Mobile Jest tests for subscription utils"
+    ],
+    [
+      76,
+      "E2E Detox for paywall flow"
+    ],
+    [
+      77,
+      "Feature flags service (LaunchDarkly/PostHog)"
+    ],
+    [
+      78,
+      "API v2 planning doc"
+    ],
+    [
+      79,
+      "OpenAPI client codegen for mobile"
+    ],
+    [
+      80,
+      "Delete dead code paths"
+    ],
+    [
+      81,
+      "GDPR data export endpoint"
+    ],
+    [
+      82,
+      "CCPA opt-out flow"
+    ],
+    [
+      83,
+      "Gambling disclaimer audit on all screens"
+    ],
+    [
+      84,
+      "Age gate if expanding content"
+    ],
+    [
+      85,
+      "App Privacy nutrition label review quarterly"
+    ],
+    [
+      86,
+      "A/B test trial length (7 vs 14 days)"
+    ],
+    [
+      87,
+      "A/B test price ($19.99 vs $29.99)"
+    ],
+    [
+      88,
+      "Intro offer for lapsed users"
+    ],
+    [
+      89,
+      "Rewarded ads vs premium messaging test"
+    ],
+    [
+      90,
+      "Ad density test on free tier"
+    ],
+    [
+      91,
+      "Proprietary historical feature store"
+    ],
+    [
+      92,
+      "User pick tracking vs model (Brier per user)"
+    ],
+    [
+      93,
+      "Community predictions vs model"
+    ],
+    [
+      94,
+      "API for third-party accuracy audits"
+    ],
+    [
+      95,
+      "Academic partnership for methodology paper"
+    ],
+    [
+      96,
+      "Sport-specific model teams (hire)"
+    ],
+    [
+      97,
+      "Real-time injury feed integration"
+    ],
+    [
+      98,
+      "Weather/feature enrichment for outdoor sports"
+    ],
+    [
+      99,
+      "Ensemble only when backtest proves lift"
+    ],
+    [
+      100,
+      "Patent/trade secret on calibration display UX"
+    ]
+  ]
+}

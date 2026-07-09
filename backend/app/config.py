@@ -124,9 +124,11 @@ class Settings(BaseSettings):
     
     # Environment
     environment: str = "development"
-    # Disable OpenAPI docs (Swagger / ReDoc) in production. Set OPENAPI_DOCS_ENABLED=false in production.
+    # Disable OpenAPI docs in production unless OPENAPI_DOCS_ENABLED=true.
     openapi_docs_enabled: bool = True
     prometheus_metrics_enabled: bool = True
+    # Max concurrent WebSocket subscribers per game on this worker (Weakness #41 / Imp #55).
+    websocket_max_connections_per_game: int = 200
     # Optional: secret for internal cron endpoints (e.g. push triggers). If set, require X-Cron-Secret header.
     push_cron_secret: Optional[str] = None
     # Optional: comma-separated CIDRs allowed to access /internal/* (defense in depth).
@@ -202,6 +204,15 @@ class Settings(BaseSettings):
                     ipaddress.ip_network(c, strict=False)
                 except ValueError as e:
                     raise ValueError(f"Invalid INTERNAL_ALLOWED_CIDRS entry: {c}") from e
+        if env == "production":
+            import os
+
+            if os.getenv("OPENAPI_DOCS_ENABLED", "").strip().lower() not in (
+                "true",
+                "1",
+                "yes",
+            ):
+                self.openapi_docs_enabled = False
         return self
 
 

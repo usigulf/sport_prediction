@@ -1,7 +1,7 @@
 services:
   # PostgreSQL with TimescaleDB
   postgres:
-    image: timescale/timescaledb:latest-pg15
+    image: timescale/timescaledb:2.14.2-pg15
     container_name: sport-prediction-postgres
     # Raise ceiling so API pool(s) + Grafana/metrics + one-off scripts do not hit "too many clients".
     command: ["postgres", "-c", "max_connections=150"]
@@ -27,7 +27,7 @@ services:
 
   # Redis — set REDIS_PASSWORD in .env (required in production via docker-compose.prod.yml).
   redis:
-    image: redis:7-alpine
+    image: redis:7.2.4-alpine
     container_name: sport-prediction-redis
     ports:
       - "127.0.0.1:6379:6379"
@@ -150,7 +150,7 @@ services:
 
   # Prometheus (Monitoring) — enable with: docker compose --profile monitoring up -d
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.51.0
     container_name: sport-prediction-prometheus
     ports:
       - "9090:9090"
@@ -167,7 +167,7 @@ services:
 
   # Grafana (Visualization)
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:10.4.0
     container_name: sport-prediction-grafana
     ports:
       - "3000:3000"

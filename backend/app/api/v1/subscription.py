@@ -181,11 +181,68 @@ async def create_checkout_session(
     create_kwargs["subscription_data"] = {"metadata": sub_meta}
     if body.tier == "premium" and body.billing_period == "monthly":
         create_kwargs["subscription_data"]["trial_period_days"] = 7
+    if getattr(current_user, "stripe_customer_id", None):
+        create_kwargs["customer"] = current_user.stripe_customer_id
+        create_kwargs.pop("customer_email", None)
     try:
         session = stripe.checkout.Session.create(**create_kwargs)
         return {"url": session.url}
     except stripe.error.StripeError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/billing-portal")
+async def create_billing_portal_session(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Stripe Customer Portal — manage subscription, payment method, cancel (Weakness #47).
+    Requires stripe_customer_id on user (set after first checkout).
+    """
+    if stripe is None:
+        raise HTTPException(status_code=503, detail="Stripe not installed")
+    if not settings.stripe_secret_key:
+        raise HTTPException(status_code=503, detail="Stripe not configured")
+    customer_id = getattr(current_user, "stripe_customer_id", None)
+    if not customer_id:
+        raise HTTPException(
+            status_code=404,
+            detail="No Stripe customer on file. Complete checkout first.",
+        )
+    stripe.api_key = settings.stripe_secret_key
+    return_url = settings.stripe_success_url or "https://octobetiq.com/subscriber-portal.html"
+    try:
+        session = stripe.billing_portal.Session.create(
+            customer=customer_id,
+            return_url=return_url,
+        )
+        return {"url": session.url}
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+def _sync_stripe_customer_and_trial(db: Session, user: User, session_obj: dict) -> None:
+    """Persist Stripe customer id and trial end from checkout/subscription events."""
+    from datetime import datetime, timezone
+
+    cid = session_obj.get("customer")
+    if cid and not getattr(user, "stripe_customer_id", None):
+        user.stripe_customer_id = str(cid)
+    sub_id = session_obj.get("subscription")
+    if sub_id and settings.stripe_secret_key and stripe is not None:
+        try:
+            stripe.api_key = settings.stripe_secret_key
+            sub = stripe.Subscription.retrieve(str(sub_id))
+            sub_d = _as_plain_dict(sub)
+            trial_end = sub_d.get("trial_end")
+            if trial_end:
+                user.subscription_trial_end_at = datetime.fromtimestamp(
+                    int(trial_end), tz=timezone.utc
+                )
+        except Exception:
+            logger.warning("Could not sync trial_end from Stripe subscription", exc_info=True)
+    db.commit()
 
 
 @router.post("/webhook")
@@ -246,7 +303,7 @@ async def stripe_webhook(
             user = db.query(User).filter(User.id == uid).first()
             if user:
                 user.subscription_tier = db_tier
-                db.commit()
+                _sync_stripe_customer_and_trial(db, user, session_obj)
                 logger.info(
                     "Updated user subscription tier from Stripe webhook",
                     extra={"event_id": event_id, "user_id": str(user.id), "tier": db_tier},

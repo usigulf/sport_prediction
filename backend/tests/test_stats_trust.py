@@ -456,3 +456,12 @@ def test_calibration_min_sample_met(db, test_teams):
     assert agg["min_sample_met"] is True
     populated = [b for b in agg["buckets"] if b["count"] > 0]
     assert len(populated) >= 1
+
+
+def test_public_audit_endpoint(client):
+    r = client.get("/api/v1/stats/public-audit")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["audit_version"] == "1.0"
+    assert "accuracy_all_time" in data
+    assert "methodology" in data

@@ -51,6 +51,7 @@ def build_share_card(
     home_win_probability: Optional[float] = None,
     away_win_probability: Optional[float] = None,
     referrer_id: Optional[UUID | str] = None,
+    rolling_accuracy_pct: Optional[float] = None,
 ) -> dict[str, Any]:
     favored_team, pick_probability_pct = (None, None)
     if confidence:
@@ -65,4 +66,5 @@ def build_share_card(
         "favored_team": favored_team,
         "pick_probability_pct": pick_probability_pct,
         "referral_code": str(referrer_id) if referrer_id else None,
+        "rolling_accuracy_pct": rolling_accuracy_pct,
     }

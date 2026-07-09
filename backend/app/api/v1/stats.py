@@ -109,6 +109,36 @@ async def get_model_status():
     }
 
 
+@router.get("/public-audit")
+async def get_public_audit_bundle(db: Session = Depends(get_db)):
+    """
+    Third-party accuracy audit bundle (Imp #94): accuracy, calibration, model readiness.
+    Stable JSON for external reviewers — no auth required.
+    """
+    now = datetime.now(timezone.utc)
+    since_30d = now - timedelta(days=30)
+    accuracy = aggregate_accuracy_from_finished(db, since=None)
+    roll_30d = aggregate_accuracy_from_finished(db, since=since_30d)
+    calibration = aggregate_calibration_from_finished(db, since=None)
+    settings = get_settings()
+    model_dir = (settings.model_artifact_dir or settings.explanation_model_dir or "").strip()
+    metrics = load_metrics_json(model_dir) if model_dir else None
+    return {
+        "audit_version": "1.0",
+        "computed_at_iso": now.isoformat(),
+        "accuracy_all_time": accuracy,
+        "accuracy_rolling_30d": roll_30d,
+        "calibration": calibration,
+        "model": {
+            "publish_ready": bool((metrics or {}).get("publish_ready")),
+            "status": (metrics or {}).get("status", "warming"),
+            "trained_at": (metrics or {}).get("trained_at"),
+        },
+        "methodology": methodology_blurb(),
+        "contact": "accuracy@octobetiq.com",
+    }
+
+
 @router.get("/coverage")
 async def get_data_coverage(db: Session = Depends(get_db)):
     """

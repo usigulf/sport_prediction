@@ -17,6 +17,7 @@ export interface SharePickCardData {
   favoredTeam?: string | null;
   pickProbabilityPct?: number | null;
   referralCode?: string | null;
+  rollingAccuracyPct?: number | null;
 }
 
 interface SharePickCardProps {
@@ -56,6 +57,11 @@ export const SharePickCard: React.FC<SharePickCardProps> = ({ card, pickDetailsL
       <Text style={styles.matchup} numberOfLines={2}>
         {card.homeName} vs {card.awayName}
       </Text>
+      {card.rollingAccuracyPct != null ? (
+        <Text style={styles.accuracyLine}>
+          My model accuracy this month: {card.rollingAccuracyPct.toFixed(1)}%
+        </Text>
+      ) : null}
       {showPickLine ? (
         <Text style={styles.pickLine}>
           Pick: {card.favoredTeam} ({card.pickProbabilityPct}%)
@@ -125,6 +131,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.accent,
     marginBottom: 8,
+  },
+  accuracyLine: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    marginBottom: 6,
   },
   confRow: {
     flexDirection: 'row',

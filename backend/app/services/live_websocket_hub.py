@@ -21,6 +21,10 @@ logger = logging.getLogger(__name__)
 REDIS_CHANNEL_PREFIX = "live:game:"
 
 
+class WebSocketConnectionLimitError(Exception):
+    """Raised when per-game subscriber cap is reached on this worker."""
+
+
 def _redis_enabled() -> bool:
     url = (get_settings().redis_url or "").strip().lower()
     return url not in ("", "disabled", "false")
@@ -95,12 +99,19 @@ class LiveWebSocketHub:
             self._redis_sub = None
 
     async def subscribe(self, game_id: str) -> asyncio.Queue[dict[str, Any]]:
+        settings = get_settings()
+        cap = max(1, int(getattr(settings, "websocket_max_connections_per_game", 200) or 200))
         queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue(maxsize=8)
         initial = await asyncio.to_thread(build_live_update_message, game_id)
         if initial:
             queue.put_nowait(initial)
 
         async with self._lock:
+            current = len(self._subscribers.get(game_id, ()))
+            if current >= cap:
+                raise WebSocketConnectionLimitError(
+                    f"Max {cap} live subscribers per game on this worker"
+                )
             self._subscribers[game_id].add(queue)
             if game_id not in self._poll_tasks:
                 self._poll_tasks[game_id] = asyncio.create_task(self._poll_game(game_id))

@@ -103,3 +103,18 @@ def test_share_referral_service_module_exists():
     text = path.read_text(encoding="utf-8")
     assert "build_share_web_url" in text
     assert "build_share_card" in text
+
+
+def test_build_share_card_includes_rolling_accuracy():
+    from app.services.share_referral_service import build_share_card
+
+    card = build_share_card(
+        home_name="A",
+        away_name="B",
+        league="nfl",
+        confidence="high",
+        home_win_probability=0.6,
+        away_win_probability=0.4,
+        rolling_accuracy_pct=62.5,
+    )
+    assert card["rolling_accuracy_pct"] == 62.5

@@ -33,3 +33,14 @@ def test_production_accepts_strong_jwt_and_redis():
         redis_password="x" * 20,
     )
     assert s.environment == "production"
+
+
+def test_production_disables_openapi_by_default(monkeypatch):
+    monkeypatch.delenv("OPENAPI_DOCS_ENABLED", raising=False)
+    s = Settings(
+        environment="production",
+        jwt_secret="x" * 40,
+        redis_url="redis://localhost:6379/0",
+        redis_password="x" * 20,
+    )
+    assert s.openapi_docs_enabled is False
