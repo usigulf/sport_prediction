@@ -41,6 +41,9 @@ from app.services.share_referral_service import (
 )
 from app.services.odds_service import get_market_odds_for_game, load_game_for_odds
 from app.services.odds_snapshot_service import build_line_movement_series
+from app.services.feature_store_service import feature_history_for_game
+from app.services.injury_feed_service import list_injuries_for_game
+from app.services.weather_enrichment_service import weather_for_game
 from app.schemas.odds import MarketOddsResponse
 from app.config import get_settings
 from app.utils.subscription_tiers import is_free_tier_user
@@ -529,6 +532,51 @@ async def get_line_movement(
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
     return build_line_movement_series(db, game)
+
+
+@router.get("/{game_id}/feature-snapshots")
+async def get_game_feature_snapshots(
+    game_id: str,
+    db: Session = Depends(get_db),
+    _: None = Depends(rate_limit_predictions),
+):
+    """Point-in-time feature vectors captured at inference (I91)."""
+    game = load_game_for_odds(db, game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    from uuid import UUID
+
+    try:
+        gid = UUID(game_id.strip())
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid game_id") from e
+    return feature_history_for_game(db, gid)
+
+
+@router.get("/{game_id}/injuries")
+async def get_game_injuries(
+    game_id: str,
+    db: Session = Depends(get_db),
+    _: None = Depends(rate_limit_predictions),
+):
+    """Injury reports for a game (I97)."""
+    game = load_game_for_odds(db, game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    return list_injuries_for_game(db, game)
+
+
+@router.get("/{game_id}/weather")
+async def get_game_weather(
+    game_id: str,
+    db: Session = Depends(get_db),
+    _: None = Depends(rate_limit_predictions),
+):
+    """Weather forecast near kickoff for outdoor games (I98)."""
+    game = load_game_for_odds(db, game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    return weather_for_game(db, game)
 
 
 @router.get("/{game_id}/live-predictions")

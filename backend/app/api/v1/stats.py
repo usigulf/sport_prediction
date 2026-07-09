@@ -15,6 +15,8 @@ from app.services.trust_metrics_service import (
 )
 from app.services.model_training import load_metrics_json
 from app.services.model_vs_market_service import build_model_vs_market_summary
+from app.services.feature_store_service import feature_store_summary
+from app.services.community_predictions_service import build_community_vs_model_summary
 from app.config import get_settings
 
 router = APIRouter(prefix="/stats", tags=["stats"])
@@ -106,6 +108,8 @@ async def get_model_status():
         "league_group_holdout_counts": metrics.get("league_group_holdout_counts"),
         "publish_block_reasons": metrics.get("publish_block_reasons") or [],
         "min_publish_holdout_per_league_group": metrics.get("min_publish_holdout_per_league_group"),
+        "ensemble_eligible": bool(metrics.get("ensemble_eligible")),
+        "ensemble_gate_reason": metrics.get("ensemble_gate_reason"),
         "detail": metrics.get("note"),
     }
 
@@ -173,3 +177,15 @@ async def get_data_coverage(db: Session = Depends(get_db)):
             "not every competition has injuries, odds, or lineups until fully licensed."
         ),
     }
+
+
+@router.get("/feature-store")
+async def get_feature_store_summary(db: Session = Depends(get_db)):
+    """Historical PIT feature snapshot counts (I91)."""
+    return feature_store_summary(db)
+
+
+@router.get("/community-vs-model")
+async def get_community_vs_model(db: Session = Depends(get_db)):
+    """Community user-pick consensus vs model (I93)."""
+    return build_community_vs_model_summary(db)

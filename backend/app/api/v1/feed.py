@@ -363,3 +363,56 @@ async def get_player_props_feed(
             break
 
     return {"items": items, "count": len(items), "disclaimer": PROPS_DISCLAIMER}
+
+
+@router.get("/widget/top-pick")
+async def get_widget_top_pick(
+    db: Session = Depends(get_db),
+):
+    """
+    Minimal public pick for iOS WidgetKit (I70).
+    Returns the highest-confidence scheduled pick today — informational only.
+    """
+    games = _games_query(
+        db,
+        date=None,
+        time_zone=None,
+        league_list=None,
+        fetch_limit=40,
+    )
+
+    def sort_key(item):
+        game, pred = item
+        return (
+            _confidence_order(pred.confidence_level if pred else None),
+            game.scheduled_time,
+        )
+
+    picks = _build_picks(
+        db,
+        games=games,
+        current_user=None,
+        limit=1,
+        sort_key=sort_key,
+    )
+    if not picks:
+        return {
+            "pick": None,
+            "disclaimer": "Informational only — not betting advice.",
+        }
+    top = picks[0]
+    pred = top.get("prediction") or {}
+    home = (top.get("home_team") or {}).get("name") or "Home"
+    away = (top.get("away_team") or {}).get("name") or "Away"
+    hp = pred.get("home_win_probability")
+    headline = f"{home} favored" if hp and float(hp) >= 0.5 else f"{away} favored"
+    return {
+        "pick": {
+            "game_id": top.get("id"),
+            "headline": headline,
+            "matchup": f"{home} vs {away}",
+            "confidence": pred.get("confidence_level") or "",
+            "scheduled_time_iso": top.get("scheduled_time"),
+        },
+        "disclaimer": "Informational only — not betting advice.",
+    }

@@ -9,12 +9,12 @@ Legend: ✅ done · 🟡 partial · ❌ not implemented · 🚫 blocked (externa
 
 | Metric | Weaknesses (50) | Improvements (100) | Combined (150) |
 |--------|-----------------|--------------------|----------------|
-| ✅ Done | 32 | 51 | 83 |
-| 🟡 Partial | 16 | 34 | 50 |
-| ❌ Open | 0 | 6 | 6 |
+| ✅ Done | 32 | 54 | 86 |
+| 🟡 Partial | 16 | 37 | 53 |
+| ❌ Open | 0 | 0 | 0 |
 | 🚫 Blocked | 2 | 9 | 11 |
 
-**Implementable coverage:** 77.7% — `(done + 0.5×partial) / (150 − blocked)`
+**Implementable coverage:** 80.9% — `(done + 0.5×partial) / (150 − blocked)`
 
 Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added for subscription utils.
 
@@ -150,7 +150,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I67 | Email digest: daily picks | 🟡 | partial | email_digest_service.py + /internal/email-digest/run; SMTP required |
 | I68 | Watchlist sync across devices | 🟡 | partial | favorites API sync; no conflict resolution UI |
 | I69 | iPad-optimized layouts | 🟡 | partial | iPad screenshots; layouts not fully optimized |
-| I70 | Widget: today’s top pick | ❌ | open | iOS widget extension not shipped |
+| I70 | Widget: today’s top pick | 🟡 | partial | GET /feed/widget/top-pick + mobile/ios/TopPickWidget Swift template |
 | I71 | Raise coverage to 60%+ | ✅ | done | CI coverage ≥60% |
 | I72 | Stripe webhook test suite | ✅ | done | backend/tests/test_stripe_webhook.py |
 | I73 | Monetization bypass regression tests | 🟡 | partial | free tier + share tests; no dedicated paywall bypass suite |
@@ -171,15 +171,15 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I88 | Intro offer for lapsed users | 🟡 | partial | intro_offer_variant experiment bucket in /config/feature-flags |
 | I89 | Rewarded ads vs premium messaging test | 🟡 | partial | rewarded_ads_messaging experiment bucket |
 | I90 | Ad density test on free tier | 🟡 | partial | ad_density experiment bucket |
-| I91 | Proprietary historical feature store | ❌ | open | Feature store |
+| I91 | Proprietary historical feature store | ✅ | done | game_feature_snapshots, feature_store_service.py, GET /stats/feature-store |
 | I92 | User pick tracking vs model (Brier per user) | ✅ | done | POST /user/me/picks, GET /user/me/picks/brier, user_brier_service.py |
-| I93 | Community predictions vs model | ❌ | open | Community predictions |
+| I93 | Community predictions vs model | ✅ | done | GET /stats/community-vs-model, community_predictions_service.py |
 | I94 | API for third-party accuracy audits | ✅ | done | GET /stats/public-audit |
 | I95 | Academic partnership for methodology paper | 🚫 | blocked | Academic partnership — external |
 | I96 | Sport-specific model teams (hire) | 🚫 | blocked | Hiring — external |
-| I97 | Real-time injury feed integration | ❌ | open | Real-time injury feed |
-| I98 | Weather/feature enrichment for outdoor sports | ❌ | open | Weather enrichment |
-| I99 | Ensemble only when backtest proves lift | ❌ | open | Ensemble when backtest proves lift |
+| I97 | Real-time injury feed integration | 🟡 | partial | game_injury_reports + GET /games/{id}/injuries, spotlight sync |
+| I98 | Weather/feature enrichment for outdoor sports | 🟡 | partial | weather_enrichment_service.py + GET /games/{id}/weather (NFL, WEATHER_API_KEY) |
+| I99 | Ensemble only when backtest proves lift | ✅ | done | ensemble_gating_service.py, docs/ENSEMBLE_GATING.md, metrics ensemble_eligible |
 | I100 | Patent/trade secret on calibration display UX | 🚫 | blocked | Legal/patent — external |
 
 ---

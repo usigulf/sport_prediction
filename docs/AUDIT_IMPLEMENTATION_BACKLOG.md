@@ -149,6 +149,16 @@ Master backlog from technical due diligence (2026-07-04).
 | PH6-002 | Odds snapshots + line movement endpoint | I62 | done |
 | PH6-003 | CLV rollup on user Brier stats | I63 | done |
 
+## Phase 7 — Final open audit items
+
+| ID | Task | Audit ref | Status |
+|----|------|-----------|--------|
+| PH7-001 | Feature store snapshots + API | I91 | done |
+| PH7-002 | Community picks vs model | I93 | done |
+| PH7-003 | Injury feed + weather enrichment | I97, I98 | done |
+| PH7-004 | Ensemble gating policy | I99 | done |
+| PH7-005 | iOS widget API + Swift template | I70 | done |
+
 ---
 
 ## Completed

@@ -60,7 +60,7 @@ def init_sqlite_tables():
     insp = inspect(engine)
     if insp.has_table("alembic_version"):
         return
-    from app.models import user, user_favorite, user_prediction_view, user_push_token, push_reminder_sent, team, team_standing, game_player_spotlight, game, prediction, challenge, stripe_webhook_event, revenuecat_webhook_event, user_pick, odds_snapshot  # noqa: F401
+    from app.models import user, user_favorite, user_prediction_view, user_push_token, push_reminder_sent, team, team_standing, game_player_spotlight, game, prediction, challenge, stripe_webhook_event, revenuecat_webhook_event, user_pick, odds_snapshot, game_feature_snapshot, game_injury_report  # noqa: F401
     Base.metadata.create_all(bind=engine)
 
 

@@ -265,6 +265,19 @@ def run_prediction_job(
             db.add(pred)
             db.commit()
             db.refresh(pred)
+            try:
+                from app.services.feature_store_service import record_feature_snapshot
+
+                record_feature_snapshot(
+                    db,
+                    game=game,
+                    features=feat,
+                    feature_source=str(feat_src),
+                    model_version=model_version,
+                    prediction_id=pred.id,
+                )
+            except Exception:
+                logger.exception("feature_store snapshot failed for game %s", game.id)
             ps.invalidate_prediction_cache(str(game.id))
             result.predictions_written += 1
             logger.info(

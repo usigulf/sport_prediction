@@ -263,9 +263,10 @@ def run_walk_forward_backtest(
                 "accuracy": round(total_correct / total_scored, 4),
             }
             if log_losses:
-                group_report["aggregate"]["mean_log_loss"] = round(
-                    sum(log_losses) / len(log_losses), 4
-                )
+                mean_ll = sum(log_losses) / len(log_losses)
+                group_report["aggregate"]["mean_log_loss"] = round(mean_ll, 4)
+                baseline_ll = 1.0986 if multiclass else 0.6931
+                group_report["aggregate"]["baseline_mean_log_loss"] = baseline_ll
             group_report["status"] = "ok"
         else:
             group_report["status"] = "no_scored_folds"
@@ -280,5 +281,9 @@ def run_walk_forward_backtest(
         ),
         "live_endpoint": "/api/v1/stats/model-vs-market",
     }
+
+    from app.services.ensemble_gating_service import assess_ensemble_eligibility
+
+    report["ensemble_gate"] = assess_ensemble_eligibility(report)
 
     return report
