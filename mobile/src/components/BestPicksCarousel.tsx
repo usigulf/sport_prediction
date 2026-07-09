@@ -3,15 +3,15 @@
  * Colors from `theme` (dark navy + accent + confidence scale).
  * Tap → onPickPress(id) and optional onSetFeatured(id) to swap Featured Game.
  */
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
   FlatList,
   ListRenderItemInfo,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -20,11 +20,23 @@ import type { BestPickItem } from './BestPickMiniCard';
 import { confidenceToPickStrength } from './PredictionCard';
 import { formatLeagueLabel } from '../utils/leagueDisplay';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const H_PADDING = 16;
 const CARD_MARGIN = 10;
-const CARD_WIDTH = Math.min(168, Math.floor((SCREEN_WIDTH - H_PADDING * 2 - CARD_MARGIN * 2) * 0.48));
-export const CAROUSEL_ITEM_WIDTH = CARD_WIDTH + CARD_MARGIN;
+
+function useCarouselMetrics(contentWidth?: number) {
+  const { width: screenWidth } = useWindowDimensions();
+  const layoutWidth = contentWidth ?? screenWidth;
+  return useMemo(() => {
+    const cardWidth = Math.min(
+      168,
+      Math.floor((layoutWidth - H_PADDING * 2 - CARD_MARGIN * 2) * 0.48),
+    );
+    return {
+      cardWidth,
+      itemWidth: cardWidth + CARD_MARGIN,
+    };
+  }, [layoutWidth]);
+}
 
 const getSportIcon = (leagueId: string): keyof typeof Ionicons.glyphMap => {
   switch (leagueId) {
@@ -43,22 +55,18 @@ const getSportIcon = (leagueId: string): keyof typeof Ionicons.glyphMap => {
   }
 };
 
-export interface BestPicksCarouselProps {
-  picks: BestPickItem[];
-  onPickPress: (pick: BestPickItem) => void;
-  onSetFeatured?: (gameId: string) => void;
-}
-
 interface CarouselCardProps {
   pick: BestPickItem;
   onPress: () => void;
   onSetFeatured?: () => void;
+  cardWidth: number;
 }
 
 const CarouselCard = React.memo<CarouselCardProps>(function CarouselCard({
   pick,
   onPress,
   onSetFeatured,
+  cardWidth,
 }) {
   const home = pick.home_team?.name ?? 'Home';
   const away = pick.away_team?.name ?? 'Away';
@@ -69,9 +77,9 @@ const CarouselCard = React.memo<CarouselCardProps>(function CarouselCard({
   const probHome = pred && !locked ? pred.home_win_probability : 0;
 
   return (
-    <View style={styles.cardWrap}>
+    <View style={[styles.cardWrap, { width: cardWidth + CARD_MARGIN }]}>
       <TouchableOpacity
-        style={styles.card}
+        style={[styles.card, { width: cardWidth, marginRight: CARD_MARGIN }]}
         onPress={() => {
           onPress();
           onSetFeatured?.();
@@ -125,18 +133,34 @@ const CarouselCard = React.memo<CarouselCardProps>(function CarouselCard({
   );
 });
 
-export function BestPicksCarousel({ picks, onPickPress, onSetFeatured }: BestPicksCarouselProps) {
+export interface BestPicksCarouselProps {
+  picks: BestPickItem[];
+  onPickPress: (pick: BestPickItem) => void;
+  onSetFeatured?: (gameId: string) => void;
+  /** Constrain carousel width on tablet layouts */
+  contentWidth?: number;
+}
+
+export function BestPicksCarousel({
+  picks,
+  onPickPress,
+  onSetFeatured,
+  contentWidth,
+}: BestPicksCarouselProps) {
+  const { cardWidth, itemWidth } = useCarouselMetrics(contentWidth);
+
   const renderItem = ({ item }: ListRenderItemInfo<BestPickItem>) => (
     <CarouselCard
       pick={item}
+      cardWidth={cardWidth}
       onPress={() => onPickPress(item)}
       onSetFeatured={onSetFeatured ? () => onSetFeatured(item.id) : undefined}
     />
   );
 
   const getItemLayout = (_: unknown, index: number) => ({
-    length: CAROUSEL_ITEM_WIDTH,
-    offset: CAROUSEL_ITEM_WIDTH * index,
+    length: itemWidth,
+    offset: itemWidth * index,
     index,
   });
 
@@ -146,7 +170,7 @@ export function BestPicksCarousel({ picks, onPickPress, onSetFeatured }: BestPic
       keyExtractor={(item) => item.id}
       horizontal
       showsHorizontalScrollIndicator={false}
-      snapToInterval={CAROUSEL_ITEM_WIDTH}
+      snapToInterval={itemWidth}
       snapToAlignment="start"
       decelerationRate="fast"
       contentContainerStyle={styles.content}
@@ -162,12 +186,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   cardWrap: {
-    width: CAROUSEL_ITEM_WIDTH,
     marginRight: 0,
   },
   card: {
-    width: CARD_WIDTH,
-    marginRight: CARD_MARGIN,
     padding: 12,
     backgroundColor: theme.colors.backgroundCard,
     borderRadius: theme.radii.md,

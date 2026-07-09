@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ScrollView, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -8,6 +8,7 @@ import { BannerStrip } from '../ads/components/BannerStrip';
 import { useGameExitInterstitial } from '../ads/hooks/useGameExitInterstitial';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useGameDetailData } from '../hooks/useGameDetailData';
+import { useLayout } from '../hooks/useLayout';
 import { GameDetailHeader } from './gameDetail/GameDetailHeader';
 import { GameDetailMatchup } from './gameDetail/GameDetailMatchup';
 import { GameDetailPredictionSection } from './gameDetail/GameDetailPredictionSection';
@@ -25,6 +26,12 @@ export const GameDetailScreen: React.FC = () => {
   const { gameId } = route.params as { gameId: string };
 
   useGameExitInterstitial(navigation);
+
+  const { isWide, contentMaxWidth, horizontalPadding } = useLayout();
+  const contentStyle = useMemo(
+    () => (isWide ? { width: contentMaxWidth, alignSelf: 'center' as const } : undefined),
+    [isWide, contentMaxWidth],
+  );
 
   const data = useGameDetailData(gameId, navigation);
   const {
@@ -81,9 +88,13 @@ export const GameDetailScreen: React.FC = () => {
     <View style={s.screenRoot}>
       <ScrollView
         style={s.container}
-        contentContainerStyle={{ paddingBottom: 72 + insets.bottom }}
+        contentContainerStyle={[
+          { paddingBottom: 72 + insets.bottom },
+          isWide && { paddingHorizontal: horizontalPadding },
+        ]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        <View style={contentStyle}>
         <GameDetailHeader game={currentGame} homeName={homeName} awayName={awayName} />
         <GameDetailMatchup
           game={currentGame}
@@ -133,6 +144,7 @@ export const GameDetailScreen: React.FC = () => {
           />
         ) : null}
         <GameDetailGameInfo game={currentGame} />
+        </View>
       </ScrollView>
       <View style={[s.bannerDock, { paddingBottom: insets.bottom }]}>
         <BannerStrip screen="GameDetail" />

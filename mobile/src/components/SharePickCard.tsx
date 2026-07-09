@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../constants/theme';
 import { formatLeagueLabel } from '../utils/leagueDisplay';
 import { confidenceToPickStrength } from './PredictionCard';
+import { PredictionDisclaimer } from './PredictionDisclaimer';
 import type { Prediction } from '../types';
 
 export interface SharePickCardData {
@@ -89,6 +90,7 @@ export const SharePickCard: React.FC<SharePickCardProps> = ({ card, pickDetailsL
           ? 'Your referral link is included when you share'
           : 'Friends can open your link to get picks in the app'}
       </Text>
+      <PredictionDisclaimer league={card.league} compact style={styles.disclaimer} />
     </View>
   );
 };
@@ -160,6 +162,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 4,
+  },
+  disclaimer: {
+    marginTop: theme.spacing.sm,
   },
 });
 

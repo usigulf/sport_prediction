@@ -9,12 +9,12 @@ Legend: ✅ done · 🟡 partial · ❌ not implemented · 🚫 blocked (externa
 
 | Metric | Weaknesses (50) | Improvements (100) | Combined (150) |
 |--------|-----------------|--------------------|----------------|
-| ✅ Done | 33 | 59 | 92 |
-| 🟡 Partial | 15 | 32 | 47 |
+| ✅ Done | 33 | 61 | 94 |
+| 🟡 Partial | 15 | 30 | 45 |
 | ❌ Open | 0 | 0 | 0 |
 | 🚫 Blocked | 2 | 9 | 11 |
 
-**Implementable coverage:** 83.1% — `(done + 0.5×partial) / (150 − blocked)`
+**Implementable coverage:** 83.8% — `(done + 0.5×partial) / (150 − blocked)`
 
 Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added for subscription utils.
 
@@ -119,7 +119,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I36 | Fix push consent order (after onboarding opt-in) | ✅ | done | push consent order |
 | I37 | Native Manage Subscriptions link (iOS 15+) | ✅ | done | mobile manageSubscriptions.ts |
 | I38 | Paywall hero redesign + social proof | ✅ | done | PaywallHero + accuracy pill + dynamic trial days |
-| I39 | Consistent skeleton/error/empty components | 🟡 | partial | FeedSkeleton/FeedErrorBanner/FeedEmptyState on Favorites, LiveHub, Games |
+| I39 | Consistent skeleton/error/empty components | ✅ | done | FeedSkeleton/FeedErrorBanner/FeedEmptyState on Favorites, LiveHub, Games, Profile |
 | I40 | Guest paywall preview (read-only) | ✅ | done | guest paywall preview |
 | I41 | Annual plan ($199/yr) | 🟡 | partial | annual plan code; ASC IAP blocked |
 | I42 | Referral: “invite friend, 7 extra trial days” | 🟡 | partial | referral/apply tracking; bonus days need ASC/Stripe promo |
@@ -149,7 +149,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I66 | Parlay correlation warnings | ✅ | done | parlay_correlation_service.py, POST /tools/parlay-correlation |
 | I67 | Email digest: daily picks | 🟡 | partial | email_digest_service.py + /internal/email-digest/run; SMTP required |
 | I68 | Watchlist sync across devices | ✅ | done | useFavorites React Query + sync notice + team-filtered games |
-| I69 | iPad-optimized layouts | 🟡 | partial | useLayout hook; Paywall wide layout; carousel still phone-width |
+| I69 | iPad-optimized layouts | 🟡 | partial | useLayout on Paywall, Home, GameDetail, Profile; carousel uses content width |
 | I70 | Widget: today’s top pick | 🟡 | partial | GET /feed/widget/top-pick + mobile/ios/TopPickWidget Swift template |
 | I71 | Raise coverage to 60%+ | ✅ | done | CI coverage ≥60% |
 | I72 | Stripe webhook test suite | ✅ | done | backend/tests/test_stripe_webhook.py |
@@ -163,7 +163,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I80 | Delete dead code paths | 🟡 | partial | archive/; legacy services/users |
 | I81 | GDPR data export endpoint | ✅ | done | GET /user/me/export, gdpr_export_service.py |
 | I82 | CCPA opt-out flow | ✅ | done | POST /user/me/privacy/ccpa-opt-out |
-| I83 | Gambling disclaimer audit on all screens | 🟡 | partial | PredictionDisclaimer on mini cards, Favorites, LiveHub, Paywall, GameDetail, Games |
+| I83 | Gambling disclaimer audit on all screens | ✅ | done | PredictionDisclaimer on picks, feeds, paywall, GameDetail, Games, Profile, SharePickCard |
 | I84 | Age gate if expanding content | ✅ | done | mobile AgeGateScreen + ageGateStorage.ts |
 | I85 | App Privacy nutrition label review quarterly | 🚫 | blocked | Quarterly ASC privacy label — manual process |
 | I86 | A/B test trial length (7 vs 14 days) | 🟡 | partial | trial_length_days wired in PaywallScreen via useServerFeatureFlags |

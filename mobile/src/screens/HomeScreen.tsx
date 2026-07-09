@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { View, ScrollView, RefreshControl, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SportIconsRow } from '../components/SportIconsRow';
@@ -7,6 +7,7 @@ import { ModelWarmingNotice } from '../components/ModelWarmingNotice';
 import { useAppSelector } from '../store/hooks';
 import { theme } from '../constants/theme';
 import { useIntervalWhen } from '../hooks/useIntervalWhen';
+import { useLayout } from '../hooks/useLayout';
 import { useAdEngine } from '../ads/engine/AdEngineContext';
 import { BannerStrip } from '../ads/components/BannerStrip';
 import type { BestPickItem } from '../components/BestPickMiniCard';
@@ -21,6 +22,11 @@ export const HomeScreen: React.FC = () => {
   const adEngine = useAdEngine();
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
+  const { isWide, contentMaxWidth, horizontalPadding } = useLayout();
+  const contentStyle = useMemo(
+    () => (isWide ? { width: contentMaxWidth, alignSelf: 'center' as const } : undefined),
+    [isWide, contentMaxWidth],
+  );
 
   const {
     upcomingGames,
@@ -88,12 +94,16 @@ export const HomeScreen: React.FC = () => {
       <HomeHeader cachedAt={cachedAt} loadError={loadError} />
       <ScrollView
         style={styles.container}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isWide && { paddingHorizontal: horizontalPadding },
+        ]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.accent} />
         }
         showsVerticalScrollIndicator={false}
       >
+        <View style={contentStyle}>
         <HomeHeroStrip
           navigation={navigation}
           isAuthenticated={isAuthenticated}
@@ -145,6 +155,7 @@ export const HomeScreen: React.FC = () => {
             <BannerStrip screen="HomeBanner" />
           </View>
         ) : null}
+        </View>
       </ScrollView>
     </View>
   );

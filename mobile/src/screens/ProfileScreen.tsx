@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Alert,
   Linking,
-  ActivityIndicator,
   Modal,
   Pressable,
 } from 'react-native';
@@ -22,6 +21,10 @@ import { MainTabParamList, RootStackParamList } from '../navigation/AppNavigator
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { theme } from '../constants/theme';
 import { OctobetiQWordmark } from '../components/OctobetiQWordmark';
+import { FeedSkeleton } from '../components/feed/FeedSkeleton';
+import { FeedErrorBanner } from '../components/feed/FeedErrorBanner';
+import { PredictionDisclaimer } from '../components/PredictionDisclaimer';
+import { useLayout } from '../hooks/useLayout';
 
 type ProfileScreenNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, 'Profile'>,
@@ -49,10 +52,11 @@ function subscriptionMenuSubtext(tier: string | undefined): string {
 export const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
   const dispatch = useAppDispatch();
-  const { user } = useAppSelector((state) => state.auth);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [loggingOut, setLoggingOut] = useState(false);
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const { user, profileLoading } = useAppSelector((state) => state.auth);
+  const { isWide, contentMaxWidth, horizontalPadding } = useLayout();
+  const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [loggingOut, setLoggingOut] = React.useState(false);
+  const [showLogoutModal, setShowLogoutModal] = React.useState(false);
 
   const loadUserInfo = async () => {
     setLoadError(null);
@@ -63,11 +67,12 @@ export const ProfileScreen: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    loadUserInfo();
+  React.useEffect(() => {
+    void loadUserInfo();
   }, []);
 
   const tier = user?.subscriptionTier ?? 'free';
+  const showSkeleton = profileLoading && !user?.email && !loadError;
 
   const handleLogoutPress = () => {
     if (loggingOut) return;
@@ -96,18 +101,17 @@ export const ProfileScreen: React.FC = () => {
             try {
               await apiService.deleteAccount();
               await signOut(dispatch);
-              // Navigator switches to unauthenticated stack (Landing) when isAuthenticated becomes false
             } catch (e) {
               Alert.alert('Error', getUserFriendlyMessage(e));
             }
           },
         },
-      ]
+      ],
     );
   };
 
-  const getTierColor = (tier: string) => {
-    switch (tier) {
+  const getTierColor = (tierName: string) => {
+    switch (tierName) {
       case 'premium_plus':
       case 'pro':
         return theme.colors.secondary;
@@ -118,182 +122,185 @@ export const ProfileScreen: React.FC = () => {
     }
   };
 
+  const contentStyle = useMemo(
+    () => (isWide ? { width: contentMaxWidth, alignSelf: 'center' as const } : undefined),
+    [isWide, contentMaxWidth],
+  );
+
+  if (showSkeleton) {
+    return (
+      <View style={[styles.container, isWide && { paddingHorizontal: horizontalPadding }]}>
+        <View style={contentStyle}>
+          <FeedSkeleton count={3} variant="card" />
+        </View>
+      </View>
+    );
+  }
+
   return (
     <>
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
-      keyboardShouldPersistTaps="handled"
-    >
-      {loadError ? (
-        <View style={styles.errorBanner}>
-          <Text style={styles.errorBannerText}>{loadError}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={loadUserInfo}>
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      ) : null}
-      <View style={styles.header}>
-        <OctobetiQWordmark variant="small" style={styles.brandWordmark} />
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {user?.email?.[0]?.toUpperCase() || 'U'}
-          </Text>
-        </View>
-        <Text style={styles.email}>{user?.email}</Text>
-        <View
-          style={[
-            styles.tierBadge,
-            { backgroundColor: getTierColor(tier) },
-          ]}
-        >
-          <Text style={styles.tierText}>
-            {subscriptionTierLabel(tier).toUpperCase()}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Account</Text>
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => {
-            navigation.navigate(
-              'Paywall',
-              tier === 'free' ? { emphasizeTier: 'premium' } : undefined,
-            );
-          }}
-        >
-          <Text style={styles.menuText}>Subscription</Text>
-          <Text style={styles.menuSubtext}>
-            {subscriptionMenuSubtext(tier)}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => navigation.navigate('PredictionHistory')}
-        >
-          <Text style={styles.menuText}>My Picks</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => navigation.navigate('Accuracy')}
-        >
-          <Text style={styles.menuText}>Model accuracy</Text>
-          <Text style={styles.menuSubtext}>How we've done</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => navigation.navigate('Leaderboards')}
-        >
-          <Text style={styles.menuText}>Leaderboard</Text>
-          <Text style={styles.menuSubtext}>Rank by pick accuracy</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => navigation.navigate('Challenges')}
-        >
-          <Text style={styles.menuText}>Challenges</Text>
-          <Text style={styles.menuSubtext}>Compete on picks</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => navigation.navigate('Settings')}
-        >
-          <Text style={styles.menuText}>Settings</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Support</Text>
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => navigation.navigate('Help')}
-        >
-          <Text style={styles.menuText}>Help & FAQ</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => Linking.openURL('mailto:support@sportsprediction.com?subject=octobetiQ%20support').catch(() => {})}
-        >
-          <Text style={styles.menuText}>Contact Us</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => navigation.navigate('PrivacyPolicy')}
-        >
-          <Text style={styles.menuText}>Privacy Policy</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => navigation.navigate('TermsOfService')}
-        >
-          <Text style={styles.menuText}>Terms of Service</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Danger zone</Text>
-        <TouchableOpacity style={styles.menuItem} onPress={handleDeleteAccount}>
-          <Text style={styles.deleteAccountText}>Delete account</Text>
-        </TouchableOpacity>
-      </View>
-
-      <TouchableOpacity
-        style={[styles.logoutButton, loggingOut && styles.logoutButtonDisabled]}
-        onPress={handleLogoutPress}
-        disabled={loggingOut}
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[
+          styles.scrollInner,
+          isWide && { paddingHorizontal: horizontalPadding },
+        ]}
+        keyboardShouldPersistTaps="handled"
       >
-        {loggingOut ? (
-          <ActivityIndicator color={theme.colors.text} />
-        ) : (
-          <Text style={styles.logoutText}>Logout</Text>
-        )}
-      </TouchableOpacity>
-    </ScrollView>
+        <View style={contentStyle}>
+          {loadError ? (
+            <FeedErrorBanner message={loadError} onRetry={() => void loadUserInfo()} />
+          ) : null}
 
-    <Modal
-      visible={showLogoutModal}
-      transparent
-      animationType="fade"
-      onRequestClose={() => {
-        if (!loggingOut) setShowLogoutModal(false);
-      }}
-    >
-      <Pressable
-        style={styles.modalBackdrop}
-        onPress={() => {
+          <View style={styles.header}>
+            <OctobetiQWordmark variant="small" style={styles.brandWordmark} />
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {user?.email?.[0]?.toUpperCase() || 'U'}
+              </Text>
+            </View>
+            <Text style={styles.email}>{user?.email}</Text>
+            <View style={[styles.tierBadge, { backgroundColor: getTierColor(tier) }]}>
+              <Text style={styles.tierText}>{subscriptionTierLabel(tier).toUpperCase()}</Text>
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Account</Text>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                navigation.navigate(
+                  'Paywall',
+                  tier === 'free' ? { emphasizeTier: 'premium' } : undefined,
+                );
+              }}
+            >
+              <Text style={styles.menuText}>Subscription</Text>
+              <Text style={styles.menuSubtext}>{subscriptionMenuSubtext(tier)}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigation.navigate('PredictionHistory')}
+            >
+              <Text style={styles.menuText}>My Picks</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigation.navigate('Accuracy')}
+            >
+              <Text style={styles.menuText}>Model accuracy</Text>
+              <Text style={styles.menuSubtext}>How we've done</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigation.navigate('Leaderboards')}
+            >
+              <Text style={styles.menuText}>Leaderboard</Text>
+              <Text style={styles.menuSubtext}>Rank by pick accuracy</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigation.navigate('Challenges')}
+            >
+              <Text style={styles.menuText}>Challenges</Text>
+              <Text style={styles.menuSubtext}>Compete on picks</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigation.navigate('Settings')}
+            >
+              <Text style={styles.menuText}>Settings</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Support</Text>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigation.navigate('Help')}
+            >
+              <Text style={styles.menuText}>Help & FAQ</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() =>
+                Linking.openURL(
+                  'mailto:support@sportsprediction.com?subject=octobetiQ%20support',
+                ).catch(() => {})
+              }
+            >
+              <Text style={styles.menuText}>Contact Us</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigation.navigate('PrivacyPolicy')}
+            >
+              <Text style={styles.menuText}>Privacy Policy</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigation.navigate('TermsOfService')}
+            >
+              <Text style={styles.menuText}>Terms of Service</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Danger zone</Text>
+            <TouchableOpacity style={styles.menuItem} onPress={handleDeleteAccount}>
+              <Text style={styles.deleteAccountText}>Delete account</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.logoutButton, loggingOut && styles.logoutButtonDisabled]}
+            onPress={handleLogoutPress}
+            disabled={loggingOut}
+          >
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+
+          <PredictionDisclaimer compact style={styles.disclaimer} />
+        </View>
+      </ScrollView>
+
+      <Modal
+        visible={showLogoutModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
           if (!loggingOut) setShowLogoutModal(false);
         }}
       >
-        <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.modalTitle}>Logout</Text>
-          <Text style={styles.modalMessage}>
-            Are you sure you want to logout?
-          </Text>
-          <View style={styles.modalActions}>
-            <TouchableOpacity
-              style={styles.modalCancelButton}
-              onPress={() => setShowLogoutModal(false)}
-              disabled={loggingOut}
-            >
-              <Text style={styles.modalCancelText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modalConfirmButton, loggingOut && styles.logoutButtonDisabled]}
-              onPress={confirmLogout}
-              disabled={loggingOut}
-            >
-              {loggingOut ? (
-                <ActivityIndicator color={theme.colors.text} />
-              ) : (
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => {
+            if (!loggingOut) setShowLogoutModal(false);
+          }}
+        >
+          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>Logout</Text>
+            <Text style={styles.modalMessage}>Are you sure you want to logout?</Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowLogoutModal(false)}
+                disabled={loggingOut}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalConfirmButton, loggingOut && styles.logoutButtonDisabled]}
+                onPress={confirmLogout}
+                disabled={loggingOut}
+              >
                 <Text style={styles.modalConfirmText}>Logout</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
         </Pressable>
-      </Pressable>
-    </Modal>
+      </Modal>
     </>
   );
 };
@@ -303,7 +310,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  scrollContent: {
+  scrollInner: {
     paddingBottom: theme.spacing.xl * 2,
   },
   header: {
@@ -345,32 +352,6 @@ const styles = StyleSheet.create({
     color: theme.colors.background,
     fontSize: 12,
     fontWeight: '600',
-  },
-  errorBanner: {
-    backgroundColor: theme.colors.secondaryDim,
-    padding: theme.spacing.md,
-    marginHorizontal: theme.spacing.md,
-    marginTop: theme.spacing.sm,
-    borderRadius: theme.radii.md,
-    borderLeftWidth: 4,
-    borderLeftColor: theme.colors.secondary,
-  },
-  errorBannerText: {
-    fontSize: 14,
-    color: theme.colors.secondary,
-    marginBottom: theme.spacing.sm,
-  },
-  retryButton: {
-    alignSelf: 'flex-start',
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.sm,
-    backgroundColor: theme.colors.secondary,
-    borderRadius: theme.radii.sm,
-  },
-  retryButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.text,
   },
   section: {
     backgroundColor: theme.colors.backgroundElevated,
@@ -423,6 +404,11 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     fontSize: 16,
     fontWeight: '600',
+  },
+  disclaimer: {
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.sm,
+    textAlign: 'center',
   },
   modalBackdrop: {
     flex: 1,

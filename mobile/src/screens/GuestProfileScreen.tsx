@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { CompositeNavigationProp, useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -8,6 +8,8 @@ import { MainTabParamList, RootStackParamList } from '../navigation/AppNavigator
 import { theme } from '../constants/theme';
 import { OctobetiQWordmark } from '../components/OctobetiQWordmark';
 import { AuthTrustLinks } from '../components/AuthTrustLinks';
+import { PredictionDisclaimer } from '../components/PredictionDisclaimer';
+import { useLayout } from '../hooks/useLayout';
 import { GUEST_TEASER_PICK_LIMIT } from '../constants/guestBrowse';
 
 type Nav = CompositeNavigationProp<
@@ -17,9 +19,21 @@ type Nav = CompositeNavigationProp<
 
 export const GuestProfileScreen: React.FC = () => {
   const navigation = useNavigation<Nav>();
+  const { isWide, contentMaxWidth, horizontalPadding } = useLayout();
+  const contentStyle = useMemo(
+    () => (isWide ? { width: contentMaxWidth, alignSelf: 'center' as const } : undefined),
+    [isWide, contentMaxWidth],
+  );
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[
+        styles.content,
+        isWide && { paddingHorizontal: horizontalPadding + theme.spacing.lg },
+      ]}
+    >
+      <View style={contentStyle}>
       <OctobetiQWordmark variant="title" style={styles.wordmark} />
       <Text style={styles.subtitle}>
         Browse schedules and {GUEST_TEASER_PICK_LIMIT} free picks daily. Create an account for full access.
@@ -58,6 +72,8 @@ export const GuestProfileScreen: React.FC = () => {
       </View>
 
       <AuthTrustLinks />
+      <PredictionDisclaimer compact style={styles.disclaimer} />
+      </View>
     </ScrollView>
   );
 };
@@ -149,5 +165,9 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.85,
+  },
+  disclaimer: {
+    marginTop: theme.spacing.md,
+    textAlign: 'center',
   },
 });

@@ -24,6 +24,7 @@ import type { Game } from '../../types';
 import { formatCachedAt, getSportIcon } from './homeScreenUtils';
 import type { HomeScreenNavigationProp } from './homeScreenUtils';
 import { homeScreenStyles as styles } from './homeScreenStyles';
+import { useLayout } from '../../hooks/useLayout';
 
 type AdEngineState = ReturnType<typeof useAdEngine>;
 
@@ -95,6 +96,7 @@ export function HomeForYouSection({
   onSetFeatured: (id: string) => void;
   bestPicksFade: Animated.Value;
 }) {
+  const { contentMaxWidth, isWide } = useLayout();
   return (
     <View style={styles.section}>
       <Text style={styles.sectionLabel}>TOP VALUE TODAY</Text>
@@ -140,6 +142,7 @@ export function HomeForYouSection({
             picks={forYouPicks.slice(0, 5)}
             onPickPress={onPickPress}
             onSetFeatured={onSetFeatured}
+            contentWidth={isWide ? contentMaxWidth : undefined}
           />
         </Animated.View>
       )}

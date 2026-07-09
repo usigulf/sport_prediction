@@ -1,7 +1,7 @@
 import { useWindowDimensions } from 'react-native';
 
 const TABLET_MIN_WIDTH = 768;
-const CONTENT_MAX_WIDTH = 640;
+export const CONTENT_MAX_WIDTH = 640;
 
 export function useLayout() {
   const { width, height } = useWindowDimensions();
