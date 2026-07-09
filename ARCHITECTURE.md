@@ -3,7 +3,7 @@
 
 > **Document role:** This doc is a **technical reference** (data pipelines, ML, backend detail, tier matrix). For **product vision, legal positioning, and roadmap**, the canonical source is **[ARCHITECTURE_DESIGN.md](ARCHITECTURE_DESIGN.md)** (information-only, no gambling; 2026 baseline: multi-sport, gamification, refined freemium). See **[ARCHITECTURE_COMPARISON.md](ARCHITECTURE_COMPARISON.md)** for a side-by-side comparison.
 >
-> **Production stack (octobetiQ, 2026):** Single **FastAPI** app in `backend/` (Postgres, Redis, Docker on VPS). ML training/inference is **in-process** (`backend/train_model.py`, `app/services/model_training.py`, `ml/models/` artifacts). Legacy `ml/training` demos and the Rust `services/predictions` crate are **archived** under `archive/` — not deployed. Sections below that describe Kafka, Triton, Rust microservices, and multi-cluster K8s are **aspirational** target architecture, not the running system.
+> **Production stack (octobetiQ, 2026):** See **[docs/PRODUCTION_REALITY.md](docs/PRODUCTION_REALITY.md)** for the audited running system (single FastAPI VPS, logistic regression ML, no Kafka/Rust in prod). This document mixes **current facts** with **aspirational** target architecture in later sections.
 
 ---
 

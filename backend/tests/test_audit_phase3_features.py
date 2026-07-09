@@ -76,6 +76,7 @@ def test_feature_flags_endpoint(client):
     flags = r.json()["flags"]
     assert "odds_display" in flags
     assert "experiments" in flags
+    assert "intro_offer_variant" in flags["experiments"]
 
 
 def test_billing_portal_requires_stripe_customer(client, test_user):

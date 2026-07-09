@@ -1,0 +1,4970 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Octobet API",
+    "description": "AI-powered sports prediction API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Register",
+        "description": "Register a new user",
+        "operationId": "register_api_v1_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login",
+        "description": "Login and get access token",
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_login_api_v1_auth_login_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Token"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/apple": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Sign In With Apple",
+        "description": "Exchange a verified Apple identity token for app JWTs.",
+        "operationId": "sign_in_with_apple_api_v1_auth_apple_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppleSignInRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Token"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Refresh Token",
+        "description": "Refresh access token. Send JSON body: {\"refresh_token\": \"<token>\"}.",
+        "operationId": "refresh_token_api_v1_auth_refresh_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Token"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Logout",
+        "description": "Revoke refresh/access tokens server-side when provided.",
+        "operationId": "logout_api_v1_auth_logout_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/LogoutRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/forgot-password": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Forgot Password",
+        "description": "Request a password reset email. Always returns the same message (anti-enumeration).",
+        "operationId": "forgot_password_api_v1_auth_forgot_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/reset-password": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Reset Password",
+        "description": "Set a new password using a single-use reset token.",
+        "operationId": "reset_password_api_v1_auth_reset_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Token"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Get Current User Info Deprecated",
+        "description": "Deprecated: use GET /api/v1/user/me instead.",
+        "operationId": "get_current_user_info_deprecated_api_v1_auth_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true,
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/games/search": {
+      "get": {
+        "tags": [
+          "games"
+        ],
+        "summary": "Search Games Endpoint",
+        "description": "Full-text-style search by team name or abbreviation (Weakness #37).",
+        "operationId": "search_games_endpoint_api_v1_games_search_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 100,
+              "title": "Q"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/leagues": {
+      "get": {
+        "tags": [
+          "games"
+        ],
+        "summary": "Get Leagues",
+        "description": "List allowed league codes and labels for filters and favorites.\nUse in query params: league= or leagues= (comma-separated).",
+        "operationId": "get_leagues_api_v1_games_leagues_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/upcoming": {
+      "get": {
+        "tags": [
+          "games"
+        ],
+        "summary": "Get Upcoming Games",
+        "description": "Get games with predictions. Without date: future scheduled only. With date: all games that local calendar day.",
+        "operationId": "get_upcoming_games_api_v1_games_upcoming_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "league",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by single league",
+              "title": "League"
+            },
+            "description": "Filter by single league"
+          },
+          {
+            "name": "leagues",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by leagues (comma-separated, e.g. nfl,nba)",
+              "title": "Leagues"
+            },
+            "description": "Filter by leagues (comma-separated, e.g. nfl,nba)"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Calendar day (YYYY-MM-DD). With time_zone, that day in the user's zone; without it, UTC midnight\u2013midnight. Includes scheduled, live, and finished on that day.",
+              "title": "Date"
+            },
+            "description": "Calendar day (YYYY-MM-DD). With time_zone, that day in the user's zone; without it, UTC midnight\u2013midnight. Includes scheduled, live, and finished on that day."
+          },
+          {
+            "name": "time_zone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "IANA timezone (e.g. America/New_York). Use with date so the day matches the device calendar.",
+              "title": "Time Zone"
+            },
+            "description": "IANA timezone (e.g. America/New_York). Use with date so the day matches the device calendar."
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}": {
+      "get": {
+        "tags": [
+          "games"
+        ],
+        "summary": "Get Game",
+        "description": "Get game details with prediction",
+        "operationId": "get_game_api_v1_games__game_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/explanation": {
+      "get": {
+        "tags": [
+          "games"
+        ],
+        "summary": "Get Prediction Explanation",
+        "description": "Get explainability for the latest prediction (top factors, confidence, model info).",
+        "operationId": "get_prediction_explanation_api_v1_games__game_id__explanation_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictionExplanationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/player-props": {
+      "get": {
+        "tags": [
+          "games"
+        ],
+        "summary": "Get Game Player Props",
+        "description": "Model-projected player props for a game. Premium only; not sportsbook lines.",
+        "operationId": "get_game_player_props_api_v1_games__game_id__player_props_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/market-odds": {
+      "get": {
+        "tags": [
+          "games"
+        ],
+        "summary": "Get Market Odds",
+        "description": "Read-only consensus sportsbook lines for model comparison (M-01 spike).\nRequires CLEARSPORTS_API_KEY (or optional ODDS_API_KEY). Informational only \u2014 not betting advice.",
+        "operationId": "get_market_odds_api_v1_games__game_id__market_odds_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketOddsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/live-predictions": {
+      "get": {
+        "tags": [
+          "games"
+        ],
+        "summary": "Get Live Predictions",
+        "description": "Live win-probability for premium users. In-play v0 when game is live and model was refreshed after kickoff.",
+        "operationId": "get_live_predictions_api_v1_games__game_id__live_predictions_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/predictions": {
+      "get": {
+        "tags": [
+          "games"
+        ],
+        "summary": "Get Prediction",
+        "description": "Get prediction for a game (requires authentication)",
+        "operationId": "get_prediction_api_v1_games__game_id__predictions_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/share": {
+      "post": {
+        "tags": [
+          "games"
+        ],
+        "summary": "Share Pick",
+        "description": "Generate share content for this game's pick: text message and optional share graphic (base64 PNG).\nPick confidence is only included when the caller is allowed to view that prediction\n(signed-in + free-tier quota, or premium).",
+        "operationId": "share_pick_api_v1_games__game_id__share_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/user/me": {
+      "get": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Get Current User Info",
+        "description": "Get current user information",
+        "operationId": "get_current_user_info_api_v1_user_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Delete Account",
+        "description": "Permanently delete the current user and all associated data (GDPR right to erasure).\nCancels Stripe subscriptions and removes the RevenueCat subscriber when configured.\nFavorites, prediction history, push tokens, and reminder records are removed.\nThe session is invalid after this.",
+        "operationId": "delete_account_api_v1_user_me_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/user/favorites": {
+      "get": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Get Favorites",
+        "description": "Get user's favorite teams and leagues (with team details expanded).",
+        "operationId": "get_favorites_api_v1_user_favorites_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/user/favorites/teams/{team_id}": {
+      "post": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Add Favorite Team",
+        "description": "Add team to favorites.",
+        "operationId": "add_favorite_team_api_v1_user_favorites_teams__team_id__post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "team_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Team Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Remove Favorite Team",
+        "description": "Remove team from favorites.",
+        "operationId": "remove_favorite_team_api_v1_user_favorites_teams__team_id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "team_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Team Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/user/favorites/leagues/{league_code}": {
+      "post": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Add Favorite League",
+        "description": "Add league to favorites. League code is case-insensitive (e.g. nfl, NFL).",
+        "operationId": "add_favorite_league_api_v1_user_favorites_leagues__league_code__post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "league_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "League Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Remove Favorite League",
+        "description": "Remove league from favorites. League code is case-insensitive.",
+        "operationId": "remove_favorite_league_api_v1_user_favorites_leagues__league_code__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "league_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "League Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/user/prediction-history": {
+      "get": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Get Prediction History",
+        "description": "Get user's prediction viewing history (paginated, most recent first).",
+        "operationId": "get_prediction_history_api_v1_user_prediction_history_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/user/push-token": {
+      "post": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Register Push Token",
+        "description": "Register an Expo (or other) push token for this user. Body: {\"token\": \"ExponentPushToken[xxx]\"}.",
+        "operationId": "register_push_token_api_v1_user_push_token_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Remove Push Token",
+        "description": "Remove push token(s). Query ?token=ExponentPushToken[xxx] to remove one; no query to remove all for user.",
+        "operationId": "remove_push_token_api_v1_user_push_token_delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "ExponentPushToken[xxx] to remove one; omit to remove all",
+              "title": "Token"
+            },
+            "description": "ExponentPushToken[xxx] to remove one; omit to remove all"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/user/me/export": {
+      "get": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Export My Data",
+        "description": "GDPR Article 20 \u2014 portable export of account data (JSON).",
+        "operationId": "export_my_data_api_v1_user_me_export_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/user/me/privacy/ccpa-opt-out": {
+      "post": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Ccpa Opt Out",
+        "description": "CCPA \u2014 record do-not-sell/opt-out preference (we do not sell PII; audit trail).",
+        "operationId": "ccpa_opt_out_api_v1_user_me_privacy_ccpa_opt_out_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/user/referral/code": {
+      "get": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Get Referral Code",
+        "description": "Referral invite code (user id) for share links.",
+        "operationId": "get_referral_code_api_v1_user_referral_code_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/user/referral/apply": {
+      "post": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Apply Referral Code",
+        "description": "Attach referrer on first apply (Imp #42 partial \u2014 tracking; bonus via ASC/Stripe).",
+        "operationId": "apply_referral_code_api_v1_user_referral_apply_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReferralApplyBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/stats/accuracy": {
+      "get": {
+        "tags": [
+          "stats"
+        ],
+        "summary": "Get Accuracy",
+        "description": "Historical accuracy for finished games with a stored pre_game prediction.\n\nPublic endpoint (no auth) for transparency. Live in-play refreshes (inplay_v0) are\nexcluded; each game uses the first pre-kickoff row. See `methodology` for scoring rules.\nIncludes rolling 30-day window and confidence-bucket breakdown.",
+        "operationId": "get_accuracy_api_v1_stats_accuracy_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stats/calibration": {
+      "get": {
+        "tags": [
+          "stats"
+        ],
+        "summary": "Get Calibration",
+        "description": "Reliability diagram: predicted outcome probability vs actual hit rate in decile buckets.\nChart is shown in-app when total_scored >= min_sample (100).",
+        "operationId": "get_calibration_api_v1_stats_calibration_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stats/model": {
+      "get": {
+        "tags": [
+          "stats"
+        ],
+        "summary": "Get Model Status",
+        "description": "Public model readiness snapshot from metrics.json (warming vs ready to publish).\nWhen artifacts are missing or publish_ready is false, inference uses heuristic fallback.",
+        "operationId": "get_model_status_api_v1_stats_model_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stats/public-audit": {
+      "get": {
+        "tags": [
+          "stats"
+        ],
+        "summary": "Get Public Audit Bundle",
+        "description": "Third-party accuracy audit bundle (Imp #94): accuracy, calibration, model readiness.\nStable JSON for external reviewers \u2014 no auth required.",
+        "operationId": "get_public_audit_bundle_api_v1_stats_public_audit_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stats/model-vs-market": {
+      "get": {
+        "tags": [
+          "stats"
+        ],
+        "summary": "Get Model Vs Market",
+        "description": "Model accuracy vs live market consensus on upcoming games (I64).\nDisplay-only \u2014 supports web dashboard and in-app transparency.",
+        "operationId": "get_model_vs_market_api_v1_stats_model_vs_market_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stats/coverage": {
+      "get": {
+        "tags": [
+          "stats"
+        ],
+        "summary": "Get Data Coverage",
+        "description": "Informational snapshot of which leagues have standings data in DB (partial coverage transparency).\nExpands as licensed feeds and sync jobs grow.",
+        "operationId": "get_data_coverage_api_v1_stats_coverage_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/feed/top-picks": {
+      "get": {
+        "tags": [
+          "feed"
+        ],
+        "summary": "Get Top Picks",
+        "description": "Top picks: games with predictions, ordered by confidence (high first) then kickoff.\nWithout date: legacy window \u2014 scheduled only, from now through end of server local calendar day.\nWith date (+ optional time_zone): same UTC window as GET /games/upcoming for that day.\nPublic; if user is free and over daily limit, predictions are omitted.",
+        "operationId": "get_top_picks_api_v1_feed_top_picks_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "league",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by single league (alias for leagues=)",
+              "title": "League"
+            },
+            "description": "Filter by single league (alias for leagues=)"
+          },
+          {
+            "name": "leagues",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by leagues (comma-separated)",
+              "title": "Leagues"
+            },
+            "description": "Filter by leagues (comma-separated)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Calendar day (YYYY-MM-DD). With time_zone, same local day as /games/upcoming; includes scheduled, live, and finished.",
+              "title": "Date"
+            },
+            "description": "Calendar day (YYYY-MM-DD). With time_zone, same local day as /games/upcoming; includes scheduled, live, and finished."
+          },
+          {
+            "name": "time_zone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "IANA timezone (e.g. America/New_York). Use with date for soccer/model alignment.",
+              "title": "Time Zone"
+            },
+            "description": "IANA timezone (e.g. America/New_York). Use with date for soccer/model alignment."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/feed/for-you": {
+      "get": {
+        "tags": [
+          "feed"
+        ],
+        "summary": "Get For You Feed",
+        "description": "Personalized feed for Home \"Best Picks for You\".\nLogged-in users with favorites see favorite-team games first, then favorite leagues,\nthen other high-confidence picks. Guests fall back to top-picks ordering.",
+        "operationId": "get_for_you_feed_api_v1_feed_for_you_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "league",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by single league (alias for leagues=)",
+              "title": "League"
+            },
+            "description": "Filter by single league (alias for leagues=)"
+          },
+          {
+            "name": "leagues",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by leagues (comma-separated)",
+              "title": "Leagues"
+            },
+            "description": "Filter by leagues (comma-separated)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 10,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Calendar day (YYYY-MM-DD). With time_zone, same local day as /games/upcoming.",
+              "title": "Date"
+            },
+            "description": "Calendar day (YYYY-MM-DD). With time_zone, same local day as /games/upcoming."
+          },
+          {
+            "name": "time_zone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "IANA timezone (e.g. America/New_York). Use with date for soccer/model alignment.",
+              "title": "Time Zone"
+            },
+            "description": "IANA timezone (e.g. America/New_York). Use with date for soccer/model alignment."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/feed/player-props": {
+      "get": {
+        "tags": [
+          "feed"
+        ],
+        "summary": "Get Player Props Feed",
+        "description": "Games with model-projected player props (Premium). For Games tab Props view.",
+        "operationId": "get_player_props_feed_api_v1_feed_player_props_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "league",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by single league (alias for leagues=)",
+              "title": "League"
+            },
+            "description": "Filter by single league (alias for leagues=)"
+          },
+          {
+            "name": "leagues",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by leagues (comma-separated)",
+              "title": "Leagues"
+            },
+            "description": "Filter by leagues (comma-separated)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Calendar day (YYYY-MM-DD)",
+              "title": "Date"
+            },
+            "description": "Calendar day (YYYY-MM-DD)"
+          },
+          {
+            "name": "time_zone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "IANA timezone",
+              "title": "Time Zone"
+            },
+            "description": "IANA timezone"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/leaderboards": {
+      "get": {
+        "tags": [
+          "leaderboards"
+        ],
+        "summary": "Get Leaderboards",
+        "description": "Leaderboard: users ranked by accuracy of finished games they viewed (prediction vs outcome).\nperiod: weekly (last 7 days), monthly (last 30 days), or all (no time filter).",
+        "operationId": "get_leaderboards_api_v1_leaderboards_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "weekly | monthly | all",
+              "default": "monthly",
+              "title": "Period"
+            },
+            "description": "weekly | monthly | all"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/challenges": {
+      "get": {
+        "tags": [
+          "challenges"
+        ],
+        "summary": "List Challenges",
+        "description": "List challenges created by the current user (Pro only).",
+        "operationId": "list_challenges_api_v1_challenges_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "active | completed | all",
+              "title": "Status"
+            },
+            "description": "active | completed | all"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "challenges"
+        ],
+        "summary": "Create Challenge",
+        "description": "Create a new challenge with the given game_ids (Pro only). Games must exist and be scheduled.",
+        "operationId": "create_challenge_api_v1_challenges_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateChallengeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/challenges/{challenge_id}": {
+      "get": {
+        "tags": [
+          "challenges"
+        ],
+        "summary": "Get Challenge",
+        "description": "Get one challenge by id (must be creator; Pro only).",
+        "operationId": "get_challenge_api_v1_challenges__challenge_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "challenge_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Challenge Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/subscription/create-checkout": {
+      "post": {
+        "tags": [
+          "subscription"
+        ],
+        "summary": "Create Checkout Session",
+        "description": "Create a Stripe Checkout Session for Premium or Pro (premium_plus).\nPremium includes a 7-day trial in code; Pro has no trial here (set trials on the Price in Stripe if needed).\nReturns { url } to open in Stripe Checkout.",
+        "operationId": "create_checkout_session_api_v1_subscription_create_checkout_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCheckoutBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/subscription/billing-portal": {
+      "post": {
+        "tags": [
+          "subscription"
+        ],
+        "summary": "Create Billing Portal Session",
+        "description": "Stripe Customer Portal \u2014 manage subscription, payment method, cancel (Weakness #47).\nRequires stripe_customer_id on user (set after first checkout).",
+        "operationId": "create_billing_portal_session_api_v1_subscription_billing_portal_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/subscription/webhook": {
+      "post": {
+        "tags": [
+          "subscription"
+        ],
+        "summary": "Stripe Webhook",
+        "description": "Stripe webhook: on checkout.session.completed, set user subscription_tier from session metadata.\nRegister POST /api/v1/subscription/webhook in Stripe (HTTPS origin where this API is exposed).",
+        "operationId": "stripe_webhook_api_v1_subscription_webhook_post",
+        "parameters": [
+          {
+            "name": "Stripe-Signature",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Stripe-Signature"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/subscription/revenuecat/webhook": {
+      "post": {
+        "tags": [
+          "subscription"
+        ],
+        "summary": "Revenuecat Webhook",
+        "description": "RevenueCat webhook: keep `subscription_tier` in sync with store entitlements.\nConfigure in RevenueCat dashboard with the same Authorization header value as\nREVENUECAT_WEBHOOK_AUTH. The app sets RevenueCat `app_user_id` to the backend\nuser id, so events map directly to a user.",
+        "operationId": "revenuecat_webhook_api_v1_subscription_revenuecat_webhook_post",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analytics/ad-events": {
+      "post": {
+        "tags": [
+          "analytics"
+        ],
+        "summary": "Ingest Ad Events",
+        "description": "Accept batched ad session metrics from the mobile app (logged server-side).",
+        "operationId": "ingest_ad_events_api_v1_analytics_ad_events_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdSessionPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/config/feature-flags": {
+      "get": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Read Feature Flags",
+        "operationId": "read_feature_flags_api_v1_config_feature_flags_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tools/parlay-correlation": {
+      "post": {
+        "tags": [
+          "tools"
+        ],
+        "summary": "Parlay Correlation Check",
+        "description": "Informational correlation warnings for multi-leg slips (I66).\nGuests and signed-in users may call; no wagering implied.",
+        "operationId": "parlay_correlation_check_api_v1_tools_parlay_correlation_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParlayCheckBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/internal/push-triggers/run": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Run Push Triggers",
+        "description": "Run game-starting, high-confidence, and post-game push triggers. Call from cron with header:\nX-Cron-Secret: <PUSH_CRON_SECRET>",
+        "operationId": "run_push_triggers_internal_push_triggers_run_post",
+        "parameters": [
+          {
+            "name": "X-Cron-Secret",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Cron-Secret"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/live/sync-run": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Run Live Sync Cron",
+        "description": "High-frequency pipeline when games are live: refresh provider scores for active leagues,\nthen re-run ML with inplay_v0 tagging (cooldown min_minutes_live). No-op when nothing is live.\nSchedule every 1\u20132 minutes via scripts/cron/internal_live_sync_run.sh.",
+        "operationId": "run_live_sync_cron_internal_live_sync_run_post",
+        "parameters": [
+          {
+            "name": "X-Cron-Secret",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Cron-Secret"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveSyncBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/predictions/run": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Run Predictions Cron",
+        "description": "Refresh ML predictions for live + upcoming games. Schedule via cron every 15\u201360 minutes with header:\nX-Cron-Secret: <PUSH_CRON_SECRET>\n\nSet EXPLANATION_MODEL_DIR or MODEL_ARTIFACT_DIR to a folder with simple_model.pkl + feature_columns.pkl\nfor sklearn inference; otherwise a deterministic heuristic runs from game state.",
+        "operationId": "run_predictions_cron_internal_predictions_run_post",
+        "parameters": [
+          {
+            "name": "X-Cron-Secret",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Cron-Secret"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PredictionRunBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/ml/train": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Train Model Cron",
+        "description": "Retrain the win-probability model from finished games and write sklearn artifacts.\nSchedule weekly (after standings + results sync) with X-Cron-Secret.\n\nWrites simple_model.pkl + feature_columns.pkl + metrics.json to out_dir\n(MODEL_ARTIFACT_DIR / EXPLANATION_MODEL_DIR, or body.out_dir). In Docker the\nAPI mount at /models is read-only \u2014 use scripts/cron/internal_train_model.sh\non the host to write into ml/models, or pass a writable out_dir here.",
+        "operationId": "train_model_cron_internal_ml_train_post",
+        "parameters": [
+          {
+            "name": "X-Cron-Secret",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Cron-Secret"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrainModelBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/games/{game_id}/player-spotlights": {
+      "put": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Replace Game Player Spotlights",
+        "description": "Replace all performer spotlight rows for a game (ETL / admin). Same auth as cron:\nX-Cron-Secret: <PUSH_CRON_SECRET>",
+        "operationId": "replace_game_player_spotlights_internal_games__game_id__player_spotlights_put",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Game Id"
+            }
+          },
+          {
+            "name": "X-Cron-Secret",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Cron-Secret"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplacePlayerSpotlightsBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Clear Game Player Spotlights",
+        "description": "Remove all spotlight rows for a game.",
+        "operationId": "clear_game_player_spotlights_internal_games__game_id__player_spotlights_delete",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Game Id"
+            }
+          },
+          {
+            "name": "X-Cron-Secret",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Cron-Secret"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/soccer/sync-schedules": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Soccer Sync Schedules",
+        "description": "For each configured soccer league: import fixtures into `teams`/`games`, then upsert `team_standings`.\nUses ClearSports when CLEARSPORTS_API_KEY is set and Sportradar is not; otherwise Sportradar season feeds.\nAfter sync, run POST /internal/predictions/run.",
+        "operationId": "soccer_sync_schedules_internal_soccer_sync_schedules_post",
+        "parameters": [
+          {
+            "name": "X-Cron-Secret",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Cron-Secret"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/us-sports/sync-schedules": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Us Sports Sync Schedules",
+        "description": "Import NFL and NBA schedules from ClearSports (CLEARSPORTS_API_KEY required).\nThen POST /internal/predictions/run.",
+        "operationId": "us_sports_sync_schedules_internal_us_sports_sync_schedules_post",
+        "parameters": [
+          {
+            "name": "X-Cron-Secret",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Cron-Secret"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/historical-backfill/run": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Historical Backfill Run",
+        "description": "M-07: Sync 2+ seasons per league from ClearSports (CLEARSPORTS_API_KEY).\nIdempotent upserts; returns decisive finished-game counts per league.\nSchedule weekly or run once after deploy. Optionally chain predictions for backtest labels.",
+        "operationId": "historical_backfill_run_internal_historical_backfill_run_post",
+        "parameters": [
+          {
+            "name": "X-Cron-Secret",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Cron-Secret"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistoricalBackfillBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/health/sportradar": {
+      "get": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Sportradar Health",
+        "description": "Verify Sportradar NFL and (optionally) soccer standings can be fetched (same X-Cron-Secret).\nDoes not persist data; uses the same caches as explanation enrichment.",
+        "operationId": "sportradar_health_internal_health_sportradar_get",
+        "parameters": [
+          {
+            "name": "X-Cron-Secret",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Cron-Secret"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/health/clearsports": {
+      "get": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Clearsports Health",
+        "description": "Verify ClearSports API key (EPL games probe) and soccer feed when key is the active provider.",
+        "operationId": "clearsports_health_internal_health_clearsports_get",
+        "parameters": [
+          {
+            "name": "X-Cron-Secret",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Cron-Secret"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/jobs/enqueue": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Enqueue Internal Job",
+        "description": "Enqueue background work (Redis list; Imp #52).",
+        "operationId": "enqueue_internal_job_internal_jobs_enqueue_post",
+        "parameters": [
+          {
+            "name": "X-Cron-Secret",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Cron-Secret"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnqueueJobBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/jobs/process-one": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Process One Job",
+        "description": "Dequeue and return one job for worker processing.",
+        "operationId": "process_one_job_internal_jobs_process_one_post",
+        "parameters": [
+          {
+            "name": "X-Cron-Secret",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Cron-Secret"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/email-digest/run": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Run Email Digest Cron",
+        "description": "Send daily picks email when FEATURE_EMAIL_DIGEST=true and SMTP configured.",
+        "operationId": "run_email_digest_cron_internal_email_digest_run_post",
+        "parameters": [
+          {
+            "name": "X-Cron-Secret",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Cron-Secret"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Health check endpoint",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "summary": "Readiness Check",
+        "description": "Readiness check: DB must be reachable. Redis is optional (skipped if REDIS_URL is empty).",
+        "operationId": "readiness_check_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AdSessionPayload": {
+        "properties": {
+          "sessionId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sessionid"
+          },
+          "ad_impression_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Ad Impression Count",
+            "default": 0
+          },
+          "ad_clicks": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Ad Clicks",
+            "default": 0
+          },
+          "rewarded_ads_watched": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Rewarded Ads Watched",
+            "default": 0
+          },
+          "revenue_per_session_micros": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Revenue Per Session Micros",
+            "default": 0
+          },
+          "sessionDurationMs": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sessiondurationms"
+          },
+          "screen_where_ad_shown": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Screen Where Ad Shown"
+          }
+        },
+        "type": "object",
+        "title": "AdSessionPayload"
+      },
+      "AppleSignInRequest": {
+        "properties": {
+          "identity_token": {
+            "type": "string",
+            "title": "Identity Token"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "identity_token"
+        ],
+        "title": "AppleSignInRequest"
+      },
+      "Body_login_api_v1_auth_login_post": {
+        "properties": {
+          "grant_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^password$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grant Type"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "title": "Password"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope",
+            "default": ""
+          },
+          "client_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
+          "client_secret": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "format": "password",
+            "title": "Client Secret"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "Body_login_api_v1_auth_login_post"
+      },
+      "ConsensusLine": {
+        "properties": {
+          "home_moneyline": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Moneyline"
+          },
+          "away_moneyline": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Away Moneyline"
+          },
+          "home_implied_prob": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Implied Prob"
+          },
+          "away_implied_prob": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Away Implied Prob"
+          },
+          "spread_home": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spread Home"
+          },
+          "spread_home_price": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spread Home Price"
+          },
+          "total_points": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Points"
+          },
+          "over_price": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Over Price"
+          }
+        },
+        "type": "object",
+        "title": "ConsensusLine"
+      },
+      "CreateChallengeRequest": {
+        "properties": {
+          "game_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Game Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "game_ids"
+        ],
+        "title": "CreateChallengeRequest"
+      },
+      "CreateCheckoutBody": {
+        "properties": {
+          "tier": {
+            "type": "string",
+            "enum": [
+              "premium",
+              "premium_plus"
+            ],
+            "title": "Tier",
+            "description": "Stripe price: premium or premium_plus (Pro)",
+            "default": "premium"
+          },
+          "billing_period": {
+            "type": "string",
+            "enum": [
+              "monthly",
+              "annual"
+            ],
+            "title": "Billing Period",
+            "description": "Premium billing interval (annual uses STRIPE_PRICE_ID_PREMIUM_ANNUAL)",
+            "default": "monthly"
+          }
+        },
+        "type": "object",
+        "title": "CreateCheckoutBody",
+        "description": "Maps to app tiers: premium \u2192 Premium, premium_plus \u2192 Pro."
+      },
+      "EnqueueJobBody": {
+        "properties": {
+          "job_type": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Job Type"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_type"
+        ],
+        "title": "EnqueueJobBody"
+      },
+      "FeatureImportance": {
+        "properties": {
+          "feature": {
+            "type": "string",
+            "title": "Feature"
+          },
+          "feature_weight": {
+            "type": "number",
+            "title": "Feature Weight"
+          },
+          "shap_value": {
+            "type": "number",
+            "title": "Shap Value"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feature",
+          "feature_weight",
+          "shap_value"
+        ],
+        "title": "FeatureImportance"
+      },
+      "ForgotPasswordRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "ForgotPasswordRequest"
+      },
+      "GameListResponse": {
+        "properties": {
+          "games": {
+            "items": {
+              "$ref": "#/components/schemas/GameResponse"
+            },
+            "type": "array",
+            "title": "Games"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "skip": {
+            "type": "integer",
+            "title": "Skip"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "games",
+          "total",
+          "skip",
+          "limit"
+        ],
+        "title": "GameListResponse"
+      },
+      "GameResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "league": {
+            "type": "string",
+            "title": "League"
+          },
+          "home_team_id": {
+            "type": "string",
+            "title": "Home Team Id"
+          },
+          "away_team_id": {
+            "type": "string",
+            "title": "Away Team Id"
+          },
+          "home_team": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TeamResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "away_team": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TeamResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "scheduled_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled Time"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "home_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Score"
+          },
+          "away_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Away Score"
+          },
+          "venue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Venue"
+          },
+          "prediction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PredictionResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "guest_signup_required": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guest Signup Required"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "league",
+          "home_team_id",
+          "away_team_id",
+          "scheduled_time",
+          "status"
+        ],
+        "title": "GameResponse"
+      },
+      "H2HMeetingDetail": {
+        "properties": {
+          "date_iso": {
+            "type": "string",
+            "title": "Date Iso"
+          },
+          "home_team_name": {
+            "type": "string",
+            "title": "Home Team Name"
+          },
+          "away_team_name": {
+            "type": "string",
+            "title": "Away Team Name"
+          },
+          "home_score": {
+            "type": "integer",
+            "title": "Home Score"
+          },
+          "away_score": {
+            "type": "integer",
+            "title": "Away Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date_iso",
+          "home_team_name",
+          "away_team_name",
+          "home_score",
+          "away_score"
+        ],
+        "title": "H2HMeetingDetail"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HistoricalBackfillBody": {
+        "properties": {
+          "seasons_back": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Seasons Back",
+            "description": "Number of prior seasons to sync in addition to the current season (e.g. 2 \u2192 3 seasons total).",
+            "default": 2
+          },
+          "leagues": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leagues",
+            "description": "Optional league filter (e.g. ['nfl','nba','premier_league']). Default: all configured leagues."
+          },
+          "min_decisive_target": {
+            "type": "integer",
+            "maximum": 5000.0,
+            "minimum": 50.0,
+            "title": "Min Decisive Target",
+            "description": "Report leagues with at least this many decisive finished games in DB.",
+            "default": 500
+          },
+          "run_predictions": {
+            "type": "boolean",
+            "title": "Run Predictions",
+            "description": "After sync, run prediction job on recently finished games (see include_recent_finished_days).",
+            "default": false
+          },
+          "include_recent_finished_days": {
+            "type": "integer",
+            "maximum": 730.0,
+            "minimum": 0.0,
+            "title": "Include Recent Finished Days",
+            "description": "When run_predictions=true, backfill predictions for finished games in the last N days.",
+            "default": 365
+          }
+        },
+        "type": "object",
+        "title": "HistoricalBackfillBody",
+        "description": "M-07: ingest prior seasons of finished games for training / backtest."
+      },
+      "LiveSyncBody": {
+        "properties": {
+          "min_minutes_live": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Min Minutes Live",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "title": "LiveSyncBody"
+      },
+      "LogoutRequest": {
+        "properties": {
+          "refresh_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refresh Token"
+          },
+          "access_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Access Token"
+          }
+        },
+        "type": "object",
+        "title": "LogoutRequest"
+      },
+      "MarketOddsResponse": {
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "sport_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sport Key"
+          },
+          "book_count": {
+            "type": "integer",
+            "title": "Book Count",
+            "default": 0
+          },
+          "consensus": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConsensusLine"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "model_comparison": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelMarketComparison"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "disclaimer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disclaimer"
+          },
+          "fetched_at_iso": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fetched At Iso"
+          }
+        },
+        "type": "object",
+        "required": [
+          "available"
+        ],
+        "title": "MarketOddsResponse"
+      },
+      "MessageResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "MessageResponse"
+      },
+      "MetricComparisonRow": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "home_display": {
+            "type": "string",
+            "title": "Home Display"
+          },
+          "away_display": {
+            "type": "string",
+            "title": "Away Display"
+          },
+          "footnote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Footnote"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "home_display",
+          "away_display"
+        ],
+        "title": "MetricComparisonRow"
+      },
+      "ModelMarketComparison": {
+        "properties": {
+          "model_home_win_prob": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Home Win Prob"
+          },
+          "market_home_implied_prob": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market Home Implied Prob"
+          },
+          "home_edge_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Edge Pct"
+          },
+          "edge_label": {
+            "type": "string",
+            "enum": [
+              "model_leans_home",
+              "model_leans_away",
+              "aligned",
+              "unavailable"
+            ],
+            "title": "Edge Label",
+            "default": "unavailable"
+          }
+        },
+        "type": "object",
+        "title": "ModelMarketComparison"
+      },
+      "ParlayCheckBody": {
+        "properties": {
+          "game_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 16,
+            "minItems": 1,
+            "title": "Game Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "game_ids"
+        ],
+        "title": "ParlayCheckBody"
+      },
+      "PlayerSpotlightDetail": {
+        "properties": {
+          "player_name": {
+            "type": "string",
+            "title": "Player Name"
+          },
+          "team_name": {
+            "type": "string",
+            "title": "Team Name"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_name",
+          "team_name",
+          "summary"
+        ],
+        "title": "PlayerSpotlightDetail"
+      },
+      "PlayerSpotlightItem": {
+        "properties": {
+          "player_name": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Player Name"
+          },
+          "team_name": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Team Name"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 8000,
+            "title": "Summary"
+          },
+          "sort_order": {
+            "type": "integer",
+            "title": "Sort Order",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_name",
+          "team_name",
+          "summary"
+        ],
+        "title": "PlayerSpotlightItem"
+      },
+      "PredictionExplanationResponse": {
+        "properties": {
+          "top_features": {
+            "items": {
+              "$ref": "#/components/schemas/FeatureImportance"
+            },
+            "type": "array",
+            "title": "Top Features"
+          },
+          "confidence_explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence Explanation"
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version"
+          },
+          "prediction_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prediction Source"
+          },
+          "accuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accuracy"
+          },
+          "data_quality_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Quality Score"
+          },
+          "data_quality_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Quality Label"
+          },
+          "quality_gate_applied": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Gate Applied"
+          },
+          "quality_reasons": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Reasons"
+          },
+          "rich_analysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RichAnalysisSections"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "structured_analysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StructuredGameAnalysis"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "top_features",
+          "model_version"
+        ],
+        "title": "PredictionExplanationResponse"
+      },
+      "PredictionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "game_id": {
+            "type": "string",
+            "title": "Game Id"
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version"
+          },
+          "prediction_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prediction Source"
+          },
+          "home_win_probability": {
+            "type": "number",
+            "title": "Home Win Probability"
+          },
+          "away_win_probability": {
+            "type": "number",
+            "title": "Away Win Probability"
+          },
+          "expected_home_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Home Score"
+          },
+          "expected_away_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Away Score"
+          },
+          "confidence_level": {
+            "type": "string",
+            "title": "Confidence Level"
+          },
+          "data_quality_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Quality Score"
+          },
+          "data_quality_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Quality Label"
+          },
+          "quality_gate_applied": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Gate Applied"
+          },
+          "quality_reasons": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Reasons"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "standings_last_updated_iso": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Standings Last Updated Iso"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "game_id",
+          "model_version",
+          "home_win_probability",
+          "away_win_probability",
+          "confidence_level",
+          "created_at"
+        ],
+        "title": "PredictionResponse"
+      },
+      "PredictionRunBody": {
+        "properties": {
+          "game_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Game Ids"
+          },
+          "force": {
+            "type": "boolean",
+            "title": "Force",
+            "default": false
+          },
+          "min_minutes_scheduled": {
+            "type": "integer",
+            "maximum": 1440.0,
+            "minimum": 1.0,
+            "title": "Min Minutes Scheduled",
+            "default": 45
+          },
+          "min_minutes_live": {
+            "type": "integer",
+            "maximum": 120.0,
+            "minimum": 1.0,
+            "title": "Min Minutes Live",
+            "default": 2
+          },
+          "include_recent_finished_days": {
+            "type": "integer",
+            "maximum": 365.0,
+            "minimum": 0.0,
+            "title": "Include Recent Finished Days",
+            "description": "Backfill pre-kickoff predictions on finished games in the last N days (accuracy/calibration).",
+            "default": 0
+          },
+          "leagues": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leagues",
+            "description": "Optional league filter (e.g. ['premier_league'])."
+          }
+        },
+        "type": "object",
+        "title": "PredictionRunBody"
+      },
+      "ProbabilityTrendPoint": {
+        "properties": {
+          "timestamp_iso": {
+            "type": "string",
+            "title": "Timestamp Iso"
+          },
+          "home_win_probability": {
+            "type": "number",
+            "title": "Home Win Probability"
+          },
+          "away_win_probability": {
+            "type": "number",
+            "title": "Away Win Probability"
+          },
+          "draw_probability": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draw Probability"
+          },
+          "confidence_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence Level"
+          }
+        },
+        "type": "object",
+        "required": [
+          "timestamp_iso",
+          "home_win_probability",
+          "away_win_probability"
+        ],
+        "title": "ProbabilityTrendPoint"
+      },
+      "ReferralApplyBody": {
+        "properties": {
+          "referral_code": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 8,
+            "title": "Referral Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "referral_code"
+        ],
+        "title": "ReferralApplyBody"
+      },
+      "RefreshTokenRequest": {
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "refresh_token"
+        ],
+        "title": "RefreshTokenRequest"
+      },
+      "ReplacePlayerSpotlightsBody": {
+        "properties": {
+          "spotlights": {
+            "items": {
+              "$ref": "#/components/schemas/PlayerSpotlightItem"
+            },
+            "type": "array",
+            "title": "Spotlights"
+          }
+        },
+        "type": "object",
+        "title": "ReplacePlayerSpotlightsBody",
+        "description": "Full replace: existing rows for this game are deleted, then these are inserted."
+      },
+      "ResetPasswordRequest": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "password"
+        ],
+        "title": "ResetPasswordRequest"
+      },
+      "RichAnalysisSections": {
+        "properties": {
+          "real_time_analysis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Real Time Analysis"
+          },
+          "form_standings": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Form Standings"
+          },
+          "head_to_head": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Head To Head"
+          },
+          "key_players": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Players"
+          },
+          "tactical": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tactical"
+          },
+          "h2h_history": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "H2H History"
+          },
+          "standings_context": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Standings Context"
+          },
+          "advanced_metrics": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Advanced Metrics"
+          },
+          "scenario_outcomes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Outcomes"
+          }
+        },
+        "type": "object",
+        "title": "RichAnalysisSections",
+        "description": "Optional narrative sections from job pipeline, DB context, and generated scenarios."
+      },
+      "StandingsRowDetail": {
+        "properties": {
+          "team_name": {
+            "type": "string",
+            "title": "Team Name"
+          },
+          "league_rank": {
+            "type": "integer",
+            "title": "League Rank"
+          },
+          "played": {
+            "type": "integer",
+            "title": "Played"
+          },
+          "wins": {
+            "type": "integer",
+            "title": "Wins"
+          },
+          "draws": {
+            "type": "integer",
+            "title": "Draws"
+          },
+          "losses": {
+            "type": "integer",
+            "title": "Losses"
+          },
+          "points": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Points"
+          },
+          "goals_for": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goals For"
+          },
+          "goals_against": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goals Against"
+          },
+          "goal_difference": {
+            "type": "integer",
+            "title": "Goal Difference"
+          }
+        },
+        "type": "object",
+        "required": [
+          "team_name",
+          "league_rank",
+          "played",
+          "wins",
+          "draws",
+          "losses",
+          "goal_difference"
+        ],
+        "title": "StandingsRowDetail"
+      },
+      "StructuredGameAnalysis": {
+        "properties": {
+          "league_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "League Label"
+          },
+          "standings_rows": {
+            "items": {
+              "$ref": "#/components/schemas/StandingsRowDetail"
+            },
+            "type": "array",
+            "title": "Standings Rows"
+          },
+          "h2h_meetings": {
+            "items": {
+              "$ref": "#/components/schemas/H2HMeetingDetail"
+            },
+            "type": "array",
+            "title": "H2H Meetings"
+          },
+          "h2h_series_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "H2H Series Summary"
+          },
+          "metric_comparisons": {
+            "items": {
+              "$ref": "#/components/schemas/MetricComparisonRow"
+            },
+            "type": "array",
+            "title": "Metric Comparisons"
+          },
+          "probability_trend": {
+            "items": {
+              "$ref": "#/components/schemas/ProbabilityTrendPoint"
+            },
+            "type": "array",
+            "title": "Probability Trend"
+          },
+          "recent_form_snapshot": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recent Form Snapshot"
+          },
+          "player_spotlights": {
+            "items": {
+              "$ref": "#/components/schemas/PlayerSpotlightDetail"
+            },
+            "type": "array",
+            "title": "Player Spotlights"
+          },
+          "data_freshness_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Freshness Note"
+          },
+          "provider_context_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Context Note"
+          },
+          "data_coverage_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Coverage Note"
+          }
+        },
+        "type": "object",
+        "title": "StructuredGameAnalysis",
+        "description": "Tabular / card-friendly breakdown; narrative remains in rich_analysis."
+      },
+      "TeamResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "league": {
+            "type": "string",
+            "title": "League"
+          },
+          "abbreviation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Abbreviation"
+          },
+          "logo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "league"
+        ],
+        "title": "TeamResponse"
+      },
+      "Token": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "refresh_token"
+        ],
+        "title": "Token"
+      },
+      "TrainModelBody": {
+        "properties": {
+          "out_dir": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Out Dir",
+            "description": "Directory for simple_model.pkl + feature_columns.pkl + metrics.json. Defaults to MODEL_ARTIFACT_DIR / EXPLANATION_MODEL_DIR."
+          },
+          "test_frac": {
+            "type": "number",
+            "maximum": 0.5,
+            "minimum": 0.05,
+            "title": "Test Frac",
+            "default": 0.2
+          },
+          "min_games": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 10.0,
+            "title": "Min Games",
+            "default": 60
+          },
+          "min_publish_holdout_per_league_group": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Publish Holdout Per League Group",
+            "description": "Min decisive corpus games per league group before writing pickles (default from settings)."
+          },
+          "force": {
+            "type": "boolean",
+            "title": "Force",
+            "description": "Train even when usable games < min_games.",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "TrainModelBody",
+        "description": "Train sklearn artifacts from finished games in the DB."
+      },
+      "UserCreate": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "UserCreate"
+      },
+      "UserResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "subscription_tier": {
+            "type": "string",
+            "title": "Subscription Tier"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "subscription_tier",
+          "created_at"
+        ],
+        "title": "UserResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "OAuth2PasswordBearer": {
+        "type": "oauth2",
+        "flows": {
+          "password": {
+            "scopes": {},
+            "tokenUrl": "/api/v1/auth/login"
+          }
+        }
+      },
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

@@ -16,6 +16,9 @@ def get_feature_flags() -> dict[str, bool]:
         "player_props": _truthy(os.getenv("FEATURE_PLAYER_PROPS", "false")),
         "referral_program": _truthy(os.getenv("FEATURE_REFERRAL_PROGRAM", "true")),
         "email_digest": _truthy(os.getenv("FEATURE_EMAIL_DIGEST", "false")),
+        "parlay_correlation_warnings": _truthy(
+            os.getenv("FEATURE_PARLAY_WARNINGS", "true")
+        ),
     }
 
 

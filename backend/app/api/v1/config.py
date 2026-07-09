@@ -34,5 +34,14 @@ async def read_feature_flags(
         "paywall_price_tier": _experiment_variant(
             user_key, "paywall_price", ("standard", "discount")
         ),
+        "intro_offer_variant": _experiment_variant(
+            user_key, "intro_offer", ("none", "winback_20pct")
+        ),
+        "ad_density": _experiment_variant(
+            user_key, "ad_density", ("standard", "reduced")
+        ),
+        "rewarded_ads_messaging": _experiment_variant(
+            user_key, "rewarded_ads", ("premium_focus", "rewarded_unlock")
+        ),
     }
     return {"flags": flags}

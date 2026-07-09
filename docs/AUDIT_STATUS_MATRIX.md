@@ -9,12 +9,12 @@ Legend: ✅ done · 🟡 partial · ❌ not implemented · 🚫 blocked (externa
 
 | Metric | Weaknesses (50) | Improvements (100) | Combined (150) |
 |--------|-----------------|--------------------|----------------|
-| ✅ Done | 32 | 48 | 80 |
-| 🟡 Partial | 16 | 29 | 45 |
-| ❌ Open | 0 | 14 | 14 |
+| ✅ Done | 32 | 50 | 82 |
+| 🟡 Partial | 16 | 32 | 48 |
+| ❌ Open | 0 | 9 | 9 |
 | 🚫 Blocked | 2 | 9 | 11 |
 
-**Implementable coverage:** 73.7% — `(done + 0.5×partial) / (150 − blocked)`
+**Implementable coverage:** 76.3% — `(done + 0.5×partial) / (150 − blocked)`
 
 Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added for subscription utils.
 
@@ -25,7 +25,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | ID | Title | Status | State | Evidence |
 |----|-------|--------|-------|----------|
 | W1 | Free-tier daily limit trivially bypassed | ✅ | done | backend/app/services/free_tier_limits.py, backend/tests/test_free_tier_prediction_limits.py |
-| W2 | Marketing/docs claim ensemble/deep AI; prod is logistic regression | 🟡 | partial | ARCHITECTURE.md still aspirational; mobile/docs/APP_STORE_METADATA_COPY.md accurate |
+| W2 | Marketing/docs claim ensemble/deep AI; prod is logistic regression | 🟡 | partial | docs/PRODUCTION_REALITY.md + ARCHITECTURE.md banner |
 | W3 | Single VPS — total SPOF | 🚫 | blocked | Single VPS docker-compose.prod.yml; HA needs second region/instances |
 | W4 | No offsite DB backups in cron | 🟡 | partial | scripts/run_pg_backup.sh, scripts/setup_offsite_backup.sh — PH2-005 blocked on DO Spaces write keys |
 | W5 | `/internal` routes may be internet-exposed | ✅ | done | deploy/nginx-deny-internal-snippet.conf, backend/tests/test_nginx_deny_internal.py |
@@ -108,7 +108,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I25 | Per-league model dir in explanation endpoint | ✅ | done | explanation per-league model dir |
 | I26 | Commit `metrics.json` schema example | 🟡 | partial | backend/models/metrics.json example |
 | I27 | Archive stale `ml/` and Rust services | 🟡 | partial | archive/README.md |
-| I28 | Update ARCHITECTURE.md to match reality | 🟡 | partial | ARCHITECTURE.md |
+| I28 | Update ARCHITECTURE.md to match reality | 🟡 | partial | docs/PRODUCTION_REALITY.md canonical prod facts |
 | I29 | Market odds as benchmark in backtest | 🟡 | partial | walk_forward_backtest market_benchmark note + /stats/model-vs-market live |
 | I30 | Per-league calibration minimum samples | ✅ | done | model_training calibration mins |
 | I31 | React Query for server state | ✅ | done | mobile React Query hooks |
@@ -146,7 +146,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I63 | Closing line value tracker | ❌ | open | CLV tracker |
 | I64 | “Model vs market” dashboard | ✅ | done | GET /stats/model-vs-market, web/model-vs-market.html |
 | I65 | Player props (when licensed) | 🟡 | partial | player_props_service behind FEATURE_PLAYER_PROPS |
-| I66 | Parlay correlation warnings | ❌ | open | Parlay correlation warnings |
+| I66 | Parlay correlation warnings | ✅ | done | parlay_correlation_service.py, POST /tools/parlay-correlation |
 | I67 | Email digest: daily picks | 🟡 | partial | email_digest_service.py + /internal/email-digest/run; SMTP required |
 | I68 | Watchlist sync across devices | 🟡 | partial | favorites API sync; no conflict resolution UI |
 | I69 | iPad-optimized layouts | 🟡 | partial | iPad screenshots; layouts not fully optimized |
@@ -159,7 +159,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I76 | E2E Detox for paywall flow | 🟡 | partial | mobile/e2e/paywall.e2e.ts + docs/DETOX_E2E.md skeleton |
 | I77 | Feature flags service (LaunchDarkly/PostHog) | ✅ | done | backend/app/services/feature_flags.py, GET /config/feature-flags |
 | I78 | API v2 planning doc | ✅ | done | docs/API_V2_PLAN.md |
-| I79 | OpenAPI client codegen for mobile | ❌ | open | mobile uses hand-written api.ts |
+| I79 | OpenAPI client codegen for mobile | ✅ | done | export_openapi.py, docs/OPENAPI_CODEGEN.md, mobile codegen:api |
 | I80 | Delete dead code paths | 🟡 | partial | archive/; legacy services/users |
 | I81 | GDPR data export endpoint | ✅ | done | GET /user/me/export, gdpr_export_service.py |
 | I82 | CCPA opt-out flow | ✅ | done | POST /user/me/privacy/ccpa-opt-out |
@@ -168,9 +168,9 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I85 | App Privacy nutrition label review quarterly | 🚫 | blocked | Quarterly ASC privacy label — manual process |
 | I86 | A/B test trial length (7 vs 14 days) | 🟡 | partial | experiments.trial_length_days in /config/feature-flags |
 | I87 | A/B test price ($19.99 vs $29.99) | 🟡 | partial | experiments.paywall_price_tier in /config/feature-flags |
-| I88 | Intro offer for lapsed users | ❌ | open | Lapsed user intro offer |
-| I89 | Rewarded ads vs premium messaging test | ❌ | open | Rewarded ads A/B |
-| I90 | Ad density test on free tier | ❌ | open | Ad density A/B |
+| I88 | Intro offer for lapsed users | 🟡 | partial | intro_offer_variant experiment bucket in /config/feature-flags |
+| I89 | Rewarded ads vs premium messaging test | 🟡 | partial | rewarded_ads_messaging experiment bucket |
+| I90 | Ad density test on free tier | 🟡 | partial | ad_density experiment bucket |
 | I91 | Proprietary historical feature store | ❌ | open | Feature store |
 | I92 | User pick tracking vs model (Brier per user) | ❌ | open | Per-user Brier tracking |
 | I93 | Community predictions vs model | ❌ | open | Community predictions |

@@ -131,6 +131,16 @@ Master backlog from technical due diligence (2026-07-04).
 | PH4-004 | Age gate (17+) | I84 | done |
 | PH4-005 | Weekly scorecard web page | I49 | done |
 
+## Phase 5 — Transparency & codegen
+
+| ID | Task | Audit ref | Status |
+|----|------|-----------|--------|
+| PH5-001 | Parlay correlation warnings API | I66 | done |
+| PH5-002 | OpenAPI export + mobile codegen | I79 | done |
+| PH5-003 | Production reality doc + ARCHITECTURE banner | W2, I28 | done |
+| PH5-004 | Monetization experiment buckets | I88–I90 | done |
+| PH5-005 | Server feature flags hook (mobile) | I77 | done |
+
 ---
 
 ## Completed
