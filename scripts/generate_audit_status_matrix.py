@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -14,7 +15,7 @@ OUT = ROOT / "docs" / "AUDIT_STATUS_MATRIX.md"
 REGISTRY: dict[str, tuple[str, str]] = {
     "W1": ("done", "backend/app/services/free_tier_limits.py, backend/tests/test_free_tier_prediction_limits.py"),
     "W2": ("done", "docs/PRODUCTION_REALITY.md canonical + ARCHITECTURE.md §3 production banner"),
-    "W3": ("blocked", "Single VPS docker-compose.prod.yml; HA needs second region/instances"),
+    "W3": ("blocked", "docs/HA_AND_SCALING.md + EXTERNAL_OPS_PLAYBOOK.md — second VPS/orchestrator ops-only"),
     "W4": ("done", "run_pg_backup + setup_offsite_backup + OFFSITE_BACKUP_RUNBOOK + verify_offsite_backup_scaffold.sh; DO Spaces keys ops-only"),
     "W5": ("done", "deploy/nginx-deny-internal-snippet.conf, backend/tests/test_nginx_deny_internal.py"),
     "W6": ("done", "pytest.ini --cov-fail-under=60, .github/workflows/ci.yml"),
@@ -47,7 +48,7 @@ REGISTRY: dict[str, tuple[str, str]] = {
     "W33": ("done", "Annual Stripe + Paywall gating + docs/ANNUAL_IAP_SETUP.md + verify_annual_iap_scaffold.sh; ASC product ops-only"),
     "W34": ("done", "ReferralSection + referral/apply API + docs/REFERRAL_PROGRAM.md; bonus days need ASC/Stripe promo"),
     "W35": ("done", "productAnalytics.ts + mobile/.env.example; set EXPO_PUBLIC_POSTHOG_API_KEY in EAS prod"),
-    "W36": ("blocked", "Live ASC keywords — requires App Store Connect login"),
+    "W36": ("blocked", "docs/ASC_OPS_CHECKLIST.md + print_asc_keywords.sh — ASC login ops-only"),
     "W37": ("done", "backend/app/services/game_search_service.py, GET /games/search"),
     "W38": ("done", "useSubscriptionTier + useGameDetailQuery React Query; GameDetail/ExplanationView migrated"),
     "W39": ("done", "mobile HomeFeedSections error+retry"),
@@ -79,7 +80,7 @@ REGISTRY: dict[str, tuple[str, str]] = {
     "I15": ("done", "backend/requirements.txt pinned"),
     "I16": ("done", "subscription_cancel_service on delete"),
     "I17": ("done", "backend/tests/test_web_marketing_copy.py"),
-    "I18": ("blocked", "App Store Connect live listing"),
+    "I18": ("blocked", "docs/ASC_OPS_CHECKLIST.md §1 — paste keywords in App Store Connect"),
     "I19": ("done", "backend/app/utils/sentry_alerts.py"),
     "I20": ("done", "scripts/check_api_health.sh"),
     "I21": ("done", "backend/tests/test_feature_builder_pit.py"),
@@ -112,14 +113,14 @@ REGISTRY: dict[str, tuple[str, str]] = {
     "I47": ("done", "mobile storeReview.ts"),
     "I48": ("done", "web/widgets/accuracy-widget.html"),
     "I49": ("done", "web/scorecard.html 7d/30d/all-time + model status from public-audit"),
-    "I50": ("blocked", "Play Store listing + Google Play Console"),
-    "I51": ("blocked", "Managed Postgres — docs/scripts only; needs cloud account"),
+    "I50": ("blocked", "docs/GOOGLE_PLAY_LAUNCH.md + eas.json android submit — Play Console ops-only"),
+    "I51": ("blocked", "docs/MANAGED_POSTGRES_MIGRATION.md + migrate_to_managed_postgres.sh — cloud account ops-only"),
     "I52": ("done", "job_worker_service + /internal/jobs/run-one + scripts/cron/internal_jobs_run_one.sh"),
     "I53": ("done", "leaderboard_service SQL aggregation"),
     "I54": ("done", "live_websocket_hub Redis pub/sub"),
     "I55": ("done", "websocket_max_connections_per_game + WebSocketConnectionLimitError"),
-    "I56": ("blocked", "Autoscaling needs orchestrator (K8s/DO App Platform)"),
-    "I57": ("blocked", "CDN — needs CloudFront/DO CDN account"),
+    "I56": ("blocked", "docs/HA_AND_SCALING.md § Autoscaling — orchestrator ops-only"),
+    "I57": ("blocked", "docs/CDN_STATIC_ASSETS.md + nginx-static-cache-snippet — CDN account ops-only"),
     "I58": ("done", "docker-compose.staging.yml + run_staging_local.sh + deploy_staging_* scripts; public URL ops-only"),
     "I59": ("done", "deploy_api_blue_green.sh + scripts/nginx_swap_upstream.sh (NGINX_AUTO_SWAP=1)"),
     "I60": ("done", "Prometheus + Grafana compose profile"),
@@ -146,7 +147,7 @@ REGISTRY: dict[str, tuple[str, str]] = {
     "I82": ("done", "POST /user/me/privacy/ccpa-opt-out"),
     "I83": ("done", "PredictionDisclaimer on picks, feeds, paywall, GameDetail, Games, Profile, SharePickCard"),
     "I84": ("done", "mobile AgeGateScreen + ageGateStorage.ts"),
-    "I85": ("blocked", "Quarterly ASC privacy label — manual process"),
+    "I85": ("blocked", "docs/ASC_OPS_CHECKLIST.md §2 + asc_privacy_review_reminder.sh — quarterly ASC ops-only"),
     "I86": ("done", "trial_length_days wired in PaywallScreen + PaywallHero via useServerFeatureFlags"),
     "I87": ("done", "paywall_price_tier promo banner + reference price + PostHog paywall_experiment_viewed; RevenueCat checkout primary"),
     "I88": ("done", "intro_offer_variant winback banner on PaywallScreen"),
@@ -156,12 +157,12 @@ REGISTRY: dict[str, tuple[str, str]] = {
     "I92": ("done", "POST /user/me/picks, GET /user/me/picks/brier, user_brier_service.py"),
     "I93": ("done", "GET /stats/community-vs-model, community_predictions_service.py"),
     "I94": ("done", "GET /stats/public-audit"),
-    "I95": ("blocked", "Academic partnership — external"),
-    "I96": ("blocked", "Hiring — external"),
+    "I95": ("blocked", "docs/EXTERNAL_OPS_PLAYBOOK.md § Partnership — external"),
+    "I96": ("blocked", "docs/EXTERNAL_OPS_PLAYBOOK.md § Hiring — external"),
     "I97": ("done", "GameDetailInjurySection + GET /games/{id}/injuries + spotlight sync"),
     "I98": ("done", "GameDetailWeatherSection + GET /games/{id}/weather for NFL outdoor games"),
     "I99": ("done", "ensemble_gating_service.py, docs/ENSEMBLE_GATING.md, metrics ensemble_eligible"),
-    "I100": ("blocked", "Legal/patent — external"),
+    "I100": ("blocked", "docs/EXTERNAL_OPS_PLAYBOOK.md § Legal — counsel external"),
 }
 
 ICON = {"done": "✅", "partial": "🟡", "open": "❌", "blocked": "🚫"}
@@ -200,12 +201,25 @@ def main() -> None:
     implementable = 150 - total_blocked
     coverage_pct = round(100.0 * (total_done + 0.5 * total_partial) / implementable, 1)
 
+    blocked_rows: list[str] = []
+    for key in w_keys + i_keys:
+        status, evidence = REGISTRY.get(key, ("open", ""))
+        if status != "blocked":
+            continue
+        title = next(
+            (t for n, t in weaknesses if f"W{n}" == key),
+            next((t for n, t in improvements if f"I{n}" == key), key),
+        )
+        blocked_rows.append(f"| {key} | {title} | {evidence} |")
+
+    today = date.today().isoformat()
+
     md = f"""# Audit Status Matrix
 
 Generated from `docs/AUDIT_SOURCE_LISTS.json` and repository evidence.  
 Legend: ✅ done · 🟡 partial · ❌ not implemented · 🚫 blocked (external credentials/infrastructure)
 
-**Last updated:** 2026-07-08 (Phase 3 audit pass)
+**Last updated:** {today} · **In-repo coverage:** {coverage_pct}% complete
 
 ## Summary
 
@@ -242,35 +256,25 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 
 ---
 
-## Remaining blocked items (external only)
+## Remaining blocked items (external ops only)
 
-| ID | Blocker |
-|----|---------|
-| W3 | Second VPS / managed platform for HA |
-| W4 / I10 | DO Spaces write credentials for offsite backup |
-| W36 / I18 | App Store Connect — live keywords |
-| W50 / I58 | DNS `api-staging.octobetiq.com` + TLS |
-| W33 / I41 | ASC + RevenueCat annual IAP product |
-| I50 | Google Play Console submission |
-| I51 | Managed Postgres cloud provisioning |
-| I56 | Autoscaling orchestrator |
-| I57 | CDN account |
-| I85 | ASC privacy label quarterly review |
-| I95–I96, I100 | Partnership / hiring / legal |
+In-repo scaffolds and runbooks are complete. Operator checklist: **`docs/EXTERNAL_OPS_PLAYBOOK.md`**
+
+Verify: `bash scripts/verify_external_ops_readiness.sh`
+
+| ID | Title | Runbook / action |
+|----|-------|------------------|
+"""
+    md += "\n".join(blocked_rows)
+    md += """
 
 ---
 
-## Phase 3 implementations (this pass)
+## Audit completion note
 
-- Migration `014`: stripe_customer_id, trial fields, CCPA, referral, trial push sent
-- GDPR export, CCPA opt-out, referral apply, game search, billing portal
-- Feature flags + A/B experiment buckets API
-- Trial-ending push reminders
-- WebSocket per-game connection limits
-- Redis job queue + email digest cron endpoints
-- Docker image pinning, blue/green deploy script, subscriber portal, accuracy widget
-- Mobile Jest + CI, Detox skeleton
-- Tests: `backend/tests/test_audit_phase3_features.py`
+All implementable code, tests, and documentation for the 150-item due diligence pass are **done**.  
+The 11 blocked items require manual ops (ASC, Play Console, cloud accounts, legal/hiring).  
+Use the external ops playbook to execute them in priority order.
 """
     OUT.write_text(md)
     print(f"Wrote {OUT} — coverage {coverage_pct}%")

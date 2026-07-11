@@ -58,5 +58,7 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # API uptime probe (/health + /ready) every 5 minutes
 */5 * * * * /root/sport_prediction/scripts/check_api_health.sh >>/var/log/api_health.log 2>&1
 
-# Staging API uptime (after ./scripts/deploy_staging_public_url.sh)
+# Quarterly ASC App Privacy review (I85) — 9am UTC on 15th of Jan/Apr/Jul/Oct
+0 9 15 1,4,7,10 * /root/sport_prediction/scripts/asc_privacy_review_reminder.sh >>/var/log/asc_privacy_review.log 2>&1
+
 # */10 * * * * /root/sport_prediction/scripts/check_staging_health.sh >>/var/log/staging_health.log 2>&1

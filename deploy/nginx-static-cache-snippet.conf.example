@@ -1,0 +1,18 @@
+# Optional nginx cache headers for static web assets (I57).
+# Include inside the www/landing server block.
+#
+#   include /etc/nginx/snippets/octobetiq-static-cache.conf;
+
+location ~* \.(html|css|js|png|jpg|jpeg|webp|svg|ico|woff2?)$ {
+    expires 1h;
+    add_header Cache-Control "public, max-age=3600";
+}
+
+location /web/ {
+    alias /var/www/octobetiq/web/;
+    expires 1h;
+    add_header Cache-Control "public, max-age=3600";
+}
+
+# Never cache API (ensure api.octobetiq.com server block has):
+# add_header Cache-Control "no-store, no-cache, must-revalidate" always;

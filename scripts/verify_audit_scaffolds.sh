@@ -17,4 +17,7 @@ bash scripts/verify_staging_scaffold.sh
 echo "[audit-scaffolds] Detox..."
 bash scripts/verify_detox_scaffold.sh
 
+echo "[audit-scaffolds] External ops runbooks..."
+bash scripts/verify_external_ops_readiness.sh
+
 echo "[audit-scaffolds] All scaffolds OK."

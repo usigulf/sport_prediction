@@ -3,7 +3,7 @@
 Generated from `docs/AUDIT_SOURCE_LISTS.json` and repository evidence.  
 Legend: ✅ done · 🟡 partial · ❌ not implemented · 🚫 blocked (external credentials/infrastructure)
 
-**Last updated:** 2026-07-08 (Phase 3 audit pass)
+**Last updated:** 2026-07-11 · **In-repo coverage:** 100.0% complete
 
 ## Summary
 
@@ -26,7 +26,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 |----|-------|--------|-------|----------|
 | W1 | Free-tier daily limit trivially bypassed | ✅ | done | backend/app/services/free_tier_limits.py, backend/tests/test_free_tier_prediction_limits.py |
 | W2 | Marketing/docs claim ensemble/deep AI; prod is logistic regression | ✅ | done | docs/PRODUCTION_REALITY.md canonical + ARCHITECTURE.md §3 production banner |
-| W3 | Single VPS — total SPOF | 🚫 | blocked | Single VPS docker-compose.prod.yml; HA needs second region/instances |
+| W3 | Single VPS — total SPOF | 🚫 | blocked | docs/HA_AND_SCALING.md + EXTERNAL_OPS_PLAYBOOK.md — second VPS/orchestrator ops-only |
 | W4 | No offsite DB backups in cron | ✅ | done | run_pg_backup + setup_offsite_backup + OFFSITE_BACKUP_RUNBOOK + verify_offsite_backup_scaffold.sh; DO Spaces keys ops-only |
 | W5 | `/internal` routes may be internet-exposed | ✅ | done | deploy/nginx-deny-internal-snippet.conf, backend/tests/test_nginx_deny_internal.py |
 | W6 | ~27% test coverage | ✅ | done | pytest.ini --cov-fail-under=60, .github/workflows/ci.yml |
@@ -59,7 +59,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | W33 | No annual subscription | ✅ | done | Annual Stripe + Paywall gating + docs/ANNUAL_IAP_SETUP.md + verify_annual_iap_scaffold.sh; ASC product ops-only |
 | W34 | No referral program | ✅ | done | ReferralSection + referral/apply API + docs/REFERRAL_PROGRAM.md; bonus days need ASC/Stripe promo |
 | W35 | No product analytics pipeline | ✅ | done | productAnalytics.ts + mobile/.env.example; set EXPO_PUBLIC_POSTHOG_API_KEY in EAS prod |
-| W36 | Keywords typo “ports” on live listing | 🚫 | blocked | Live ASC keywords — requires App Store Connect login |
+| W36 | Keywords typo “ports” on live listing | 🚫 | blocked | docs/ASC_OPS_CHECKLIST.md + print_asc_keywords.sh — ASC login ops-only |
 | W37 | No full-text search | ✅ | done | backend/app/services/game_search_service.py, GET /games/search |
 | W38 | Duplicate tier/profile fetches per screen | ✅ | done | useSubscriptionTier + useGameDetailQuery React Query; GameDetail/ExplanationView migrated |
 | W39 | Silent error swallowing on feeds | ✅ | done | mobile HomeFeedSections error+retry |
@@ -98,7 +98,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I15 | Pin backend dependencies | ✅ | done | backend/requirements.txt pinned |
 | I16 | Cancel subscriptions on account delete | ✅ | done | subscription_cancel_service on delete |
 | I17 | Remove unsourced “62%+” from web copy | ✅ | done | backend/tests/test_web_marketing_copy.py |
-| I18 | Fix live keywords `ports` → `sports` | 🚫 | blocked | App Store Connect live listing |
+| I18 | Fix live keywords `ports` → `sports` | 🚫 | blocked | docs/ASC_OPS_CHECKLIST.md §1 — paste keywords in App Store Connect |
 | I19 | Sentry alerts on webhook failures | ✅ | done | backend/app/utils/sentry_alerts.py |
 | I20 | Uptime monitoring on `/health` + `/stats/model` | ✅ | done | scripts/check_api_health.sh |
 | I21 | PIT-only features at inference; no current standings fallback in prod | ✅ | done | backend/tests/test_feature_builder_pit.py |
@@ -130,14 +130,14 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I47 | App Store review prompt after positive accuracy session | ✅ | done | mobile storeReview.ts |
 | I48 | Public embed: accuracy widget for octobetiq.com | ✅ | done | web/widgets/accuracy-widget.html |
 | I49 | Blog: weekly transparent scorecard | ✅ | done | web/scorecard.html 7d/30d/all-time + model status from public-audit |
-| I50 | Android Play Store launch | 🚫 | blocked | Play Store listing + Google Play Console |
-| I51 | Managed Postgres (RDS/DO managed) | 🚫 | blocked | Managed Postgres — docs/scripts only; needs cloud account |
+| I50 | Android Play Store launch | 🚫 | blocked | docs/GOOGLE_PLAY_LAUNCH.md + eas.json android submit — Play Console ops-only |
+| I51 | Managed Postgres (RDS/DO managed) | 🚫 | blocked | docs/MANAGED_POSTGRES_MIGRATION.md + migrate_to_managed_postgres.sh — cloud account ops-only |
 | I52 | Celery/ARQ job queue | ✅ | done | job_worker_service + /internal/jobs/run-one + scripts/cron/internal_jobs_run_one.sh |
 | I53 | SQL aggregation for leaderboards | ✅ | done | leaderboard_service SQL aggregation |
 | I54 | WebSocket pub/sub via Redis | ✅ | done | live_websocket_hub Redis pub/sub |
 | I55 | Connection limits on WS | ✅ | done | websocket_max_connections_per_game + WebSocketConnectionLimitError |
-| I56 | API autoscaling (2+ instances) | 🚫 | blocked | Autoscaling needs orchestrator (K8s/DO App Platform) |
-| I57 | CloudFront/CDN for static | 🚫 | blocked | CDN — needs CloudFront/DO CDN account |
+| I56 | API autoscaling (2+ instances) | 🚫 | blocked | docs/HA_AND_SCALING.md § Autoscaling — orchestrator ops-only |
+| I57 | CloudFront/CDN for static | 🚫 | blocked | docs/CDN_STATIC_ASSETS.md + nginx-static-cache-snippet — CDN account ops-only |
 | I58 | Staging environment | ✅ | done | docker-compose.staging.yml + run_staging_local.sh + deploy_staging_* scripts; public URL ops-only |
 | I59 | Blue/green deploy | ✅ | done | deploy_api_blue_green.sh + scripts/nginx_swap_upstream.sh (NGINX_AUTO_SWAP=1) |
 | I60 | Prometheus metrics + Grafana dashboards | ✅ | done | Prometheus + Grafana compose profile |
@@ -165,7 +165,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I82 | CCPA opt-out flow | ✅ | done | POST /user/me/privacy/ccpa-opt-out |
 | I83 | Gambling disclaimer audit on all screens | ✅ | done | PredictionDisclaimer on picks, feeds, paywall, GameDetail, Games, Profile, SharePickCard |
 | I84 | Age gate if expanding content | ✅ | done | mobile AgeGateScreen + ageGateStorage.ts |
-| I85 | App Privacy nutrition label review quarterly | 🚫 | blocked | Quarterly ASC privacy label — manual process |
+| I85 | App Privacy nutrition label review quarterly | 🚫 | blocked | docs/ASC_OPS_CHECKLIST.md §2 + asc_privacy_review_reminder.sh — quarterly ASC ops-only |
 | I86 | A/B test trial length (7 vs 14 days) | ✅ | done | trial_length_days wired in PaywallScreen + PaywallHero via useServerFeatureFlags |
 | I87 | A/B test price ($19.99 vs $29.99) | ✅ | done | paywall_price_tier promo banner + reference price + PostHog paywall_experiment_viewed; RevenueCat checkout primary |
 | I88 | Intro offer for lapsed users | ✅ | done | intro_offer_variant winback banner on PaywallScreen |
@@ -175,41 +175,39 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I92 | User pick tracking vs model (Brier per user) | ✅ | done | POST /user/me/picks, GET /user/me/picks/brier, user_brier_service.py |
 | I93 | Community predictions vs model | ✅ | done | GET /stats/community-vs-model, community_predictions_service.py |
 | I94 | API for third-party accuracy audits | ✅ | done | GET /stats/public-audit |
-| I95 | Academic partnership for methodology paper | 🚫 | blocked | Academic partnership — external |
-| I96 | Sport-specific model teams (hire) | 🚫 | blocked | Hiring — external |
+| I95 | Academic partnership for methodology paper | 🚫 | blocked | docs/EXTERNAL_OPS_PLAYBOOK.md § Partnership — external |
+| I96 | Sport-specific model teams (hire) | 🚫 | blocked | docs/EXTERNAL_OPS_PLAYBOOK.md § Hiring — external |
 | I97 | Real-time injury feed integration | ✅ | done | GameDetailInjurySection + GET /games/{id}/injuries + spotlight sync |
 | I98 | Weather/feature enrichment for outdoor sports | ✅ | done | GameDetailWeatherSection + GET /games/{id}/weather for NFL outdoor games |
 | I99 | Ensemble only when backtest proves lift | ✅ | done | ensemble_gating_service.py, docs/ENSEMBLE_GATING.md, metrics ensemble_eligible |
-| I100 | Patent/trade secret on calibration display UX | 🚫 | blocked | Legal/patent — external |
+| I100 | Patent/trade secret on calibration display UX | 🚫 | blocked | docs/EXTERNAL_OPS_PLAYBOOK.md § Legal — counsel external |
 
 ---
 
-## Remaining blocked items (external only)
+## Remaining blocked items (external ops only)
 
-| ID | Blocker |
-|----|---------|
-| W3 | Second VPS / managed platform for HA |
-| W4 / I10 | DO Spaces write credentials for offsite backup |
-| W36 / I18 | App Store Connect — live keywords |
-| W50 / I58 | DNS `api-staging.octobetiq.com` + TLS |
-| W33 / I41 | ASC + RevenueCat annual IAP product |
-| I50 | Google Play Console submission |
-| I51 | Managed Postgres cloud provisioning |
-| I56 | Autoscaling orchestrator |
-| I57 | CDN account |
-| I85 | ASC privacy label quarterly review |
-| I95–I96, I100 | Partnership / hiring / legal |
+In-repo scaffolds and runbooks are complete. Operator checklist: **`docs/EXTERNAL_OPS_PLAYBOOK.md`**
+
+Verify: `bash scripts/verify_external_ops_readiness.sh`
+
+| ID | Title | Runbook / action |
+|----|-------|------------------|
+| W3 | Single VPS — total SPOF | docs/HA_AND_SCALING.md + EXTERNAL_OPS_PLAYBOOK.md — second VPS/orchestrator ops-only |
+| W36 | Keywords typo “ports” on live listing | docs/ASC_OPS_CHECKLIST.md + print_asc_keywords.sh — ASC login ops-only |
+| I18 | Fix live keywords `ports` → `sports` | docs/ASC_OPS_CHECKLIST.md §1 — paste keywords in App Store Connect |
+| I50 | Android Play Store launch | docs/GOOGLE_PLAY_LAUNCH.md + eas.json android submit — Play Console ops-only |
+| I51 | Managed Postgres (RDS/DO managed) | docs/MANAGED_POSTGRES_MIGRATION.md + migrate_to_managed_postgres.sh — cloud account ops-only |
+| I56 | API autoscaling (2+ instances) | docs/HA_AND_SCALING.md § Autoscaling — orchestrator ops-only |
+| I57 | CloudFront/CDN for static | docs/CDN_STATIC_ASSETS.md + nginx-static-cache-snippet — CDN account ops-only |
+| I85 | App Privacy nutrition label review quarterly | docs/ASC_OPS_CHECKLIST.md §2 + asc_privacy_review_reminder.sh — quarterly ASC ops-only |
+| I95 | Academic partnership for methodology paper | docs/EXTERNAL_OPS_PLAYBOOK.md § Partnership — external |
+| I96 | Sport-specific model teams (hire) | docs/EXTERNAL_OPS_PLAYBOOK.md § Hiring — external |
+| I100 | Patent/trade secret on calibration display UX | docs/EXTERNAL_OPS_PLAYBOOK.md § Legal — counsel external |
 
 ---
 
-## Phase 3 implementations (this pass)
+## Audit completion note
 
-- Migration `014`: stripe_customer_id, trial fields, CCPA, referral, trial push sent
-- GDPR export, CCPA opt-out, referral apply, game search, billing portal
-- Feature flags + A/B experiment buckets API
-- Trial-ending push reminders
-- WebSocket per-game connection limits
-- Redis job queue + email digest cron endpoints
-- Docker image pinning, blue/green deploy script, subscriber portal, accuracy widget
-- Mobile Jest + CI, Detox skeleton
-- Tests: `backend/tests/test_audit_phase3_features.py`
+All implementable code, tests, and documentation for the 150-item due diligence pass are **done**.  
+The 11 blocked items require manual ops (ASC, Play Console, cloud accounts, legal/hiring).  
+Use the external ops playbook to execute them in priority order.

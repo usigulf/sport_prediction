@@ -30,6 +30,20 @@ def test_audit_scaffold_docs_exist():
         assert (REPO_ROOT / rel).is_file(), f"missing {rel}"
 
 
+def test_external_ops_playbook_exists():
+    playbook = REPO_ROOT / "docs/EXTERNAL_OPS_PLAYBOOK.md"
+    assert playbook.is_file()
+    text = playbook.read_text(encoding="utf-8")
+    for section in ("W3", "I50", "I57", "I85"):
+        assert section in text
+
+
+def test_verify_external_ops_script_exists():
+    script = REPO_ROOT / "scripts/verify_external_ops_readiness.sh"
+    assert script.is_file()
+    assert script.stat().st_mode & 0o111
+
+
 def test_staging_compose_isolated_db():
     text = (REPO_ROOT / "docker-compose.staging.yml").read_text(encoding="utf-8")
     assert "sportsprediction_staging" in text
