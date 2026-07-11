@@ -62,6 +62,14 @@ def main() -> int:
     else:
         print(text)
 
+    mb = report.get("market_benchmark") or {}
+    if mb.get("live_endpoint"):
+        print(
+            "\nLive model-vs-market benchmark (upcoming games): "
+            f"GET {mb['live_endpoint']} — see web/model-vs-market.html",
+            file=sys.stderr,
+        )
+
     any_ok = any(
         (info.get("status") == "ok")
         for info in (report.get("groups") or {}).values()

@@ -490,6 +490,21 @@ async def process_one_job(
     return {"processed": True, "job": job}
 
 
+@router.post("/jobs/run-one")
+async def run_one_job(
+    db: Session = Depends(get_db),
+    _: None = Depends(_require_cron_secret),
+):
+    """Dequeue, execute handler, and mark job completed or failed (W42 / I52)."""
+    from app.services.job_queue_service import pending_job_count
+    from app.services.job_worker_service import run_next_job
+
+    result = run_next_job(db)
+    if not result:
+        return {"processed": False, "pending": pending_job_count()}
+    return {"processed": True, "pending": pending_job_count(), **result}
+
+
 @router.post("/email-digest/run")
 async def run_email_digest_cron(
     db: Session = Depends(get_db),

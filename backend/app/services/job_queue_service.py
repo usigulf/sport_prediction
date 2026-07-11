@@ -76,3 +76,45 @@ def get_job(job_id: str) -> dict[str, Any] | None:
             return None
         return json.loads(raw)
     return cache.get(key)
+
+
+def _persist_job(job_id: str, data: dict[str, Any]) -> None:
+    cache = CacheService()
+    key = f"{JOB_PREFIX}{job_id}"
+    if cache.redis_client:
+        cache.redis_client.setex(key, 86400, json.dumps(data))
+    else:
+        cache.set(key, data, ttl=86400)
+
+
+def complete_job(job_id: str, result: Any = None) -> None:
+    job = get_job(job_id)
+    if not job:
+        return
+    job["status"] = "completed"
+    job["completed_at"] = datetime.now(timezone.utc).isoformat()
+    if result is not None:
+        job["result"] = result
+    _persist_job(job_id, job)
+
+
+def fail_job(job_id: str, error: str) -> None:
+    job = get_job(job_id)
+    if not job:
+        return
+    job["status"] = "failed"
+    job["failed_at"] = datetime.now(timezone.utc).isoformat()
+    job["error"] = error[:500]
+    _persist_job(job_id, job)
+
+
+def pending_job_count() -> int:
+    """Approximate queue depth (Redis list length or in-memory list)."""
+    cache = CacheService()
+    if cache.redis_client:
+        try:
+            return int(cache.redis_client.llen(QUEUE_KEY) or 0)
+        except Exception:
+            return 0
+    pending = cache.get(QUEUE_KEY) or []
+    return len(pending) if isinstance(pending, list) else 0

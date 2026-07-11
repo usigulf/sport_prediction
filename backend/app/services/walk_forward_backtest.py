@@ -280,6 +280,7 @@ def run_walk_forward_backtest(
             "Use GET /stats/model-vs-market for live model-vs-consensus edges on upcoming games."
         ),
         "live_endpoint": "/api/v1/stats/model-vs-market",
+        "live_dashboard": "/model-vs-market.html",
     }
 
     from app.services.ensemble_gating_service import assess_ensemble_eligibility

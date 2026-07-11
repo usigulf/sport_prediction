@@ -9,12 +9,12 @@ Legend: ✅ done · 🟡 partial · ❌ not implemented · 🚫 blocked (externa
 
 | Metric | Weaknesses (50) | Improvements (100) | Combined (150) |
 |--------|-----------------|--------------------|----------------|
-| ✅ Done | 41 | 79 | 120 |
-| 🟡 Partial | 7 | 12 | 19 |
+| ✅ Done | 44 | 81 | 125 |
+| 🟡 Partial | 4 | 10 | 14 |
 | ❌ Open | 0 | 0 | 0 |
 | 🚫 Blocked | 2 | 9 | 11 |
 
-**Implementable coverage:** 93.2% — `(done + 0.5×partial) / (150 − blocked)`
+**Implementable coverage:** 95.0% — `(done + 0.5×partial) / (150 − blocked)`
 
 Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added for subscription utils.
 
@@ -36,7 +36,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | W10 | Cron secret example may be real | ✅ | done | backend/tests/test_env_examples.py |
 | W11 | Redis no auth | ✅ | done | docker-compose.yml Redis requirepass |
 | W12 | Leaderboard O(all games) query | ✅ | done | backend/app/services/leaderboard_service.py |
-| W13 | WebSocket per-client DB polling | 🟡 | partial | backend/app/services/live_websocket_hub.py — one poller per game, Redis pub/sub |
+| W13 | WebSocket per-client DB polling | ✅ | done | live_websocket_hub one poller per game + Redis pub/sub; test_job_worker_and_ws_hub |
 | W14 | God screens 1000+ lines | ✅ | done | GameDetail split into hook + section components; PaywallHero extracted |
 | W15 | No password reset flow | ✅ | done | backend/app/services/password_reset_service.py, mobile ForgotPasswordScreen |
 | W16 | Push may register before consent | ✅ | done | mobile/src/utils/pushNotifications.ts, backend/tests/test_push_consent_order.py |
@@ -65,10 +65,10 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | W39 | Silent error swallowing on feeds | ✅ | done | mobile HomeFeedSections error+retry |
 | W40 | OpenAPI exposed in prod config default | ✅ | done | backend/app/config.py auto-disables OpenAPI in production |
 | W41 | 4 workers × inconsistent in-memory revocation | ✅ | done | backend/app/services/token_revocation_service.py Redis jti denylist; prod requires REDIS_URL |
-| W42 | No job queue for long tasks | 🟡 | partial | backend/app/services/job_queue_service.py + /internal/jobs/* — cron worker pattern |
+| W42 | No job queue for long tasks | ✅ | done | job_queue_service + job_worker_service + /internal/jobs/run-one + cron |
 | W43 | Unpinned Docker `:latest` tags | ✅ | done | docker-compose.yml pinned image tags |
 | W44 | Mobile: no unit tests in CI | ✅ | done | mobile/src/utils/subscription.test.ts, CI mobile Jest job |
-| W45 | `premium_plus` tier exists but not marketed | 🟡 | partial | premium_plus in API; Paywall shows Premium only by design |
+| W45 | `premium_plus` tier exists but not marketed | ✅ | done | docs/SUBSCRIPTION_TIERS.md — premium_plus legacy; Paywall Premium-only by design |
 | W46 | RevenueCat entitlement was `octobetiq Pro` vs `premium` mismatch (fixed in ops, fragile) | ✅ | done | backend/tests/test_revenuecat_webhook.py entitlement mapping |
 | W47 | No web subscriber portal | ✅ | done | web/subscriber-portal.html, POST /subscription/billing-portal |
 | W48 | Coverage.xml in git | ✅ | done | .gitignore coverage.xml |
@@ -109,7 +109,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I26 | Commit `metrics.json` schema example | ✅ | done | backend/models/metrics.json schema example with eval + publish_ready |
 | I27 | Archive stale `ml/` and Rust services | ✅ | done | archive/README.md — ml/ and Rust services archived with replacements |
 | I28 | Update ARCHITECTURE.md to match reality | ✅ | done | docs/PRODUCTION_REALITY.md + ARCHITECTURE.md §3 shipped vs aspirational |
-| I29 | Market odds as benchmark in backtest | 🟡 | partial | walk_forward_backtest market_benchmark note + /stats/model-vs-market live |
+| I29 | Market odds as benchmark in backtest | ✅ | done | walk_forward market_benchmark + CLI hint + GET /stats/model-vs-market live |
 | I30 | Per-league calibration minimum samples | ✅ | done | model_training calibration mins |
 | I31 | React Query for server state | ✅ | done | mobile React Query hooks |
 | I32 | Split HomeScreen into feature components | ✅ | done | mobile/src/screens/home/HomeFeedSections.tsx |
@@ -147,7 +147,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I64 | “Model vs market” dashboard | ✅ | done | GET /stats/model-vs-market, web/model-vs-market.html |
 | I65 | Player props (when licensed) | 🟡 | partial | player_props_service behind FEATURE_PLAYER_PROPS |
 | I66 | Parlay correlation warnings | ✅ | done | parlay_correlation_service.py, POST /tools/parlay-correlation |
-| I67 | Email digest: daily picks | 🟡 | partial | email_digest_service.py + /internal/email-digest/run; SMTP required |
+| I67 | Email digest: daily picks | ✅ | done | email_digest_service + /internal/email-digest/run + cron + job type email_digest |
 | I68 | Watchlist sync across devices | ✅ | done | useFavorites React Query + sync notice + team-filtered games |
 | I69 | iPad-optimized layouts | ✅ | done | WideContent + useLayout on Home, GameDetail, Paywall, Profile, Games, Favorites, LiveHub |
 | I70 | Widget: today’s top pick | 🟡 | partial | widget API + Swift template + docs/IOS_WIDGET.md embed checklist + npm run widget:verify |
@@ -156,7 +156,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I73 | Monetization bypass regression tests | ✅ | done | backend/tests/test_premium_gating.py — auth, quota, share-pick bypass |
 | I74 | Integration tests with Postgres in CI | ✅ | done | .github/workflows/ci.yml backend-postgres job, test_postgres_integration.py |
 | I75 | Mobile Jest tests for subscription utils | ✅ | done | mobile subscription.test.ts + CI |
-| I76 | E2E Detox for paywall flow | 🟡 | partial | mobile/e2e/paywall.e2e.ts + testIDs; Detox build required |
+| I76 | E2E Detox for paywall flow | 🟡 | partial | e2e/paywall.e2e.ts + .detoxrc.js + testIDs; Detox dev build required to run |
 | I77 | Feature flags service (LaunchDarkly/PostHog) | ✅ | done | backend/app/services/feature_flags.py, GET /config/feature-flags |
 | I78 | API v2 planning doc | ✅ | done | docs/API_V2_PLAN.md |
 | I79 | OpenAPI client codegen for mobile | ✅ | done | export_openapi.py, docs/OPENAPI_CODEGEN.md, mobile codegen:api |

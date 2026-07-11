@@ -46,7 +46,13 @@ done
 curl -fsS "http://127.0.0.1:${API_HOST_PORT}/health" | head -c 200
 echo
 
-echo "[blue-green] Swap nginx upstream to port ${API_HOST_PORT} (manual step if not automated):"
-echo "  Update deploy/nginx upstream to 127.0.0.1:${API_HOST_PORT} and reload nginx."
+if [[ "${NGINX_AUTO_SWAP:-}" == "1" ]] && [[ -x "${ROOT_DIR}/scripts/nginx_swap_upstream.sh" ]]; then
+  echo "[blue-green] Auto-swapping nginx upstream to port ${API_HOST_PORT}..."
+  sudo "${ROOT_DIR}/scripts/nginx_swap_upstream.sh" "${API_HOST_PORT}" "${NGINX_CONF_PATH:-/etc/nginx/sites-available/octobetiq-api}"
+else
+  echo "[blue-green] Swap nginx upstream to port ${API_HOST_PORT}:"
+  echo "  NGINX_AUTO_SWAP=1 ${ROOT_DIR}/scripts/nginx_swap_upstream.sh ${API_HOST_PORT}"
+  echo "  Or update deploy/nginx upstream to 127.0.0.1:${API_HOST_PORT} and reload nginx."
+fi
 echo "[blue-green] Stop previous ${OTHER_SERVICE} when satisfied:"
 echo "  docker rm -f sport-prediction-${OTHER_SERVICE} 2>/dev/null || true"
