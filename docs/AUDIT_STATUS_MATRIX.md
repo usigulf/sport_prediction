@@ -9,12 +9,12 @@ Legend: ✅ done · 🟡 partial · ❌ not implemented · 🚫 blocked (externa
 
 | Metric | Weaknesses (50) | Improvements (100) | Combined (150) |
 |--------|-----------------|--------------------|----------------|
-| ✅ Done | 39 | 75 | 114 |
-| 🟡 Partial | 9 | 16 | 25 |
+| ✅ Done | 41 | 79 | 120 |
+| 🟡 Partial | 7 | 12 | 19 |
 | ❌ Open | 0 | 0 | 0 |
 | 🚫 Blocked | 2 | 9 | 11 |
 
-**Implementable coverage:** 91.0% — `(done + 0.5×partial) / (150 − blocked)`
+**Implementable coverage:** 93.2% — `(done + 0.5×partial) / (150 − blocked)`
 
 Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added for subscription utils.
 
@@ -32,7 +32,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | W6 | ~27% test coverage | ✅ | done | pytest.ini --cov-fail-under=60, .github/workflows/ci.yml |
 | W7 | No Stripe webhook idempotency | ✅ | done | backend/app/services/stripe_webhook_idempotency.py |
 | W8 | No RevenueCat event deduplication | ✅ | done | backend/app/services/revenuecat_webhook_idempotency.py |
-| W9 | Demo credentials committed in repo | 🟡 | partial | scripts/rotate_app_review_demo_account.py; DEV_CREDENTIALS.md dev-only |
+| W9 | Demo credentials committed in repo | ✅ | done | rotate_app_review_demo_account.py + DEV_CREDENTIALS.md without literal passwords |
 | W10 | Cron secret example may be real | ✅ | done | backend/tests/test_env_examples.py |
 | W11 | Redis no auth | ✅ | done | docker-compose.yml Redis requirepass |
 | W12 | Leaderboard O(all games) query | ✅ | done | backend/app/services/leaderboard_service.py |
@@ -58,7 +58,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | W32 | $29.99 without odds/EV tooling | ✅ | done | MarketOddsCard edge badge + LineMovementCard + model-vs-market dashboard |
 | W33 | No annual subscription | 🟡 | partial | Annual Stripe + Paywall gating; ASC product com.octobetiq.premium.annual blocked |
 | W34 | No referral program | 🟡 | partial | ReferralSection on Profile + referral/apply API; bonus days need ASC/Stripe promo |
-| W35 | No product analytics pipeline | 🟡 | partial | mobile/src/services/productAnalytics.ts — needs POSTHOG key in prod |
+| W35 | No product analytics pipeline | ✅ | done | productAnalytics.ts + mobile/.env.example; set EXPO_PUBLIC_POSTHOG_API_KEY in EAS prod |
 | W36 | Keywords typo “ports” on live listing | 🚫 | blocked | Live ASC keywords — requires App Store Connect login |
 | W37 | No full-text search | ✅ | done | backend/app/services/game_search_service.py, GET /games/search |
 | W38 | Duplicate tier/profile fetches per screen | ✅ | done | useSubscriptionTier + useGameDetailQuery React Query; GameDetail/ExplanationView migrated |
@@ -85,7 +85,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I2 | Centralize tier gating in one module | ✅ | done | backend/app/utils/subscription_tiers.py |
 | I3 | Block serving predictions when `model_version` is heuristic/synthetic in prod UI | ✅ | done | backend/app/utils/prediction_source.py |
 | I4 | Add `prediction_source` field to API responses | ✅ | done | backend/app/services/prediction_payload.py |
-| I5 | Rotate demo account password; remove from public scripts | 🟡 | partial | scripts/rotate_app_review_demo_account.py |
+| I5 | Rotate demo account password; remove from public scripts | ✅ | done | scripts/rotate_app_review_demo_account.py; public docs reference seed script only |
 | I6 | Rotate `PUSH_CRON_SECRET`; placeholder in `.env.example` | ✅ | done | backend/.env.example placeholders |
 | I7 | Nginx `deny /internal` on public hosts | ✅ | done | deploy/nginx-deny-internal-snippet.conf |
 | I8 | Set `INTERNAL_ALLOWED_CIDRS=127.0.0.1/32` | ✅ | done | .env.production.example INTERNAL_ALLOWED_CIDRS |
@@ -124,7 +124,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I41 | Annual plan ($199/yr) | 🟡 | partial | annual plan code; ASC IAP blocked |
 | I42 | Referral: “invite friend, 7 extra trial days” | 🟡 | partial | ReferralSection share/apply UI + referral/apply tracking; bonus days need ASC/Stripe promo |
 | I43 | Share card: “My model accuracy this month” | ✅ | done | SharePickCard rollingAccuracyPct, build_share_card rolling_accuracy_pct |
-| I44 | PostHog/Mixpanel integration | 🟡 | partial | productAnalytics.ts optional PostHog |
+| I44 | PostHog/Mixpanel integration | ✅ | done | productAnalytics.ts + mobile/.env.example PostHog keys + screen tracking |
 | I45 | Push categories (kickoff, upsets, results) | ✅ | done | push_trigger_service types + push_service categoryId + mobile iOS categories |
 | I46 | Trial-ending push + email | ✅ | done | send_trial_ending_reminders push + send_trial_ending_email when SMTP set |
 | I47 | App Store review prompt after positive accuracy session | ✅ | done | mobile storeReview.ts |
@@ -177,8 +177,8 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I94 | API for third-party accuracy audits | ✅ | done | GET /stats/public-audit |
 | I95 | Academic partnership for methodology paper | 🚫 | blocked | Academic partnership — external |
 | I96 | Sport-specific model teams (hire) | 🚫 | blocked | Hiring — external |
-| I97 | Real-time injury feed integration | 🟡 | partial | game_injury_reports + GET /games/{id}/injuries, spotlight sync |
-| I98 | Weather/feature enrichment for outdoor sports | 🟡 | partial | weather_enrichment_service.py + GET /games/{id}/weather (NFL, WEATHER_API_KEY) |
+| I97 | Real-time injury feed integration | ✅ | done | GameDetailInjurySection + GET /games/{id}/injuries + spotlight sync |
+| I98 | Weather/feature enrichment for outdoor sports | ✅ | done | GameDetailWeatherSection + GET /games/{id}/weather for NFL outdoor games |
 | I99 | Ensemble only when backtest proves lift | ✅ | done | ensemble_gating_service.py, docs/ENSEMBLE_GATING.md, metrics ensemble_eligible |
 | I100 | Patent/trade secret on calibration display UX | 🚫 | blocked | Legal/patent — external |
 

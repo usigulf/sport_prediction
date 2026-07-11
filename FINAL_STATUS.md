@@ -77,12 +77,12 @@ curl http://localhost:8000/health
 # Register user
 curl -X POST http://localhost:8000/api/v1/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email": "test@example.com", "password": "testpass123"}'
+  -d '{"email": "test@example.com", "password": "<see scripts/seed_data.py>"}'
 
 # Login
 curl -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=test@example.com&password=testpass123"
+  -d "username=test@example.com&password=<see scripts/seed_data.py>"
 
 # Get games
 curl http://localhost:8000/api/v1/games/upcoming

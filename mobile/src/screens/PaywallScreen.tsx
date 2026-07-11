@@ -347,6 +347,7 @@ export const PaywallScreen: React.FC = () => {
       ]}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
+      testID="paywall-screen"
     >
       {loadError ? (
         <View style={styles.errorBanner}>
@@ -380,7 +381,9 @@ export const PaywallScreen: React.FC = () => {
           <Text style={styles.pricePromoText}>{pricePromoText}</Text>
         </View>
       ) : null}
-      <Text style={styles.title}>Choose your plan</Text>
+      <Text style={styles.title} testID="paywall-choose-plan">
+        Choose your plan
+      </Text>
       <Text style={styles.subtitle}>
         {contextBannerText
           ? 'Pick the plan that matches what you need.'

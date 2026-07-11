@@ -45,7 +45,7 @@ These work as soon as backend and mobile are running with a seeded DB.
 |------|------------|
 | **Run backend** | `cd backend && ./run.sh` (or `make` per README). Uses port 8000, or 8001 if 8000 in use. |
 | **Run mobile** | Node **20+** required. `cd mobile && npm start`. See `mobile/NODE_VERSION.md` if you see `toReversed is not a function`. |
-| **Seed database** | So login works: `make seed` or `cd backend && ./seed.sh`. Use test users (see `DEV_CREDENTIALS.md`), e.g. `test@example.com` / `testpass123`. |
+| **Seed database** | So login works: `make seed` or `cd backend && ./seed.sh`. Use test users from `DEV_CREDENTIALS.md` (passwords in `scripts/seed_data.py`, local dev only). |
 | **API URL (device)** | If backend is on another port or machine: set `EXPO_PUBLIC_API_URL=http://YOUR_IP:PORT/api/v1` in `mobile/.env`. |
 | **Stripe (real payments)** | 1) Create product + price in Stripe Dashboard. 2) In `backend/.env`: `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID_PREMIUM`, `STRIPE_WEBHOOK_SECRET`, optional `STRIPE_SUCCESS_URL` / `STRIPE_CANCEL_URL`. 3) Webhook URL in Stripe: `https://your-api.com/api/v1/subscription/webhook`, event `checkout.session.completed`. Without these, “Start 7-day free trial” returns 503 and app shows error. |
 | **Production** | Set `JWT_SECRET` (strong, min 32 chars), `ENVIRONMENT=production`, `CORS_ORIGINS`. Optional: `REDIS_URL=` or `disabled` to skip Redis for `/ready`. See `backend/.env.example` and `backend/README.md`. |

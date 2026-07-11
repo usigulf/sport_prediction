@@ -25,6 +25,8 @@ import {
 import { useSubscriptionTier } from './useSubscriptionTier';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 import type { PlayerPropItem } from '../screens/gameDetail/types';
+import type { InjuryReportItem } from '../screens/gameDetail/GameDetailInjurySection';
+import type { GameWeatherPayload } from '../screens/gameDetail/GameDetailWeatherSection';
 
 type Nav = StackNavigationProp<RootStackParamList>;
 
@@ -63,6 +65,12 @@ export function useGameDetailData(gameId: string, navigation: Nav) {
   const [playerPropsNamed, setPlayerPropsNamed] = useState(false);
   const [marketOdds, setMarketOdds] = useState<MarketOddsResponse | null>(null);
   const [lineMovement, setLineMovement] = useState<LineMovementResponse | null>(null);
+  const [injuries, setInjuries] = useState<InjuryReportItem[]>([]);
+  const [injuriesLoading, setInjuriesLoading] = useState(false);
+  const [injuriesError, setInjuriesError] = useState<string | null>(null);
+  const [injuriesDisclaimer, setInjuriesDisclaimer] = useState<string | null>(null);
+  const [weather, setWeather] = useState<GameWeatherPayload | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(false);
 
   const isPremium = hasPremiumAccess(subscriptionTier);
   const unlockedByAd = rewardedUnlock.isUnlockedForGame(gameId);
@@ -133,6 +141,53 @@ export function useGameDetailData(gameId: string, navigation: Nav) {
   }, [gameId, oddsDisplayEnabled]);
 
   useEffect(() => {
+    if (!currentGame) return;
+    let cancelled = false;
+    setInjuriesError(null);
+    setInjuriesLoading(true);
+    void apiService
+      .getGameInjuries(gameId)
+      .then((res) => {
+        if (cancelled) return;
+        setInjuries(res.injuries ?? []);
+        setInjuriesDisclaimer(res.disclaimer ?? null);
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) setInjuriesError(getUserFriendlyMessage(e));
+      })
+      .finally(() => {
+        if (!cancelled) setInjuriesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [gameId, currentGame?.id]);
+
+  useEffect(() => {
+    if (!currentGame || (currentGame.league ?? '').toLowerCase() !== 'nfl') {
+      setWeather(null);
+      setWeatherLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setWeatherLoading(true);
+    void apiService
+      .getGameWeather(gameId)
+      .then((res) => {
+        if (!cancelled) setWeather(res);
+      })
+      .catch(() => {
+        if (!cancelled) setWeather({ available: false, reason: 'fetch_failed' });
+      })
+      .finally(() => {
+        if (!cancelled) setWeatherLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [gameId, currentGame?.id, currentGame?.league]);
+
+  useEffect(() => {
     if (!isAuthenticated || !currentPrediction || !currentGame) return;
     const status = currentGame.status;
     if (status === 'finished' || status === 'final') return;
@@ -190,6 +245,22 @@ export function useGameDetailData(gameId: string, navigation: Nav) {
           setLineMovement(null);
         }
       }
+      if (currentGame) {
+        try {
+          const injuryRes = await apiService.getGameInjuries(gameId);
+          setInjuries(injuryRes.injuries ?? []);
+          setInjuriesDisclaimer(injuryRes.disclaimer ?? null);
+        } catch {
+          /* optional */
+        }
+        if ((currentGame.league ?? '').toLowerCase() === 'nfl') {
+          try {
+            setWeather(await apiService.getGameWeather(gameId));
+          } catch {
+            setWeather({ available: false, reason: 'fetch_failed' });
+          }
+        }
+      }
     } finally {
       setRefreshing(false);
     }
@@ -201,6 +272,7 @@ export function useGameDetailData(gameId: string, navigation: Nav) {
     oddsDisplayEnabled,
     predictionQuery,
     rewardedUnlock,
+    currentGame,
   ]);
 
   const addTeamToFavorites = useCallback(
@@ -270,6 +342,12 @@ export function useGameDetailData(gameId: string, navigation: Nav) {
     playerPropsEnabled,
     marketOdds,
     lineMovement,
+    injuries,
+    injuriesLoading,
+    injuriesError,
+    injuriesDisclaimer,
+    weather,
+    weatherLoading,
     oddsDisplayEnabled,
     lastUpdate,
     connected,

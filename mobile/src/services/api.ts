@@ -627,6 +627,40 @@ class ApiService {
     });
   }
 
+  async getGameInjuries(gameId: string) {
+    return this.request<{
+      game_id: string;
+      count: number;
+      injuries: Array<{
+        player_name: string;
+        team_name?: string | null;
+        status: string;
+        detail?: string | null;
+        reported_at_iso?: string | null;
+      }>;
+      disclaimer?: string;
+    }>(`/games/${gameId}/injuries`, {
+      requireAuth: false,
+      sendAuthIfPresent: true,
+    });
+  }
+
+  async getGameWeather(gameId: string) {
+    return this.request<{
+      available: boolean;
+      reason?: string;
+      temp_f?: number | null;
+      feels_like_f?: number | null;
+      humidity_pct?: number | null;
+      wind_mph?: number | null;
+      description?: string | null;
+      disclaimer?: string | null;
+    }>(`/games/${gameId}/weather`, {
+      requireAuth: false,
+      sendAuthIfPresent: true,
+    });
+  }
+
   async recordUserPick(body: {
     game_id: string;
     outcome: 'home' | 'away' | 'draw';

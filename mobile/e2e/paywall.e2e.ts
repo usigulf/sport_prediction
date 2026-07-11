@@ -8,8 +8,9 @@ describe('Paywall preview', () => {
   });
 
   it('shows Premium plans for guest browse', async () => {
+    await expect(element(by.id('paywall-screen'))).toBeVisible();
+    await expect(element(by.id('paywall-choose-plan'))).toBeVisible();
     await expect(element(by.text('Premium'))).toBeVisible();
-    await expect(element(by.text('Choose your plan'))).toBeVisible();
   });
 
   it('shows premium subscription card', async () => {

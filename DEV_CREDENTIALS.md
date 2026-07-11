@@ -1,23 +1,23 @@
 # Dev / test login credentials
 
-Use these only in **development**. Do not use in production.
+Use these only in **local development** after seeding the database. **Never use seed passwords in production or App Store Review** — use `scripts/rotate_app_review_demo_account.py` for the review demo account (see `docs/APP_REVIEW_DEMO_ACCOUNT.md`).
 
-After running the seed script (`python scripts/seed_data.py` from the project root, with `backend` on PYTHONPATH or run from `backend/`), these users exist:
+After running the seed script (`make seed` or `python scripts/seed_data.py` from the project root):
 
 | Email | Password | Tier |
 |-------|----------|------|
-| test@example.com | testpass123 | free |
-| premium@example.com | premium123 | premium |
-| admin@example.com | admin123 | premium_plus |
+| test@example.com | *(see `scripts/seed_data.py` → `SEED_USERS`)* | free |
+| premium@example.com | *(see seed script)* | premium |
+| admin@example.com | *(see seed script)* | premium_plus |
 
 **If you get "Incorrect email or password":**
 
-1. **Using seed users** — Use one of the emails and passwords above exactly (case-sensitive).
-2. **Using your own account** — Register first via the app (Register screen), then log in with that email and password.
-3. **No users in DB** — Seed the database so test users exist:
-   - From project root: `make seed` (or `cd backend && ./seed.sh` if you have it)
-   - Or from backend: `PYTHONPATH=. python ../scripts/seed_data.py`
+1. **Using seed users** — Re-run `make seed` and use the emails above with passwords defined in `scripts/seed_data.py` (local dev only).
+2. **Using your own account** — Register via the app, then log in with that email and password.
+3. **No users in DB** — From project root: `make seed` (or `cd backend && PYTHONPATH=. python ../scripts/seed_data.py`).
 
-Ensure the **backend is running** (e.g. `./run.sh` in `backend/`) and the app is pointing at it (e.g. same machine, or `EXPO_PUBLIC_API_URL` set correctly).
+Ensure the **backend is running** and the app points at it (`EXPO_PUBLIC_API_URL` for device/simulator).
 
-**Premium / live WebSocket:** Log in with **premium@example.com** / **premium123** (or **admin@example.com** / **admin123**) to get a user with a premium-style tier. The live game WebSocket (`/ws/live/{game_id}`) only accepts connections when the user’s `subscription_tier` is premium (or trialing/pro). To test without Stripe, use one of these seeded premium accounts.
+**Premium / live WebSocket:** Log in with a seeded **premium** or **admin** tier account to test live updates without Stripe.
+
+**App Store Review:** Credentials live only in gitignored `secrets/app_review_demo.env` after rotation — not in this file.

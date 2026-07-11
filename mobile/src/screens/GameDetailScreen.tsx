@@ -15,6 +15,8 @@ import { GameDetailPredictionSection } from './gameDetail/GameDetailPredictionSe
 import { GameDetailLiveSection } from './gameDetail/GameDetailLiveSection';
 import { GameDetailPlayerPropsSection } from './gameDetail/GameDetailPlayerPropsSection';
 import { GameDetailGameInfo } from './gameDetail/GameDetailGameInfo';
+import { GameDetailInjurySection } from './gameDetail/GameDetailInjurySection';
+import { GameDetailWeatherSection } from './gameDetail/GameDetailWeatherSection';
 import { gameDetailStyles as s } from './gameDetail/gameDetailStyles';
 
 export type { PlayerPropItem } from './gameDetail/types';
@@ -59,6 +61,12 @@ export const GameDetailScreen: React.FC = () => {
     playerPropsEnabled,
     marketOdds,
     lineMovement,
+    injuries,
+    injuriesLoading,
+    injuriesError,
+    injuriesDisclaimer,
+    weather,
+    weatherLoading,
     oddsDisplayEnabled,
     lastUpdate,
     connected,
@@ -145,6 +153,17 @@ export const GameDetailScreen: React.FC = () => {
             navigation={navigation}
           />
         ) : null}
+        <GameDetailInjurySection
+          injuries={injuries}
+          loading={injuriesLoading}
+          error={injuriesError}
+          disclaimer={injuriesDisclaimer}
+        />
+        <GameDetailWeatherSection
+          payload={weather}
+          loading={weatherLoading}
+          league={currentGame.league}
+        />
         <GameDetailGameInfo game={currentGame} />
         </View>
       </ScrollView>
