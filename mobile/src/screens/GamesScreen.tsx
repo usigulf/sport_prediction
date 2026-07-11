@@ -31,20 +31,16 @@ import {
   GAMES_LIVE_PICKS_TAB_LABEL,
   BETA_SOCCER_ONLY,
 } from '../constants/leagues';
-import { formatLeagueLabel, sportHubLabel } from '../utils/leagueDisplay';
+import { formatLeagueLabel } from '../utils/leagueDisplay';
 import { theme } from '../constants/theme';
 import { PLAYER_PROPS_ENABLED } from '../constants/featureFlags';
 import type { PredictionExplanation } from '../types';
-import {
-  buildSoccerWeekDays,
-  formatLocalYMD,
-  mondayBasedIndexInWeek,
-  weekRangeLabel,
-} from '../utils/soccerWeek';
+import { SportWeekDatePicker } from '../components/games/SportWeekDatePicker';
 import { FeedSkeleton } from '../components/feed/FeedSkeleton';
 import { FeedErrorBanner } from '../components/feed/FeedErrorBanner';
 import { FeedEmptyState } from '../components/feed/FeedEmptyState';
 import { PredictionDisclaimer } from '../components/PredictionDisclaimer';
+import { useSportWeekPicker } from '../hooks/useSportWeekPicker';
 import { useUpcomingGamesQuery } from '../hooks/useUpcomingGamesQuery';
 import { WideContent } from '../components/WideContent';
 
@@ -82,9 +78,14 @@ export const GamesScreen: React.FC = () => {
     const prev = prevLeagueRef.current;
     prevLeagueRef.current = selectedLeague;
     if (selectedLeague === 'soccer' && prev !== 'soccer') {
-      setSoccerWeekOffset(0);
-      setSoccerDayIndex(mondayBasedIndexInWeek(new Date()));
+      soccerWeek.resetToToday();
       setSoccerSubLeague('all');
+    }
+    if (selectedLeague === 'nfl' && prev !== 'nfl') {
+      nflWeek.resetToToday();
+    }
+    if (selectedLeague === 'nba' && prev !== 'nba') {
+      nbaWeek.resetToToday();
     }
   }, [selectedLeague]);
   const [gamesView, setGamesView] = useState<GamesViewType>('model');
@@ -102,16 +103,15 @@ export const GamesScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const prevLeagueRef = useRef<string | null | undefined>(undefined);
 
-  /** Soccer hub: Monday-start week offset, selected day 0–6, competition filter */
-  const [soccerWeekOffset, setSoccerWeekOffset] = useState(0);
-  const [soccerDayIndex, setSoccerDayIndex] = useState(() => mondayBasedIndexInWeek(new Date()));
+  /** Per-sport week pickers: soccer Mon-start, NFL/NBA Sun-start */
+  const soccerWeek = useSportWeekPicker('monday');
+  const nflWeek = useSportWeekPicker('sunday');
+  const nbaWeek = useSportWeekPicker('sunday');
   const [soccerSubLeague, setSoccerSubLeague] = useState<SoccerSubFilter>('all');
   /** null = loading favorite leagues for My Leagues filter */
   const [favoriteLeagueCsv, setFavoriteLeagueCsv] = useState<string | undefined | null>(undefined);
 
-  const soccerWeekDays = useMemo(() => buildSoccerWeekDays(soccerWeekOffset), [soccerWeekOffset]);
-  const selectedSoccerYmd =
-    soccerWeekDays[soccerDayIndex]?.ymd ?? formatLocalYMD(new Date());
+  const deviceTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   useEffect(() => {
     if (selectedLeague !== MY_LEAGUES_ID) {
@@ -142,21 +142,44 @@ export const GamesScreen: React.FC = () => {
   const gamesQueryParams = useMemo(() => {
     const limit = 50;
     if (selectedLeague === 'soccer') {
-      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const leaguesArg =
         soccerSubLeague === 'all' ? SOCCER_LEAGUE_IDS.join(',') : soccerSubLeague;
       return {
         limit: Math.max(limit, 100),
         leagues: leaguesArg,
-        date: selectedSoccerYmd,
-        time_zone: tz,
+        date: soccerWeek.selectedYmd,
+        time_zone: deviceTimeZone,
+      };
+    }
+    if (selectedLeague === 'nfl') {
+      return {
+        limit,
+        league: 'nfl',
+        date: nflWeek.selectedYmd,
+        time_zone: deviceTimeZone,
+      };
+    }
+    if (selectedLeague === 'nba') {
+      return {
+        limit,
+        league: 'nba',
+        date: nbaWeek.selectedYmd,
+        time_zone: deviceTimeZone,
       };
     }
     if (selectedLeague === MY_LEAGUES_ID) {
       return { limit, leagues: favoriteLeagueCsv || undefined };
     }
     return { limit, league: selectedLeague || undefined };
-  }, [selectedLeague, selectedSoccerYmd, soccerSubLeague, favoriteLeagueCsv]);
+  }, [
+    selectedLeague,
+    soccerWeek.selectedYmd,
+    nflWeek.selectedYmd,
+    nbaWeek.selectedYmd,
+    soccerSubLeague,
+    favoriteLeagueCsv,
+    deviceTimeZone,
+  ]);
 
   const gamesQueryEnabled =
     selectedLeague !== MY_LEAGUES_ID || !isAuthenticated || favoriteLeagueCsv !== null;
@@ -185,22 +208,48 @@ export const GamesScreen: React.FC = () => {
     return selectedLeague;
   }, [selectedLeague, soccerSubLeague]);
 
+  const buildTopPicksOpts = useCallback(() => {
+    const leaguesParam = getLeaguesParam();
+    const base = { limit: 30 as const };
+    if (selectedLeague === 'soccer') {
+      return {
+        ...base,
+        leagues: leaguesParam,
+        date: soccerWeek.selectedYmd,
+        time_zone: deviceTimeZone,
+      };
+    }
+    if (selectedLeague === 'nfl') {
+      return {
+        ...base,
+        leagues: 'nfl',
+        date: nflWeek.selectedYmd,
+        time_zone: deviceTimeZone,
+      };
+    }
+    if (selectedLeague === 'nba') {
+      return {
+        ...base,
+        leagues: 'nba',
+        date: nbaWeek.selectedYmd,
+        time_zone: deviceTimeZone,
+      };
+    }
+    return { ...base, leagues: leaguesParam };
+  }, [
+    getLeaguesParam,
+    selectedLeague,
+    soccerWeek.selectedYmd,
+    nflWeek.selectedYmd,
+    nbaWeek.selectedYmd,
+    deviceTimeZone,
+  ]);
+
   useEffect(() => {
     if (gamesView !== 'trending') return;
     let cancelled = false;
     setTrendingLoading(true);
-    const leaguesParam = getLeaguesParam();
-    const soccerTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const topPicksOpts =
-      selectedLeague === 'soccer'
-        ? {
-            leagues: leaguesParam,
-            limit: 30,
-            date: selectedSoccerYmd,
-            time_zone: soccerTz,
-          }
-        : { leagues: leaguesParam, limit: 30 };
-    apiService.getTopPicks(topPicksOpts).then((res) => {
+    apiService.getTopPicks(buildTopPicksOpts()).then((res) => {
       if (!cancelled) setTrendingPicks(res.picks ?? []);
     }).catch(() => {
       if (!cancelled) setTrendingPicks([]);
@@ -208,24 +257,13 @@ export const GamesScreen: React.FC = () => {
       if (!cancelled) setTrendingLoading(false);
     });
     return () => { cancelled = true; };
-  }, [gamesView, selectedLeague, getLeaguesParam, selectedSoccerYmd]);
+  }, [gamesView, buildTopPicksOpts]);
 
   const onRefresh = async () => {
     setRefreshing(true);
     await refetchGames();
     if (gamesView === 'trending') {
-      const leaguesParam = getLeaguesParam();
-      const soccerTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const topPicksOpts =
-        selectedLeague === 'soccer'
-          ? {
-              leagues: leaguesParam,
-              limit: 30,
-              date: selectedSoccerYmd,
-              time_zone: soccerTz,
-            }
-          : { leagues: leaguesParam, limit: 30 };
-      const res = await apiService.getTopPicks(topPicksOpts).catch(() => ({ picks: [] }));
+      const res = await apiService.getTopPicks(buildTopPicksOpts()).catch(() => ({ picks: [] }));
       setTrendingPicks(res.picks ?? []);
     }
     setRefreshing(false);
@@ -343,9 +381,9 @@ export const GamesScreen: React.FC = () => {
             {selectedLeague === 'soccer'
               ? 'Pick a day — all soccer competitions for that date'
               : selectedLeague === 'nfl'
-                ? `${sportHubLabel('nfl')} schedules and AI picks for the week`
+                ? 'Pick a day — NFL games for that date'
                 : selectedLeague === 'nba'
-                  ? `${sportHubLabel('nba')} schedules and AI picks for the week`
+                  ? 'Pick a day — NBA games for that date'
                   : selectedLeague == null
                     ? GAMES_ALL_SPORTS_SUBTITLE
                     : 'Pick a sport, then a view'}
@@ -385,60 +423,13 @@ export const GamesScreen: React.FC = () => {
 
         {selectedLeague === 'soccer' && (
           <View style={styles.soccerHub}>
-            <View style={styles.weekNavRow}>
-              <TouchableOpacity
-                onPress={() => setSoccerWeekOffset((w) => w - 1)}
-                style={styles.weekNavBtn}
-                hitSlop={8}
-              >
-                <Ionicons name="chevron-back" size={22} color={theme.colors.accent} />
-              </TouchableOpacity>
-              <Text style={styles.weekNavLabel}>{weekRangeLabel(soccerWeekDays)}</Text>
-              <TouchableOpacity
-                onPress={() => setSoccerWeekOffset((w) => w + 1)}
-                style={styles.weekNavBtn}
-                hitSlop={8}
-              >
-                <Ionicons name="chevron-forward" size={22} color={theme.colors.accent} />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.soccerWeekHint}>
-              Swipe the week arrows to browse upcoming fixtures by day.
-            </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.dayStrip}
-            >
-              {soccerWeekDays.map((d, i) => (
-                <TouchableOpacity
-                  key={d.ymd}
-                  style={[
-                    styles.dayChip,
-                    soccerDayIndex === i && styles.dayChipActive,
-                    d.isToday && styles.dayChipToday,
-                  ]}
-                  onPress={() => setSoccerDayIndex(i)}
-                >
-                  <Text
-                    style={[
-                      styles.dayChipWeekday,
-                      soccerDayIndex === i && styles.dayChipTextActive,
-                    ]}
-                  >
-                    {d.weekdayShort}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.dayChipNum,
-                      soccerDayIndex === i && styles.dayChipTextActive,
-                    ]}
-                  >
-                    {d.dayNum}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+            <SportWeekDatePicker
+              days={soccerWeek.days}
+              dayIndex={soccerWeek.dayIndex}
+              onDayIndexChange={soccerWeek.setDayIndex}
+              onWeekOffsetChange={soccerWeek.setWeekOffset}
+              hint="Swipe the week arrows to browse upcoming fixtures by day."
+            />
             <Text style={styles.soccerFilterLabel}>Competition</Text>
             <ScrollView
               horizontal
@@ -474,6 +465,26 @@ export const GamesScreen: React.FC = () => {
               ))}
             </ScrollView>
           </View>
+        )}
+
+        {selectedLeague === 'nfl' && (
+          <SportWeekDatePicker
+            days={nflWeek.days}
+            dayIndex={nflWeek.dayIndex}
+            onDayIndexChange={nflWeek.setDayIndex}
+            onWeekOffsetChange={nflWeek.setWeekOffset}
+            hint="Sunday-start week — browse NFL games by day."
+          />
+        )}
+
+        {selectedLeague === 'nba' && (
+          <SportWeekDatePicker
+            days={nbaWeek.days}
+            dayIndex={nbaWeek.dayIndex}
+            onDayIndexChange={nbaWeek.setDayIndex}
+            onWeekOffsetChange={nbaWeek.setWeekOffset}
+            hint="Browse NBA games by day."
+          />
         )}
 
         {/* Model Picks | Live Picks | Player Props (when enabled) */}
@@ -532,12 +543,16 @@ export const GamesScreen: React.FC = () => {
               <FeedEmptyState
                 icon="football-outline"
                 title={
-                  selectedLeague === 'soccer'
+                  selectedLeague === 'soccer' ||
+                  selectedLeague === 'nfl' ||
+                  selectedLeague === 'nba'
                     ? 'No games this day'
                     : 'No games found'
                 }
                 subtitle={
-                  selectedLeague === 'soccer'
+                  selectedLeague === 'soccer' ||
+                  selectedLeague === 'nfl' ||
+                  selectedLeague === 'nba'
                     ? 'Try another day with the week arrows above.'
                     : 'Check back later or try a different league filter.'
                 }
