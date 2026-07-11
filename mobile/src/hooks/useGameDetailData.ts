@@ -2,14 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Share } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { useQueryClient } from '@tanstack/react-query';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { useAppDispatch, useAppSelector } from '../store/hooks';
-import {
-  fetchGameDetails,
-  fetchPrediction,
-  fetchExplanation,
-  clearPredictionForGameChange,
-} from '../store/slices/gamesSlice';
+import { useAppSelector } from '../store/hooks';
 import { apiService, type MarketOddsResponse } from '../services/api';
 import { useLiveUpdates } from './useLiveUpdates';
 import { useServerFeatureFlags } from './useServerFeatureFlags';
@@ -20,17 +15,34 @@ import { hasPremiumAccess } from '../utils/subscription';
 import { useRewardedUnlock } from '../ads/engine/RewardedUnlockContext';
 import { useAdEngine } from '../ads/engine/AdEngineContext';
 import { trackSharePick } from '../services/productAnalytics';
+import {
+  gameDetailQueryKey,
+  gamePredictionQueryKey,
+  useGameDetailQuery,
+  useGamePredictionQuery,
+} from './useGameDetailQuery';
+import { useSubscriptionTier } from './useSubscriptionTier';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 import type { PlayerPropItem } from '../screens/gameDetail/types';
 
 type Nav = StackNavigationProp<RootStackParamList>;
 
 export function useGameDetailData(gameId: string, navigation: Nav) {
-  const dispatch = useAppDispatch();
+  const queryClient = useQueryClient();
   const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
   const authUser = useAppSelector((s) => s.auth.user);
-  const { currentGame, currentPrediction, loading, loadingPrediction, error: gamesError } =
-    useAppSelector((s) => s.games);
+
+  const gameQuery = useGameDetailQuery(gameId);
+  const predictionQuery = useGamePredictionQuery(gameId, isAuthenticated);
+  const { subscriptionTier } = useSubscriptionTier();
+
+  const currentGame = gameQuery.data ?? null;
+  const currentPrediction = predictionQuery.data ?? null;
+  const loading = gameQuery.isLoading && !currentGame;
+  const loadingPrediction = predictionQuery.isLoading;
+  const gamesError =
+    (predictionQuery.error instanceof Error ? predictionQuery.error.message : null) ??
+    (gameQuery.error instanceof Error ? gameQuery.error.message : null);
 
   const adEngine = useAdEngine();
   const rewardedUnlock = useRewardedUnlock();
@@ -43,7 +55,6 @@ export function useGameDetailData(gameId: string, navigation: Nav) {
   const [refreshing, setRefreshing] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
   const [addingTeamId, setAddingTeamId] = useState<string | null>(null);
-  const [subscriptionTier, setSubscriptionTier] = useState('free');
   const [playerProps, setPlayerProps] = useState<PlayerPropItem[]>([]);
   const [playerPropsLoading, setPlayerPropsLoading] = useState(false);
   const [playerPropsError, setPlayerPropsError] = useState<string | null>(null);
@@ -58,38 +69,9 @@ export function useGameDetailData(gameId: string, navigation: Nav) {
     enabled: isPremium,
   });
 
-  const loadGameData = useCallback(async () => {
-    const tasks: Promise<unknown>[] = [dispatch(fetchGameDetails(gameId))];
-    if (isAuthenticated) tasks.push(dispatch(fetchPrediction(gameId)));
-    await Promise.all(tasks);
-  }, [dispatch, gameId, isAuthenticated]);
-
   useEffect(() => {
     setShowExplanation(false);
-    dispatch(clearPredictionForGameChange());
-    void loadGameData();
-  }, [gameId, isAuthenticated, dispatch, loadGameData]);
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setSubscriptionTier('free');
-      return;
-    }
-    let cancelled = false;
-    void apiService
-      .getCurrentUser()
-      .then((user) => {
-        if (!cancelled && (user as { subscription_tier?: string })?.subscription_tier) {
-          setSubscriptionTier((user as { subscription_tier: string }).subscription_tier);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setSubscriptionTier('free');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isAuthenticated]);
+  }, [gameId]);
 
   useEffect(() => {
     if (!playerPropsEnabled || !hasPremiumAccess(subscriptionTier)) return;
@@ -141,16 +123,19 @@ export function useGameDetailData(gameId: string, navigation: Nav) {
 
   useEffect(() => {
     if (!isPremium || !lastUpdate?.prediction_updated_at) return;
-    dispatch(fetchGameDetails(gameId));
-    dispatch(fetchPrediction(gameId));
-  }, [lastUpdate?.prediction_updated_at, gameId, isPremium, dispatch]);
+    void queryClient.invalidateQueries({ queryKey: gameDetailQueryKey(gameId) });
+    void queryClient.invalidateQueries({ queryKey: gamePredictionQueryKey(gameId) });
+  }, [lastUpdate?.prediction_updated_at, gameId, isPremium, queryClient]);
 
   const onRefresh = useCallback(async () => {
     await rewardedUnlock.invalidateForGame(gameId);
     void adEngine.bumpPredictionEngagement();
     setRefreshing(true);
     try {
-      await loadGameData();
+      await Promise.all([
+        gameQuery.refetch(),
+        isAuthenticated ? predictionQuery.refetch() : Promise.resolve(),
+      ]);
       if (oddsDisplayEnabled) {
         try {
           setMarketOdds(await apiService.getMarketOdds(gameId));
@@ -158,24 +143,17 @@ export function useGameDetailData(gameId: string, navigation: Nav) {
           setMarketOdds(null);
         }
       }
-      if (showExplanation && currentPrediction?.id && isPremium) {
-        await dispatch(
-          fetchExplanation({ gameId, predictionId: currentPrediction.id }),
-        ).unwrap();
-      }
     } finally {
       setRefreshing(false);
     }
   }, [
     adEngine,
-    currentPrediction?.id,
-    dispatch,
     gameId,
-    isPremium,
-    loadGameData,
+    gameQuery,
+    isAuthenticated,
     oddsDisplayEnabled,
+    predictionQuery,
     rewardedUnlock,
-    showExplanation,
   ]);
 
   const addTeamToFavorites = useCallback(

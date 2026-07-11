@@ -54,7 +54,7 @@ export const HomeScreen: React.FC = () => {
     featuredGame,
     liveGames,
     refetchGames,
-  } = useHomeScreenData(isAuthenticated, user?.subscriptionTier);
+  } = useHomeScreenData(isAuthenticated);
 
   useIntervalWhen(liveGames.length > 0, LIVE_GAMES_POLL_MS, () => {
     void refetchGames();

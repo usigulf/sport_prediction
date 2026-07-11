@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { fetchExplanation } from '../store/slices/gamesSlice';
+import { useGameExplanationQuery } from '../hooks/useGameDetailQuery';
 import { theme } from '../constants/theme';
 import { isSoccerLeague } from '../constants/leagues';
 import { sanitizeLicensedFeedCopy } from '../utils/sanitizeProviderCopy';
@@ -29,8 +28,7 @@ interface ExplanationViewProps {
   homeWinProbability?: number;
   awayWinProbability?: number;
   /**
-   * When set, skips Redux `fetchExplanation` and uses this payload (e.g. game preview modal).
-   * Avoids stale/wrong analysis when global `state.games.explanation` is for another screen.
+   * When set, skips React Query fetch and uses this payload (e.g. game preview modal).
    */
   external?: {
     explanation: PredictionExplanation | null;
@@ -364,20 +362,20 @@ export const ExplanationView: React.FC<ExplanationViewProps> = ({
   awayWinProbability,
   external,
 }) => {
-  const dispatch = useAppDispatch();
-  const { explanation: reduxExplanation, loadingExplanation: reduxLoading } = useAppSelector(
-    (state) => state.games
-  );
-
   const useExternal = Boolean(external);
-  const explanation = useExternal ? external!.explanation : reduxExplanation;
-  const loadingExplanation = useExternal ? external!.loading : reduxLoading;
-  const externalError = useExternal ? external!.error : null;
-
-  useEffect(() => {
-    if (useExternal) return;
-    dispatch(fetchExplanation({ gameId, predictionId }));
-  }, [gameId, predictionId, analysisRefreshToken, dispatch, useExternal]);
+  const explanationQuery = useGameExplanationQuery(
+    gameId,
+    predictionId,
+    !useExternal,
+    analysisRefreshToken,
+  );
+  const explanation = useExternal ? external!.explanation : (explanationQuery.data ?? null);
+  const loadingExplanation = useExternal ? external!.loading : explanationQuery.isLoading;
+  const externalError = useExternal
+    ? external!.error
+    : explanationQuery.error instanceof Error
+      ? explanationQuery.error.message
+      : null;
 
   const narrativeSections = useMemo(() => {
     const ra = explanation?.rich_analysis;

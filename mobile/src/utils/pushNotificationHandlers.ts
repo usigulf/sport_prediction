@@ -5,6 +5,7 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { navigationRef } from '../navigation/navigationRef';
+import { registerPushNotificationCategories } from './pushNotificationCategories';
 
 function gameIdFromData(data: unknown): string | null {
   if (!data || typeof data !== 'object') return null;
@@ -24,6 +25,7 @@ export function navigateFromPushData(data: unknown): boolean {
 /** Call once at app startup (before listeners). */
 export function configurePushNotificationPresentation(): void {
   if (Platform.OS === 'web') return;
+  void registerPushNotificationCategories();
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldShowAlert: true,

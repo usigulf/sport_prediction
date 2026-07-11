@@ -3,9 +3,10 @@ import { apiService } from '../../services/api';
 import { getUserFriendlyMessage } from '../../utils/errorMessages';
 import { soccerBetaFetchParams } from '../../utils/soccerBetaFetch';
 import { useUpcomingGamesQuery } from '../../hooks/useUpcomingGamesQuery';
+import { useSubscriptionTier } from '../../hooks/useSubscriptionTier';
 import { hasProAccess } from '../../utils/subscription';
 
-export function useHomeScreenData(isAuthenticated: boolean, userSubscriptionTier?: string) {
+export function useHomeScreenData(isAuthenticated: boolean) {
   const {
     data: gamesData,
     isLoading: gamesLoading,
@@ -24,7 +25,7 @@ export function useHomeScreenData(isAuthenticated: boolean, userSubscriptionTier
   const [forYouLoading, setForYouLoading] = useState(false);
   const [forYouError, setForYouError] = useState<string | null>(null);
   const [accuracyPct, setAccuracyPct] = useState<number | null>(null);
-  const [subscriptionTier, setSubscriptionTier] = useState<string>('free');
+  const { subscriptionTier, refetch: refetchSubscriptionTier } = useSubscriptionTier();
   const [challengeCount, setChallengeCount] = useState<number>(0);
   const [premiumTeaserDismissed, setPremiumTeaserDismissed] = useState(false);
   const [trendingPicks, setTrendingPicks] = useState<any[]>([]);
@@ -107,17 +108,7 @@ export function useHomeScreenData(isAuthenticated: boolean, userSubscriptionTier
     }
     let cancelled = false;
     (async () => {
-      let tier = userSubscriptionTier ?? subscriptionTier;
-      try {
-        const u = (await apiService.getCurrentUser()) as { subscription_tier?: string };
-        if (u?.subscription_tier) {
-          tier = u.subscription_tier;
-          if (!cancelled) setSubscriptionTier(u.subscription_tier);
-        }
-      } catch {
-        /* profile optional for home */
-      }
-      if (!cancelled) await loadChallengeCount(tier);
+      if (!cancelled) await loadChallengeCount(subscriptionTier);
       if (!cancelled) {
         try {
           const favs = (await apiService.getFavorites()) as {
@@ -136,7 +127,7 @@ export function useHomeScreenData(isAuthenticated: boolean, userSubscriptionTier
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, loadChallengeCount, userSubscriptionTier]);
+  }, [isAuthenticated, loadChallengeCount, subscriptionTier]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -151,12 +142,8 @@ export function useHomeScreenData(isAuthenticated: boolean, userSubscriptionTier
         })
         .catch(() => {}),
       isAuthenticated
-        ? apiService
-            .getCurrentUser()
-            .then((u: { subscription_tier?: string }) => {
-              if (u?.subscription_tier) setSubscriptionTier(u.subscription_tier);
-              return loadChallengeCount(u?.subscription_tier ?? subscriptionTier);
-            })
+        ? refetchSubscriptionTier()
+            .then(() => loadChallengeCount(subscriptionTier))
             .catch(() => loadChallengeCount(subscriptionTier))
         : Promise.resolve(),
       isAuthenticated
@@ -179,6 +166,7 @@ export function useHomeScreenData(isAuthenticated: boolean, userSubscriptionTier
     loadForYou,
     loadTrending,
     refetchGames,
+    refetchSubscriptionTier,
     subscriptionTier,
   ]);
 

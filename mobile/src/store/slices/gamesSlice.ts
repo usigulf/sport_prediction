@@ -1,6 +1,6 @@
 /**
- * Redux slice for game detail, predictions, and explanations.
- * Upcoming games lists use React Query (useUpcomingGamesQuery).
+ * Legacy Redux slice — game detail/prediction/explanation now use React Query
+ * (useGameDetailQuery, useGameExplanationQuery). Kept for store compatibility.
  */
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { apiService } from '../../services/api';

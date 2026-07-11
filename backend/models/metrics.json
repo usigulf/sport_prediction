@@ -1,0 +1,49 @@
+{
+  "$schema": "https://octobetiq.com/schemas/metrics.json",
+  "mode": "per_league_group",
+  "status": "ready",
+  "league_group": "football",
+  "model_kind": "binary_home_win",
+  "model_version": "sklearn_logistic_v1",
+  "games": 842,
+  "out_dir": "backend/models/football",
+  "feature_columns": [
+    "home_team_win_rate",
+    "away_team_win_rate",
+    "home_team_avg_score",
+    "away_team_avg_score",
+    "home_team_recent_form",
+    "away_team_recent_form",
+    "home_advantage",
+    "rest_days_home",
+    "rest_days_away"
+  ],
+  "league_counts": {
+    "nfl": 412,
+    "nba": 430
+  },
+  "league_group_corpus_counts": {
+    "football": 842,
+    "soccer": 1204
+  },
+  "league_group_holdout_counts": {
+    "football": 168,
+    "soccer": 241
+  },
+  "calibrated_final": true,
+  "eval": {
+    "holdout_games": 168,
+    "accuracy": 0.5833,
+    "log_loss": 0.6912,
+    "brier_score": 0.2418
+  },
+  "publish_ready": true,
+  "publish_block_reasons": [],
+  "ensemble_eligible": false,
+  "ensemble_gate_reason": "single_model_only_until_backtest_lift",
+  "min_publish_holdout_per_league_group": 120,
+  "min_publish_corpus_required": 400,
+  "artifacts_written": true,
+  "trained_at": "2026-05-30T15:37:07.159697+00:00",
+  "note": "Example metrics.json schema for per-league-group training. Predicts P(home | decisive); draws excluded from binary groups. Features are point-in-time from finished games before kickoff."
+}

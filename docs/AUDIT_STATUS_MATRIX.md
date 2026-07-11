@@ -9,12 +9,12 @@ Legend: ✅ done · 🟡 partial · ❌ not implemented · 🚫 blocked (externa
 
 | Metric | Weaknesses (50) | Improvements (100) | Combined (150) |
 |--------|-----------------|--------------------|----------------|
-| ✅ Done | 34 | 65 | 99 |
-| 🟡 Partial | 14 | 26 | 40 |
+| ✅ Done | 35 | 67 | 102 |
+| 🟡 Partial | 13 | 24 | 37 |
 | ❌ Open | 0 | 0 | 0 |
 | 🚫 Blocked | 2 | 9 | 11 |
 
-**Implementable coverage:** 85.6% — `(done + 0.5×partial) / (150 − blocked)`
+**Implementable coverage:** 86.7% — `(done + 0.5×partial) / (150 − blocked)`
 
 Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added for subscription utils.
 
@@ -61,7 +61,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | W35 | No product analytics pipeline | 🟡 | partial | mobile/src/services/productAnalytics.ts — needs POSTHOG key in prod |
 | W36 | Keywords typo “ports” on live listing | 🚫 | blocked | Live ASC keywords — requires App Store Connect login |
 | W37 | No full-text search | ✅ | done | backend/app/services/game_search_service.py, GET /games/search |
-| W38 | Duplicate tier/profile fetches per screen | 🟡 | partial | React Query favorites + upcoming; GameDetail still Redux for predictions |
+| W38 | Duplicate tier/profile fetches per screen | ✅ | done | useSubscriptionTier + useGameDetailQuery React Query; GameDetail/ExplanationView migrated |
 | W39 | Silent error swallowing on feeds | ✅ | done | mobile HomeFeedSections error+retry |
 | W40 | OpenAPI exposed in prod config default | ✅ | done | backend/app/config.py auto-disables OpenAPI in production |
 | W41 | 4 workers × inconsistent in-memory revocation | ✅ | done | backend/app/services/token_revocation_service.py Redis jti denylist; prod requires REDIS_URL |
@@ -106,7 +106,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I23 | Walk-forward backtest script | ✅ | done | backend/app/services/walk_forward_backtest.py |
 | I24 | Fix explainability (coefficients from inner LR) | ✅ | done | backend/app/services/explanation_service.py |
 | I25 | Per-league model dir in explanation endpoint | ✅ | done | explanation per-league model dir |
-| I26 | Commit `metrics.json` schema example | 🟡 | partial | backend/models/metrics.json example |
+| I26 | Commit `metrics.json` schema example | ✅ | done | backend/models/metrics.json schema example with eval + publish_ready |
 | I27 | Archive stale `ml/` and Rust services | 🟡 | partial | archive/README.md |
 | I28 | Update ARCHITECTURE.md to match reality | 🟡 | partial | docs/PRODUCTION_REALITY.md canonical prod facts |
 | I29 | Market odds as benchmark in backtest | 🟡 | partial | walk_forward_backtest market_benchmark note + /stats/model-vs-market live |
@@ -125,7 +125,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I42 | Referral: “invite friend, 7 extra trial days” | 🟡 | partial | referral/apply tracking; bonus days need ASC/Stripe promo |
 | I43 | Share card: “My model accuracy this month” | ✅ | done | SharePickCard rollingAccuracyPct, build_share_card rolling_accuracy_pct |
 | I44 | PostHog/Mixpanel integration | 🟡 | partial | productAnalytics.ts optional PostHog |
-| I45 | Push categories (kickoff, upsets, results) | 🟡 | partial | push_trigger_service kickoff/high-conf/post-game |
+| I45 | Push categories (kickoff, upsets, results) | ✅ | done | push_trigger_service types + push_service categoryId + mobile iOS categories |
 | I46 | Trial-ending push + email | 🟡 | partial | send_trial_ending_reminders push; email via digest when SMTP set |
 | I47 | App Store review prompt after positive accuracy session | ✅ | done | mobile storeReview.ts |
 | I48 | Public embed: accuracy widget for octobetiq.com | ✅ | done | web/widgets/accuracy-widget.html |

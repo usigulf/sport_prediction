@@ -84,7 +84,8 @@ Thumbs.db
 *.pkl
 
 # Trained model artifacts (regenerate with backend/scripts/train_model.py)
-backend/models/
+backend/models/*
+!backend/models/metrics.json
 *.h5
 *.pb
 /models/
