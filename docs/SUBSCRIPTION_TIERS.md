@@ -23,5 +23,5 @@ All tier checks go through `subscription_tiers.py`:
 
 ## Related audit items
 
-- **W33 / I41** Annual IAP — code supports annual billing; ASC product `com.octobetiq.premium.annual` still required in App Store Connect
+- **W33 / I41** Annual IAP — see **`docs/ANNUAL_IAP_SETUP.md`**; Paywall auto-shows annual when RevenueCat package exists
 - **I87** Price experiment — messaging via feature flags; checkout price comes from RevenueCat/Stripe

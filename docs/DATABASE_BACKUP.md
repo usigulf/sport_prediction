@@ -12,8 +12,9 @@ Production uses **Docker Compose** with TimescaleDB (`sport-prediction-postgres`
 | `scripts/setup_db_backup_cron.sh` | Install `0 3 * * *` cron idempotently |
 | `scripts/setup_offsite_backup.sh` | Write `secrets/backup_offsite.env` + test offsite copy |
 | `scripts/verify_db_backup.sh` | Alert if local/offsite backups are stale or missing |
+| `scripts/verify_offsite_backup_scaffold.sh` | CI check — scripts/docs present (no credentials) |
 
-## Install on VPS
+See **`docs/OFFSITE_BACKUP_RUNBOOK.md`** for DigitalOcean Spaces setup and ops checklist.
 
 ```bash
 cd ~/sport_prediction

@@ -34,6 +34,10 @@ jobs:
       - name: pip-audit
         run: bash ../scripts/pip_audit_backend.sh
 
+      - name: Audit scaffold verify
+        working-directory: ..
+        run: bash scripts/verify_audit_scaffolds.sh
+
       - name: Pytest with coverage
         env:
           DATABASE_URL: "sqlite:///:memory:"

@@ -10,11 +10,22 @@ Production postgres/redis containers are shared; only the API process and DB nam
 |--------|---------|
 | `scripts/setup_staging_env.sh` | Create `.env.staging` with unique JWT/cron secrets |
 | `scripts/ensure_staging_database.sh` | `CREATE DATABASE sportsprediction_staging` (idempotent) |
+| `scripts/run_staging_local.sh` | **Local-only** — Docker staging on `127.0.0.1:8001` (no DNS) |
 | `scripts/deploy_staging_api.sh` | Build, migrate, start `api-staging`, verify `/health` |
 | `scripts/deploy_staging_public_url.sh` | DNS check, nginx, Certbot TLS, public `/health` verify |
 | `scripts/check_staging_health.sh` | Uptime probe for staging URL |
 
-## First-time VPS setup
+Scaffold verify (no VPS/DNS): `bash scripts/verify_staging_scaffold.sh`
+
+## Local development (no DNS)
+
+```bash
+./scripts/run_staging_local.sh
+curl http://127.0.0.1:8001/health
+open http://127.0.0.1:8001/docs
+```
+
+Uses the same `docker-compose.staging.yml` overlay as production VPS staging.
 
 ```bash
 cd ~/sport_prediction
