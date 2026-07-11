@@ -58,6 +58,7 @@ export const GameDetailScreen: React.FC = () => {
     playerPropsNamed,
     playerPropsEnabled,
     marketOdds,
+    lineMovement,
     oddsDisplayEnabled,
     lastUpdate,
     connected,
@@ -119,6 +120,7 @@ export const GameDetailScreen: React.FC = () => {
           setShowExplanation={setShowExplanation}
           oddsDisplayEnabled={oddsDisplayEnabled}
           marketOdds={marketOdds}
+          lineMovement={lineMovement}
           authUserId={authUser?.id}
           lastUpdatePredictionAt={lastUpdate?.prediction_updated_at}
           onShare={handleShare}

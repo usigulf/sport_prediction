@@ -281,6 +281,40 @@ export interface MarketOddsResponse {
   fetched_at_iso?: string | null;
 }
 
+export interface LineMovementPoint {
+  captured_at_iso: string | null;
+  home_implied_prob: number | null;
+  away_implied_prob: number | null;
+  spread_home: number | null;
+  total_points: number | null;
+  home_moneyline: number | null;
+  away_moneyline: number | null;
+}
+
+export interface LineMovementResponse {
+  game_id: string;
+  point_count: number;
+  points: LineMovementPoint[];
+  disclaimer?: string;
+}
+
+export interface UserBrierStatsResponse {
+  total_picks: number;
+  scored_picks: number;
+  pending_picks: number;
+  correct: number;
+  accuracy_pct: number | null;
+  user_brier: number | null;
+  model_brier: number | null;
+  brier_delta: number | null;
+  clv: {
+    scored_picks: number;
+    avg_clv: number | null;
+    positive_clv_pct: number | null;
+  };
+  methodology?: string;
+}
+
 /** GET /stats/model — sklearn publish readiness (warming vs ready). */
 export interface ModelStatusResponse {
   status: 'warming' | 'ready' | 'forced' | string;
@@ -584,6 +618,53 @@ class ApiService {
       requireAuth: false,
       sendAuthIfPresent: true,
     });
+  }
+
+  async getLineMovement(gameId: string) {
+    return this.request<LineMovementResponse>(`/games/${gameId}/line-movement`, {
+      requireAuth: false,
+      sendAuthIfPresent: true,
+    });
+  }
+
+  async recordUserPick(body: {
+    game_id: string;
+    outcome: 'home' | 'away' | 'draw';
+    probability: number;
+    market_home_implied_prob?: number | null;
+    market_away_implied_prob?: number | null;
+  }) {
+    return this.request<{ id: string; game_id: string; outcome: string; probability: number }>(
+      '/user/me/picks',
+      {
+        method: 'POST',
+        requireAuth: true,
+        body,
+      },
+    );
+  }
+
+  async getUserBrierStats() {
+    return this.request<UserBrierStatsResponse>('/user/me/picks/brier', {
+      requireAuth: true,
+    });
+  }
+
+  async getReferralCode() {
+    return this.request<{ referral_code: string }>('/user/referral/code', {
+      requireAuth: true,
+    });
+  }
+
+  async applyReferralCode(referralCode: string) {
+    return this.request<{ message: string; applied: boolean; referrer_id?: string }>(
+      '/user/referral/apply',
+      {
+        method: 'POST',
+        requireAuth: true,
+        body: { referral_code: referralCode },
+      },
+    );
   }
 
   // Predictions

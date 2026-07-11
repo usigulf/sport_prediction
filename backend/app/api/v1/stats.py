@@ -122,8 +122,10 @@ async def get_public_audit_bundle(db: Session = Depends(get_db)):
     """
     now = datetime.now(timezone.utc)
     since_30d = now - timedelta(days=30)
+    since_7d = now - timedelta(days=7)
     accuracy = aggregate_accuracy_from_finished(db, since=None)
     roll_30d = aggregate_accuracy_from_finished(db, since=since_30d)
+    roll_7d = aggregate_accuracy_from_finished(db, since=since_7d)
     calibration = aggregate_calibration_from_finished(db, since=None)
     settings = get_settings()
     model_dir = (settings.model_artifact_dir or settings.explanation_model_dir or "").strip()
@@ -133,6 +135,7 @@ async def get_public_audit_bundle(db: Session = Depends(get_db)):
         "computed_at_iso": now.isoformat(),
         "accuracy_all_time": accuracy,
         "accuracy_rolling_30d": roll_30d,
+        "accuracy_rolling_7d": roll_7d,
         "calibration": calibration,
         "model": {
             "publish_ready": bool((metrics or {}).get("publish_ready")),

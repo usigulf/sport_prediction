@@ -5,7 +5,7 @@ import * as Sharing from 'expo-sharing';
 import { useQueryClient } from '@tanstack/react-query';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useAppSelector } from '../store/hooks';
-import { apiService, type MarketOddsResponse } from '../services/api';
+import { apiService, type MarketOddsResponse, type LineMovementResponse } from '../services/api';
 import { useLiveUpdates } from './useLiveUpdates';
 import { useServerFeatureFlags } from './useServerFeatureFlags';
 import { isOddsDisplayEnabled, isPlayerPropsEnabled } from '../utils/resolvedFeatureFlags';
@@ -15,6 +15,7 @@ import { hasPremiumAccess } from '../utils/subscription';
 import { useRewardedUnlock } from '../ads/engine/RewardedUnlockContext';
 import { useAdEngine } from '../ads/engine/AdEngineContext';
 import { trackSharePick } from '../services/productAnalytics';
+import { modelPickFromPrediction } from '../utils/userPickTracking';
 import {
   gameDetailQueryKey,
   gamePredictionQueryKey,
@@ -61,6 +62,7 @@ export function useGameDetailData(gameId: string, navigation: Nav) {
   const [playerPropsDisclaimer, setPlayerPropsDisclaimer] = useState<string | null>(null);
   const [playerPropsNamed, setPlayerPropsNamed] = useState(false);
   const [marketOdds, setMarketOdds] = useState<MarketOddsResponse | null>(null);
+  const [lineMovement, setLineMovement] = useState<LineMovementResponse | null>(null);
 
   const isPremium = hasPremiumAccess(subscriptionTier);
   const unlockedByAd = rewardedUnlock.isUnlockedForGame(gameId);
@@ -105,6 +107,7 @@ export function useGameDetailData(gameId: string, navigation: Nav) {
   useEffect(() => {
     if (!oddsDisplayEnabled) {
       setMarketOdds(null);
+      setLineMovement(null);
       return;
     }
     let cancelled = false;
@@ -116,10 +119,49 @@ export function useGameDetailData(gameId: string, navigation: Nav) {
       .catch(() => {
         if (!cancelled) setMarketOdds(null);
       });
+    void apiService
+      .getLineMovement(gameId)
+      .then((res) => {
+        if (!cancelled) setLineMovement(res);
+      })
+      .catch(() => {
+        if (!cancelled) setLineMovement(null);
+      });
     return () => {
       cancelled = true;
     };
   }, [gameId, oddsDisplayEnabled]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !currentPrediction || !currentGame) return;
+    const status = currentGame.status;
+    if (status === 'finished' || status === 'final') return;
+
+    const hp = Number(currentPrediction.home_win_probability);
+    const ap = Number(currentPrediction.away_win_probability);
+    if (!Number.isFinite(hp) || !Number.isFinite(ap)) return;
+
+    const { outcome, probability } = modelPickFromPrediction(hp, ap, currentGame.league);
+    void apiService
+      .recordUserPick({
+        game_id: gameId,
+        outcome,
+        probability,
+        market_home_implied_prob: marketOdds?.consensus?.home_implied_prob ?? null,
+        market_away_implied_prob: marketOdds?.consensus?.away_implied_prob ?? null,
+      })
+      .catch(() => {
+        /* non-blocking */
+      });
+  }, [
+    currentGame,
+    currentPrediction,
+    gameId,
+    isAuthenticated,
+    marketOdds?.consensus?.away_implied_prob,
+    marketOdds?.consensus?.home_implied_prob,
+    marketOdds?.fetched_at_iso,
+  ]);
 
   useEffect(() => {
     if (!isPremium || !lastUpdate?.prediction_updated_at) return;
@@ -141,6 +183,11 @@ export function useGameDetailData(gameId: string, navigation: Nav) {
           setMarketOdds(await apiService.getMarketOdds(gameId));
         } catch {
           setMarketOdds(null);
+        }
+        try {
+          setLineMovement(await apiService.getLineMovement(gameId));
+        } catch {
+          setLineMovement(null);
         }
       }
     } finally {
@@ -222,6 +269,7 @@ export function useGameDetailData(gameId: string, navigation: Nav) {
     playerPropsNamed,
     playerPropsEnabled,
     marketOdds,
+    lineMovement,
     oddsDisplayEnabled,
     lastUpdate,
     connected,

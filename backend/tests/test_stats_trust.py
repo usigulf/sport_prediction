@@ -464,4 +464,5 @@ def test_public_audit_endpoint(client):
     data = r.json()
     assert data["audit_version"] == "1.0"
     assert "accuracy_all_time" in data
+    assert "accuracy_rolling_7d" in data
     assert "methodology" in data

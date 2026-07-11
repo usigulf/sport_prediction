@@ -14,6 +14,8 @@ import { apiService } from '../services/api';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { theme } from '../constants/theme';
+import { UserPickStatsCard } from '../components/UserPickStatsCard';
+import type { UserBrierStatsResponse } from '../services/api';
 
 type PredictionHistoryNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -43,16 +45,21 @@ export const PredictionHistoryScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [brierStats, setBrierStats] = useState<UserBrierStatsResponse | null>(null);
 
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     setError(null);
     try {
-      const res = await apiService.getPredictionHistory({ skip: 0, limit: 50 });
+      const [res, stats] = await Promise.all([
+        apiService.getPredictionHistory({ skip: 0, limit: 50 }),
+        apiService.getUserBrierStats().catch(() => null),
+      ]);
       const data = res as { predictions: HistoryItem[]; total: number };
       setItems(data.predictions ?? []);
       setTotal(data.total ?? 0);
+      setBrierStats(stats);
     } catch (e: unknown) {
       setError(getUserFriendlyMessage(e));
       setItems([]);
@@ -148,7 +155,12 @@ export const PredictionHistoryScreen: React.FC = () => {
         data={items}
         keyExtractor={(i) => i.id}
         renderItem={renderItem}
-        contentContainerStyle={items.length === 0 ? styles.emptyList : undefined}
+        contentContainerStyle={styles.listContent}
+        ListHeaderComponent={
+          brierStats && brierStats.total_picks > 0 ? (
+            <UserPickStatsCard stats={brierStats} />
+          ) : null
+        }
         ListEmptyComponent={
           <Text style={styles.emptyText}>
             No prediction history yet. View a game and open its prediction to see it here.
@@ -166,6 +178,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  listContent: {
+    padding: 16,
+    flexGrow: 1,
   },
   centered: {
     flex: 1,

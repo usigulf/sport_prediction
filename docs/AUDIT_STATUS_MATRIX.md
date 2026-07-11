@@ -9,12 +9,12 @@ Legend: ✅ done · 🟡 partial · ❌ not implemented · 🚫 blocked (externa
 
 | Metric | Weaknesses (50) | Improvements (100) | Combined (150) |
 |--------|-----------------|--------------------|----------------|
-| ✅ Done | 38 | 71 | 109 |
-| 🟡 Partial | 10 | 20 | 30 |
+| ✅ Done | 39 | 75 | 114 |
+| 🟡 Partial | 9 | 16 | 25 |
 | ❌ Open | 0 | 0 | 0 |
 | 🚫 Blocked | 2 | 9 | 11 |
 
-**Implementable coverage:** 89.2% — `(done + 0.5×partial) / (150 − blocked)`
+**Implementable coverage:** 91.0% — `(done + 0.5×partial) / (150 − blocked)`
 
 Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added for subscription utils.
 
@@ -55,9 +55,9 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | W29 | Account delete doesn’t cancel billing | ✅ | done | backend/app/services/subscription_cancel_service.py |
 | W30 | Inconsistent subscription tier checks | ✅ | done | backend/app/utils/subscription_tiers.py |
 | W31 | Guests can’t see paywall in production | ✅ | done | mobile PaywallScreen guest preview |
-| W32 | $29.99 without odds/EV tooling | 🟡 | partial | odds_service edge_pct + /stats/model-vs-market dashboard |
+| W32 | $29.99 without odds/EV tooling | ✅ | done | MarketOddsCard edge badge + LineMovementCard + model-vs-market dashboard |
 | W33 | No annual subscription | 🟡 | partial | Annual Stripe + Paywall gating; ASC product com.octobetiq.premium.annual blocked |
-| W34 | No referral program | 🟡 | partial | backend/app/api/v1/user.py referral/apply, share_referral_service.py |
+| W34 | No referral program | 🟡 | partial | ReferralSection on Profile + referral/apply API; bonus days need ASC/Stripe promo |
 | W35 | No product analytics pipeline | 🟡 | partial | mobile/src/services/productAnalytics.ts — needs POSTHOG key in prod |
 | W36 | Keywords typo “ports” on live listing | 🚫 | blocked | Live ASC keywords — requires App Store Connect login |
 | W37 | No full-text search | ✅ | done | backend/app/services/game_search_service.py, GET /games/search |
@@ -122,14 +122,14 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I39 | Consistent skeleton/error/empty components | ✅ | done | FeedSkeleton/FeedErrorBanner/FeedEmptyState on Favorites, LiveHub, Games, Profile |
 | I40 | Guest paywall preview (read-only) | ✅ | done | guest paywall preview |
 | I41 | Annual plan ($199/yr) | 🟡 | partial | annual plan code; ASC IAP blocked |
-| I42 | Referral: “invite friend, 7 extra trial days” | 🟡 | partial | referral/apply tracking; bonus days need ASC/Stripe promo |
+| I42 | Referral: “invite friend, 7 extra trial days” | 🟡 | partial | ReferralSection share/apply UI + referral/apply tracking; bonus days need ASC/Stripe promo |
 | I43 | Share card: “My model accuracy this month” | ✅ | done | SharePickCard rollingAccuracyPct, build_share_card rolling_accuracy_pct |
 | I44 | PostHog/Mixpanel integration | 🟡 | partial | productAnalytics.ts optional PostHog |
 | I45 | Push categories (kickoff, upsets, results) | ✅ | done | push_trigger_service types + push_service categoryId + mobile iOS categories |
 | I46 | Trial-ending push + email | ✅ | done | send_trial_ending_reminders push + send_trial_ending_email when SMTP set |
 | I47 | App Store review prompt after positive accuracy session | ✅ | done | mobile storeReview.ts |
 | I48 | Public embed: accuracy widget for octobetiq.com | ✅ | done | web/widgets/accuracy-widget.html |
-| I49 | Blog: weekly transparent scorecard | 🟡 | partial | web/scorecard.html weekly public-audit scorecard |
+| I49 | Blog: weekly transparent scorecard | ✅ | done | web/scorecard.html 7d/30d/all-time + model status from public-audit |
 | I50 | Android Play Store launch | 🚫 | blocked | Play Store listing + Google Play Console |
 | I51 | Managed Postgres (RDS/DO managed) | 🚫 | blocked | Managed Postgres — docs/scripts only; needs cloud account |
 | I52 | Celery/ARQ job queue | 🟡 | partial | job_queue_service.py + internal endpoints |
@@ -141,9 +141,9 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I58 | Staging environment | 🟡 | partial | docker-compose.staging.yml; public URL blocked DNS |
 | I59 | Blue/green deploy | 🟡 | partial | scripts/deploy_api_blue_green.sh — nginx swap manual |
 | I60 | Prometheus metrics + Grafana dashboards | ✅ | done | Prometheus + Grafana compose profile |
-| I61 | Odds display (informational, not affiliate-first) | 🟡 | partial | odds_service + MarketOddsCard behind flag |
-| I62 | Line movement charts | 🟡 | partial | GET /games/{id}/line-movement + odds_snapshots on market-odds fetch |
-| I63 | Closing line value tracker | 🟡 | partial | CLV in GET /user/me/picks/brier from odds_snapshots |
+| I61 | Odds display (informational, not affiliate-first) | ✅ | done | MarketOddsCard + LineMovementCard on GameDetail when odds_display flag on |
+| I62 | Line movement charts | ✅ | done | LineMovementCard + GET /games/{id}/line-movement + odds_snapshots on market-odds fetch |
+| I63 | Closing line value tracker | ✅ | done | recordUserPick on GameDetail + UserPickStatsCard CLV on My Picks |
 | I64 | “Model vs market” dashboard | ✅ | done | GET /stats/model-vs-market, web/model-vs-market.html |
 | I65 | Player props (when licensed) | 🟡 | partial | player_props_service behind FEATURE_PLAYER_PROPS |
 | I66 | Parlay correlation warnings | ✅ | done | parlay_correlation_service.py, POST /tools/parlay-correlation |

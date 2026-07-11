@@ -11,20 +11,33 @@
     .pct { font-size: 2.5rem; font-weight: 700; color: var(--accent); }
     .muted { color: var(--muted); line-height: 1.55; }
     section { margin: 1.5rem 0; padding: 1rem; border: 1px solid rgba(148,163,184,.2); border-radius: 10px; }
+    .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); }
   </style>
 </head>
 <body>
   <h1>Weekly transparent scorecard</h1>
   <p class="muted">Public audit data — pre-game picks vs final results. Not betting advice.</p>
-  <section>
-    <div class="muted">Rolling 30-day accuracy</div>
-    <div class="pct" id="acc30">—</div>
-    <div class="muted" id="meta30"></div>
-  </section>
+  <div class="grid">
+    <section>
+      <div class="muted">Rolling 7-day accuracy</div>
+      <div class="pct" id="acc7">—</div>
+      <div class="muted" id="meta7"></div>
+    </section>
+    <section>
+      <div class="muted">Rolling 30-day accuracy</div>
+      <div class="pct" id="acc30">—</div>
+      <div class="muted" id="meta30"></div>
+    </section>
+  </div>
   <section>
     <div class="muted">All-time tracked accuracy</div>
     <div class="pct" id="accAll">—</div>
     <div class="muted" id="metaAll"></div>
+  </section>
+  <section>
+    <div class="muted">Model readiness</div>
+    <div id="modelStatus" class="muted" style="font-size:1.1rem;font-weight:600;color:var(--text)">—</div>
+    <div class="muted" id="modelDetail"></div>
   </section>
   <p class="muted" id="updated"></p>
   <p class="muted"><a href="/model-vs-market.html" style="color:#38bdf8">Model vs market</a> · <a href="https://octobetiq.com" style="color:#38bdf8">octobetiq.com</a></p>
@@ -33,12 +46,21 @@
       const r = await fetch('https://api.octobetiq.com/api/v1/stats/public-audit');
       if (!r.ok) return;
       const d = await r.json();
+      const r7 = d.accuracy_rolling_7d || {};
       const r30 = d.accuracy_rolling_30d || {};
       const all = d.accuracy_all_time || {};
-      document.getElementById('acc30').textContent = r30.accuracy_pct != null ? r30.accuracy_pct + '%' : '—';
-      document.getElementById('meta30').textContent = `${r30.total_games || 0} finished games in window`;
-      document.getElementById('accAll').textContent = all.accuracy_pct != null ? all.accuracy_pct + '%' : '—';
-      document.getElementById('metaAll').textContent = `${all.total_games || 0} games scored since launch`;
+      const model = d.model || {};
+      const setAcc = (id, metaId, block) => {
+        document.getElementById(id).textContent = block.accuracy_pct != null ? block.accuracy_pct + '%' : '—';
+        document.getElementById(metaId).textContent = `${block.total_games || 0} finished games in window`;
+      };
+      setAcc('acc7', 'meta7', r7);
+      setAcc('acc30', 'meta30', r30);
+      setAcc('accAll', 'metaAll', all);
+      document.getElementById('modelStatus').textContent = model.publish_ready ? 'Publish-ready' : (model.status || 'warming');
+      document.getElementById('modelDetail').textContent = model.trained_at
+        ? `Last trained ${model.trained_at.replace('T', ' ').slice(0, 19)} UTC`
+        : 'Training artifacts warming on server';
       document.getElementById('updated').textContent = 'Updated ' + (d.computed_at_iso || '').replace('T', ' ').slice(0, 19) + ' UTC';
     })();
   </script>

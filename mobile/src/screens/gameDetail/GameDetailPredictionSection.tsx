@@ -8,6 +8,7 @@ import {
 import { StackNavigationProp } from '@react-navigation/stack';
 import { PredictionCard } from '../../components/PredictionCard';
 import { MarketOddsCard } from '../../components/MarketOddsCard';
+import { LineMovementCard } from '../../components/LineMovementCard';
 import { ExplanationView } from '../../components/ExplanationView';
 import { GuestSignupCard } from '../../components/GuestSignupCard';
 import { SharePickCard, buildSharePickCardData } from '../../components/SharePickCard';
@@ -15,7 +16,7 @@ import { PredictionDisclaimer } from '../../components/PredictionDisclaimer';
 import { NativeFeedAdCard } from '../../ads/components/NativeFeedAdCard';
 import { RewardedUnlockCTA } from '../../ads/components/RewardedUnlockCTA';
 import { getUserFriendlyMessage } from '../../utils/errorMessages';
-import type { MarketOddsResponse } from '../../services/api';
+import type { MarketOddsResponse, LineMovementResponse } from '../../services/api';
 import type { Game, Prediction } from '../../types';
 import type { RootStackParamList } from '../../navigation/AppNavigator';
 import { theme } from '../../constants/theme';
@@ -38,6 +39,7 @@ type Props = {
   setShowExplanation: (v: boolean) => void;
   oddsDisplayEnabled: boolean;
   marketOdds: MarketOddsResponse | null;
+  lineMovement: LineMovementResponse | null;
   authUserId?: string;
   lastUpdatePredictionAt?: string | null;
   onShare: () => void;
@@ -59,6 +61,7 @@ export function GameDetailPredictionSection({
   setShowExplanation,
   oddsDisplayEnabled,
   marketOdds,
+  lineMovement,
   authUserId,
   lastUpdatePredictionAt,
   onShare,
@@ -114,6 +117,13 @@ export function GameDetailPredictionSection({
               homeTeamName={homeName}
               awayTeamName={awayName}
               payload={marketOdds}
+            />
+          ) : null}
+          {oddsDisplayEnabled && lineMovement ? (
+            <LineMovementCard
+              homeTeamName={homeName}
+              awayTeamName={awayName}
+              payload={lineMovement}
             />
           ) : null}
           <NativeFeedAdCard surface="game_detail" screenLabel="GameDetailNative" />

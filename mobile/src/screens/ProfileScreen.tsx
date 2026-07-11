@@ -25,6 +25,8 @@ import { FeedSkeleton } from '../components/feed/FeedSkeleton';
 import { FeedErrorBanner } from '../components/feed/FeedErrorBanner';
 import { PredictionDisclaimer } from '../components/PredictionDisclaimer';
 import { useLayout } from '../hooks/useLayout';
+import { useServerFeatureFlags } from '../hooks/useServerFeatureFlags';
+import { ReferralSection } from '../components/ReferralSection';
 
 type ProfileScreenNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, 'Profile'>,
@@ -54,6 +56,7 @@ export const ProfileScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const { user, profileLoading } = useAppSelector((state) => state.auth);
   const { isWide, contentMaxWidth, horizontalPadding } = useLayout();
+  const serverFlags = useServerFeatureFlags();
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [loggingOut, setLoggingOut] = React.useState(false);
   const [showLogoutModal, setShowLogoutModal] = React.useState(false);
@@ -164,6 +167,8 @@ export const ProfileScreen: React.FC = () => {
               <Text style={styles.tierText}>{subscriptionTierLabel(tier).toUpperCase()}</Text>
             </View>
           </View>
+
+          <ReferralSection enabled={serverFlags.referral_program !== false} />
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Account</Text>
