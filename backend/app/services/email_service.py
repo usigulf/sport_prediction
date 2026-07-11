@@ -52,3 +52,35 @@ def send_password_reset_email(*, to_email: str, reset_url: str) -> bool:
     except Exception:
         logger.exception("Failed to send password reset email to %s", to_email)
         return False
+
+
+def send_trial_ending_email(*, to_email: str) -> bool:
+    """Remind user their Premium trial ends in ~24h. Returns True when sent."""
+    if not _smtp_configured():
+        logger.info("Trial-ending email not sent (SMTP not configured) for %s", to_email)
+        return False
+
+    msg = EmailMessage()
+    msg["Subject"] = "Your OctobetiQ Premium trial ends soon"
+    msg["From"] = settings.smtp_from_email
+    msg["To"] = to_email
+    msg.set_content(
+        "Your OctobetiQ Premium free trial ends in about 24 hours.\n\n"
+        "To keep unlimited picks and live analysis, your subscription will renew automatically "
+        "unless you cancel in the App Store under Settings → Subscriptions.\n\n"
+        "Questions? Reply to this email or visit octobetiq.com/help.\n"
+    )
+
+    try:
+        with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15) as smtp:
+            if settings.smtp_use_tls:
+                smtp.starttls()
+            username = (settings.smtp_username or "").strip()
+            password: Optional[str] = settings.smtp_password
+            if username and password:
+                smtp.login(username, password)
+            smtp.send_message(msg)
+        return True
+    except Exception:
+        logger.exception("Failed to send trial-ending email to %s", to_email)
+        return False

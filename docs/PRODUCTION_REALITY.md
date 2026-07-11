@@ -33,6 +33,8 @@ Short reference for investors and developers. **This is what runs in production 
 - Search: `GET /games/search`
 - Transparency: `GET /stats/model-vs-market`, `POST /tools/parlay-correlation`
 - Config: `GET /config/feature-flags` (server experiments)
+- Widget: `GET /feed/widget/top-pick` (public JSON for iOS WidgetKit)
+- Mobile server state: React Query hooks (`useSubscriptionTier`, `useGameDetailQuery`)
 
 ## OpenAPI
 

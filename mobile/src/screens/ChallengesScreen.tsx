@@ -18,6 +18,8 @@ import { apiService } from '../services/api';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { theme } from '../constants/theme';
 import { hasProAccess } from '../utils/subscription';
+import { useSubscriptionTier } from '../hooks/useSubscriptionTier';
+import { useAppSelector } from '../store/hooks';
 import { PremiumFeatureEmptyState } from '../components/PremiumFeatureEmptyState';
 
 type ChallengeItem = {
@@ -34,39 +36,30 @@ type Nav = StackNavigationProp<RootStackParamList, 'Challenges'>;
 
 export const ChallengesScreen: React.FC = () => {
   const navigation = useNavigation<Nav>();
+  const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
+  const { subscriptionTier, isLoading: tierLoading } = useSubscriptionTier();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [challenges, setChallenges] = useState<ChallengeItem[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [subscriptionTier, setSubscriptionTier] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
       setError(null);
-      let tier = 'free';
-      try {
-        const u = await apiService.getCurrentUser() as { subscription_tier?: string };
-        tier = u?.subscription_tier ?? 'free';
-        setSubscriptionTier(tier);
-      } catch {
-        setSubscriptionTier('free');
-        return;
-      }
-      if (!hasProAccess(tier)) {
+      if (!isAuthenticated || !hasProAccess(subscriptionTier)) {
         setChallenges([]);
         return;
       }
       const res = await apiService.getChallenges({ limit: 20 });
       setChallenges(res.challenges ?? []);
     } catch (e) {
-      setSubscriptionTier((t) => t ?? 'free');
       setChallenges([]);
       setError((e as Error)?.message ?? 'Failed to load challenges');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [isAuthenticated, subscriptionTier]);
 
   useEffect(() => {
     load();
@@ -83,7 +76,7 @@ export const ChallengesScreen: React.FC = () => {
     load();
   };
 
-  if (subscriptionTier === null) {
+  if (tierLoading && isAuthenticated) {
     return (
       <View style={[styles.container, styles.centered]} accessibilityLabel="Loading challenges">
         <ActivityIndicator size="large" color={theme.colors.accent} />

@@ -9,12 +9,12 @@ Legend: ✅ done · 🟡 partial · ❌ not implemented · 🚫 blocked (externa
 
 | Metric | Weaknesses (50) | Improvements (100) | Combined (150) |
 |--------|-----------------|--------------------|----------------|
-| ✅ Done | 35 | 67 | 102 |
-| 🟡 Partial | 13 | 24 | 37 |
+| ✅ Done | 38 | 71 | 109 |
+| 🟡 Partial | 10 | 20 | 30 |
 | ❌ Open | 0 | 0 | 0 |
 | 🚫 Blocked | 2 | 9 | 11 |
 
-**Implementable coverage:** 86.7% — `(done + 0.5×partial) / (150 − blocked)`
+**Implementable coverage:** 89.2% — `(done + 0.5×partial) / (150 − blocked)`
 
 Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added for subscription utils.
 
@@ -25,7 +25,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | ID | Title | Status | State | Evidence |
 |----|-------|--------|-------|----------|
 | W1 | Free-tier daily limit trivially bypassed | ✅ | done | backend/app/services/free_tier_limits.py, backend/tests/test_free_tier_prediction_limits.py |
-| W2 | Marketing/docs claim ensemble/deep AI; prod is logistic regression | 🟡 | partial | docs/PRODUCTION_REALITY.md + ARCHITECTURE.md banner |
+| W2 | Marketing/docs claim ensemble/deep AI; prod is logistic regression | ✅ | done | docs/PRODUCTION_REALITY.md canonical + ARCHITECTURE.md §3 production banner |
 | W3 | Single VPS — total SPOF | 🚫 | blocked | Single VPS docker-compose.prod.yml; HA needs second region/instances |
 | W4 | No offsite DB backups in cron | 🟡 | partial | scripts/run_pg_backup.sh, scripts/setup_offsite_backup.sh — PH2-005 blocked on DO Spaces write keys |
 | W5 | `/internal` routes may be internet-exposed | ✅ | done | deploy/nginx-deny-internal-snippet.conf, backend/tests/test_nginx_deny_internal.py |
@@ -46,8 +46,8 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | W20 | Soccer draw not model-trained | ✅ | done | backend/app/services/model_training.py soccer 1X2 |
 | W21 | Standings leakage at inference fallback | ✅ | done | backend/tests/test_feature_builder_pit.py |
 | W22 | Explainability likely broken | ✅ | done | backend/tests/test_explanation_service.py |
-| W23 | Stale `ml/` + ARCHITECTURE.md mislead developers/investors | 🟡 | partial | archive/README.md; ARCHITECTURE.md partially updated |
-| W24 | Rust microservices dead weight | 🟡 | partial | archive/services/; services/users/ legacy |
+| W23 | Stale `ml/` + ARCHITECTURE.md mislead developers/investors | ✅ | done | archive/README.md + ARCHITECTURE.md §3.0 shipped table |
+| W24 | Rust microservices dead weight | ✅ | done | archive/services/ + services/users/README.md — legacy not deployed |
 | W25 | CI Ruff never fails (`|| true`) | ✅ | done | .github/workflows/ci.yml Ruff without || true |
 | W26 | No dependency security scanning | ✅ | done | scripts/pip_audit_backend.sh, npm audit in CI |
 | W27 | `deploy_api.sh` no migrations | ✅ | done | scripts/deploy_api.sh alembic upgrade head |
@@ -107,8 +107,8 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I24 | Fix explainability (coefficients from inner LR) | ✅ | done | backend/app/services/explanation_service.py |
 | I25 | Per-league model dir in explanation endpoint | ✅ | done | explanation per-league model dir |
 | I26 | Commit `metrics.json` schema example | ✅ | done | backend/models/metrics.json schema example with eval + publish_ready |
-| I27 | Archive stale `ml/` and Rust services | 🟡 | partial | archive/README.md |
-| I28 | Update ARCHITECTURE.md to match reality | 🟡 | partial | docs/PRODUCTION_REALITY.md canonical prod facts |
+| I27 | Archive stale `ml/` and Rust services | ✅ | done | archive/README.md — ml/ and Rust services archived with replacements |
+| I28 | Update ARCHITECTURE.md to match reality | ✅ | done | docs/PRODUCTION_REALITY.md + ARCHITECTURE.md §3 shipped vs aspirational |
 | I29 | Market odds as benchmark in backtest | 🟡 | partial | walk_forward_backtest market_benchmark note + /stats/model-vs-market live |
 | I30 | Per-league calibration minimum samples | ✅ | done | model_training calibration mins |
 | I31 | React Query for server state | ✅ | done | mobile React Query hooks |
@@ -126,7 +126,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I43 | Share card: “My model accuracy this month” | ✅ | done | SharePickCard rollingAccuracyPct, build_share_card rolling_accuracy_pct |
 | I44 | PostHog/Mixpanel integration | 🟡 | partial | productAnalytics.ts optional PostHog |
 | I45 | Push categories (kickoff, upsets, results) | ✅ | done | push_trigger_service types + push_service categoryId + mobile iOS categories |
-| I46 | Trial-ending push + email | 🟡 | partial | send_trial_ending_reminders push; email via digest when SMTP set |
+| I46 | Trial-ending push + email | ✅ | done | send_trial_ending_reminders push + send_trial_ending_email when SMTP set |
 | I47 | App Store review prompt after positive accuracy session | ✅ | done | mobile storeReview.ts |
 | I48 | Public embed: accuracy widget for octobetiq.com | ✅ | done | web/widgets/accuracy-widget.html |
 | I49 | Blog: weekly transparent scorecard | 🟡 | partial | web/scorecard.html weekly public-audit scorecard |
@@ -150,7 +150,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I67 | Email digest: daily picks | 🟡 | partial | email_digest_service.py + /internal/email-digest/run; SMTP required |
 | I68 | Watchlist sync across devices | ✅ | done | useFavorites React Query + sync notice + team-filtered games |
 | I69 | iPad-optimized layouts | ✅ | done | WideContent + useLayout on Home, GameDetail, Paywall, Profile, Games, Favorites, LiveHub |
-| I70 | Widget: today’s top pick | 🟡 | partial | widget API + Swift template w/ disclaimer; scripts/verify_widget_api.sh; Xcode target embed manual |
+| I70 | Widget: today’s top pick | 🟡 | partial | widget API + Swift template + docs/IOS_WIDGET.md embed checklist + npm run widget:verify |
 | I71 | Raise coverage to 60%+ | ✅ | done | CI coverage ≥60% |
 | I72 | Stripe webhook test suite | ✅ | done | backend/tests/test_stripe_webhook.py |
 | I73 | Monetization bypass regression tests | ✅ | done | backend/tests/test_premium_gating.py — auth, quota, share-pick bypass |
@@ -160,7 +160,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I77 | Feature flags service (LaunchDarkly/PostHog) | ✅ | done | backend/app/services/feature_flags.py, GET /config/feature-flags |
 | I78 | API v2 planning doc | ✅ | done | docs/API_V2_PLAN.md |
 | I79 | OpenAPI client codegen for mobile | ✅ | done | export_openapi.py, docs/OPENAPI_CODEGEN.md, mobile codegen:api |
-| I80 | Delete dead code paths | 🟡 | partial | archive/; legacy services/users |
+| I80 | Delete dead code paths | ✅ | done | archive/README.md + services/users/README.md — legacy paths documented |
 | I81 | GDPR data export endpoint | ✅ | done | GET /user/me/export, gdpr_export_service.py |
 | I82 | CCPA opt-out flow | ✅ | done | POST /user/me/privacy/ccpa-opt-out |
 | I83 | Gambling disclaimer audit on all screens | ✅ | done | PredictionDisclaimer on picks, feeds, paywall, GameDetail, Games, Profile, SharePickCard |

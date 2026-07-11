@@ -247,6 +247,8 @@ During games, real-time updates:
 
 ## 3. AI/ML Architecture
 
+> **Production truth (2026):** octobetiQ ships **sklearn logistic regression** per league group — not ensemble/deep learning. See **[docs/PRODUCTION_REALITY.md](docs/PRODUCTION_REALITY.md)** before sections 3.1–3.6 below; many subsections describe **target** data sources and models not yet deployed.
+
 ### 3.0 Shipped implementation (backend monolith)
 
 | Concern | Location |

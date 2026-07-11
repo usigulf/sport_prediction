@@ -16,6 +16,7 @@ from app.models.user_push_token import UserPushToken
 from app.models.push_reminder_sent import PushReminderSent
 from app.models.prediction import Prediction
 from app.services.push_service import send_expo_push
+from app.services.email_service import send_trial_ending_email
 from app.services.trust_metrics_service import (
     implied_draw_probability,
     prediction_correct_vs_result,
@@ -352,7 +353,8 @@ def send_post_game_results(db: Session) -> int:
 
 def send_trial_ending_reminders(db: Session) -> int:
     """
-    Notify premium/trialing users ~24h before subscription_trial_end_at (Imp #46).
+    Notify premium/trialing users ~24h before subscription_trial_end_at (I46).
+    Sends push when tokens exist; sends email when SMTP is configured.
     """
     now = _utc_now()
     window_end = now + timedelta(hours=TRIAL_ENDING_WINDOW_HOURS)
@@ -370,50 +372,25 @@ def send_trial_ending_reminders(db: Session) -> int:
     sent_count = 0
     for user in users:
         uid = str(user.id)
-        tokens = _tokens_for_user_ids(db, {uid})
-        if not tokens:
-            continue
-        send_expo_push(
-            tokens,
-            "Your Premium trial ends soon",
-            "Your free trial ends in about 24 hours. Manage or cancel in Settings → Subscriptions.",
-            data={"type": "trial_ending"},
-        )
-        user.trial_ending_push_sent_at = now
-        db.commit()
-        sent_count += 1
-    return sent_count
+        delivered = False
 
-
-def send_trial_ending_reminders(db: Session) -> int:
-    """
-    Notify premium/trialing users ~24h before subscription_trial_end_at (Imp #46).
-    """
-    now = _utc_now()
-    window_end = now + timedelta(hours=TRIAL_ENDING_WINDOW_HOURS)
-    users = (
-        db.query(User)
-        .filter(
-            User.subscription_trial_end_at.isnot(None),
-            User.subscription_trial_end_at >= now.replace(tzinfo=None),
-            User.subscription_trial_end_at <= window_end.replace(tzinfo=None),
-            User.subscription_tier.in_(("premium", "trialing")),
-            User.trial_ending_push_sent_at.is_(None),
-        )
-        .all()
-    )
-    sent_count = 0
-    for user in users:
-        uid = str(user.id)
         tokens = _tokens_for_user_ids(db, {uid})
-        if not tokens:
+        if tokens:
+            send_expo_push(
+                tokens,
+                "Your Premium trial ends soon",
+                "Your free trial ends in about 24 hours. Manage or cancel in Settings → Subscriptions.",
+                data={"type": "trial_ending"},
+            )
+            delivered = True
+
+        if user.email:
+            if send_trial_ending_email(to_email=user.email):
+                delivered = True
+
+        if not delivered:
             continue
-        send_expo_push(
-            tokens,
-            "Your Premium trial ends soon",
-            "Your free trial ends in about 24 hours. Manage or cancel in Settings → Subscriptions.",
-            data={"type": "trial_ending"},
-        )
+
         user.trial_ending_push_sent_at = now
         db.commit()
         sent_count += 1

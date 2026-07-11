@@ -20,6 +20,7 @@ import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { formatLeagueLabel } from '../utils/leagueDisplay';
 import { theme } from '../constants/theme';
 import { hasProAccess } from '../utils/subscription';
+import { useSubscriptionTier } from '../hooks/useSubscriptionTier';
 
 const MAX_GAMES = 10;
 
@@ -31,7 +32,7 @@ export const CreateChallengeScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [subscriptionTier, setSubscriptionTier] = useState<string | null>(null);
+  const { subscriptionTier, isLoading: tierLoading } = useSubscriptionTier();
 
   const loadGames = useCallback(async () => {
     setLoading(true);
@@ -51,21 +52,6 @@ export const CreateChallengeScreen: React.FC = () => {
   useEffect(() => {
     loadGames();
   }, [loadGames]);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const u = await apiService.getCurrentUser() as { subscription_tier?: string };
-        if (!cancelled) setSubscriptionTier(u?.subscription_tier ?? 'free');
-      } catch {
-        if (!cancelled) setSubscriptionTier('free');
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const toggle = (gameId: string) => {
     setSelected((prev) => {
@@ -93,7 +79,7 @@ export const CreateChallengeScreen: React.FC = () => {
     }
   };
 
-  if (subscriptionTier === null) {
+  if (tierLoading) {
     return (
       <View style={[styles.container, styles.centered]}>
         <ActivityIndicator size="large" color={theme.colors.accent} />

@@ -29,6 +29,7 @@
     "app-store:preview": "bash scripts/record-app-store-preview.sh",
     "app-store:captions": "bash scripts/build-asc-screenshots.sh",
     "test": "jest",
+    "widget:verify": "bash ../scripts/verify_widget_api.sh",
     "test:ci": "jest --ci",
     "codegen:api": "openapi-typescript ../docs/openapi.json -o src/types/api.generated.ts"
   },

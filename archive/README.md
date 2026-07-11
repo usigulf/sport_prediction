@@ -19,4 +19,4 @@ This directory holds **superseded** experiments and microservice scaffolds. Do n
 
 ## Go user service
 
-`services/users/` (Go) is also **not** deployed; auth and users live in the FastAPI backend. Only the Rust predictions crate was archived in P2-005; revisit `services/users/` separately if cleaning up legacy scaffolds.
+`services/users/` (Go) is also **not** deployed; auth and users live in the FastAPI backend. See `services/users/README.md`. Only the Rust predictions crate was archived in P2-005.
