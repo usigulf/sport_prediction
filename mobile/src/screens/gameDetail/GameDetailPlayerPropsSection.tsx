@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { PREMIUM_PROPS_UNLOCK_CONTEXT } from '../../constants/premiumCopy';
+import { PlayerPropRow } from '../../components/playerProps/PlayerPropRow';
 import type { RootStackParamList } from '../../navigation/AppNavigator';
 import { theme } from '../../constants/theme';
 import type { PlayerPropItem } from './types';
@@ -16,6 +17,7 @@ type Props = {
   playerPropsLoading: boolean;
   playerPropsError: string | null;
   playerProps: PlayerPropItem[];
+  onRetry?: () => void;
   navigation: Nav;
 };
 
@@ -26,10 +28,11 @@ export function GameDetailPlayerPropsSection({
   playerPropsLoading,
   playerPropsError,
   playerProps,
+  onRetry,
   navigation,
 }: Props) {
   return (
-    <View style={s.infoSection}>
+    <View style={s.infoSection} testID="game-detail-player-props">
       <Text style={s.sectionTitle}>
         {playerPropsNamed ? 'Player props' : 'Player props (model est.)'}
       </Text>
@@ -46,21 +49,19 @@ export function GameDetailPlayerPropsSection({
               style={s.playerPropsLoader}
             />
           ) : playerPropsError ? (
-            <Text style={s.playerPropsError}>{playerPropsError}</Text>
+            <View>
+              <Text style={s.playerPropsError}>{playerPropsError}</Text>
+              {onRetry ? (
+                <TouchableOpacity style={s.upgradeButton} onPress={onRetry}>
+                  <Text style={s.upgradeButtonText}>Retry</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
           ) : playerProps.length === 0 ? (
             <Text style={s.mutedText}>No player props for this game yet.</Text>
           ) : (
             playerProps.map((prop, i) => (
-              <View key={i} style={s.propRow}>
-                <Text style={s.propPlayer}>{prop.player_name}</Text>
-                <Text style={s.propMeta}>
-                  {prop.prop_type} — model line {prop.line} {prop.unit}
-                  {prop.confidence_level ? ` · ${prop.confidence_level}` : ''}
-                </Text>
-                <Text style={s.propPredicted}>
-                  Projected: {prop.predicted_value} {prop.unit}
-                </Text>
-              </View>
+              <PlayerPropRow key={`${prop.player_name}-${prop.prop_type}-${i}`} prop={prop} />
             ))
           )}
         </>

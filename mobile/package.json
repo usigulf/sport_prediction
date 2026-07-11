@@ -29,8 +29,11 @@
     "app-store:preview": "bash scripts/record-app-store-preview.sh",
     "app-store:captions": "bash scripts/build-asc-screenshots.sh",
     "test": "jest",
-    "widget:verify": "bash ../scripts/verify_widget_api.sh",
     "test:ci": "jest --ci",
+    "test:e2e": "detox test --configuration ios.sim.release",
+    "test:e2e:build": "detox build --configuration ios.sim.release",
+    "verify:e2e": "bash ../scripts/verify_detox_scaffold.sh",
+    "widget:verify": "bash ../scripts/verify_widget_api.sh",
     "codegen:api": "openapi-typescript ../docs/openapi.json -o src/types/api.generated.ts"
   },
   "dependencies": {
@@ -75,8 +78,10 @@
     "@babel/core": "^7.20.0",
     "@types/jest": "^29.5.14",
     "@types/react": "~19.1.10",
+    "detox": "^20.37.0",
     "eas-cli": "^18.7.0",
     "jest": "^29.7.0",
+    "jest-circus": "^29.7.0",
     "jest-expo": "~54.0.0",
     "openapi-typescript": "^7.13.0",
     "typescript": "^5.1.3"

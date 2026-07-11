@@ -33,15 +33,20 @@ import {
 } from '../constants/leagues';
 import { formatLeagueLabel } from '../utils/leagueDisplay';
 import { theme } from '../constants/theme';
-import { PLAYER_PROPS_ENABLED } from '../constants/featureFlags';
+import { PREMIUM_PROPS_UNLOCK_CONTEXT } from '../constants/premiumCopy';
 import type { PredictionExplanation } from '../types';
 import { SportWeekDatePicker } from '../components/games/SportWeekDatePicker';
 import { FeedSkeleton } from '../components/feed/FeedSkeleton';
 import { FeedErrorBanner } from '../components/feed/FeedErrorBanner';
 import { FeedEmptyState } from '../components/feed/FeedEmptyState';
 import { PredictionDisclaimer } from '../components/PredictionDisclaimer';
+import { PlayerPropsFeedCard } from '../components/playerProps/PlayerPropsFeedCard';
 import { useSportWeekPicker } from '../hooks/useSportWeekPicker';
 import { useUpcomingGamesQuery } from '../hooks/useUpcomingGamesQuery';
+import { usePlayerPropsFeed } from '../hooks/usePlayerPropsFeed';
+import { useServerFeatureFlags } from '../hooks/useServerFeatureFlags';
+import { isPlayerPropsEnabled } from '../utils/resolvedFeatureFlags';
+import { hasPremiumAccess } from '../utils/subscription';
 import { WideContent } from '../components/WideContent';
 
 /** BetQL-style sub-views within Games (per sport). */
@@ -65,6 +70,10 @@ export const GamesScreen: React.FC = () => {
   const navigation = useNavigation<GamesScreenNavigationProp>();
   const route = useRoute<RouteProp<MainTabParamList, 'Games'>>();
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const subscriptionTier = useAppSelector((state) => state.auth.user?.subscriptionTier ?? 'free');
+  const serverFlags = useServerFeatureFlags();
+  const playerPropsEnabled = isPlayerPropsEnabled(serverFlags);
+  const isPremium = hasPremiumAccess(subscriptionTier);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedLeague, setSelectedLeague] = useState<string | null>(null);
 
@@ -245,6 +254,25 @@ export const GamesScreen: React.FC = () => {
     deviceTimeZone,
   ]);
 
+  const propsFeedParams = useMemo(
+    () => ({
+      ...buildTopPicksOpts(),
+      limit: 20,
+    }),
+    [buildTopPicksOpts],
+  );
+
+  const propsFeedEnabled =
+    gamesView === 'props' && playerPropsEnabled && isAuthenticated && isPremium;
+
+  const {
+    items: propsFeedItems,
+    loading: propsFeedLoading,
+    error: propsFeedError,
+    disclaimer: propsFeedDisclaimer,
+    refetch: refetchPropsFeed,
+  } = usePlayerPropsFeed(propsFeedParams, propsFeedEnabled);
+
   useEffect(() => {
     if (gamesView !== 'trending') return;
     let cancelled = false;
@@ -265,6 +293,9 @@ export const GamesScreen: React.FC = () => {
     if (gamesView === 'trending') {
       const res = await apiService.getTopPicks(buildTopPicksOpts()).catch(() => ({ picks: [] }));
       setTrendingPicks(res.picks ?? []);
+    }
+    if (gamesView === 'props' && propsFeedEnabled) {
+      await refetchPropsFeed();
     }
     setRefreshing(false);
   };
@@ -366,8 +397,8 @@ export const GamesScreen: React.FC = () => {
   const subTabs: { key: GamesViewType; label: string }[] = [
     { key: 'model', label: 'Model Picks' },
     { key: 'trending', label: GAMES_LIVE_PICKS_TAB_LABEL },
-    ...(PLAYER_PROPS_ENABLED && !BETA_SOCCER_ONLY
-      ? [{ key: 'props' as GamesViewType, label: 'Props (preview)' }]
+    ...(playerPropsEnabled && !BETA_SOCCER_ONLY
+      ? [{ key: 'props' as GamesViewType, label: 'Player Props' }]
       : []),
   ];
 
@@ -501,7 +532,7 @@ export const GamesScreen: React.FC = () => {
         </View>
       </View>
 
-      {(gamesView === 'model' || gamesView === 'props') && (
+      {(gamesView === 'model') && (
         <FlatList
           data={upcomingGames}
           renderItem={renderGame}
@@ -510,14 +541,6 @@ export const GamesScreen: React.FC = () => {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListHeaderComponent={
             <>
-              {gamesView === 'props' ? (
-                <View style={styles.propsTabHint}>
-                  <Text style={styles.propsTabHintText}>
-                    Model-projected props on game detail (Premium). Player names when available;
-                    otherwise team-level estimates — not sportsbook lines.
-                  </Text>
-                </View>
-              ) : null}
               {loadError ? (
                 <FeedErrorBanner
                   message={loadError}
@@ -565,6 +588,85 @@ export const GamesScreen: React.FC = () => {
             ) : null
           }
         />
+      )}
+
+      {gamesView === 'props' && (
+        !isAuthenticated ? (
+          <View style={styles.propsUpgrade}>
+            <Text style={styles.propsUpgradeTitle}>Sign in for player props</Text>
+            <Text style={styles.propsUpgradeText}>
+              Model-projected player props are available to Premium subscribers.
+            </Text>
+            <TouchableOpacity
+              style={styles.propsUpgradeBtn}
+              onPress={() => navigation.navigate('Login')}
+            >
+              <Text style={styles.propsUpgradeBtnText}>Sign in</Text>
+            </TouchableOpacity>
+          </View>
+        ) : !isPremium ? (
+          <View style={styles.propsUpgrade}>
+            <Text style={styles.propsUpgradeTitle}>Premium player props</Text>
+            <Text style={styles.propsUpgradeText}>{PREMIUM_PROPS_UNLOCK_CONTEXT}</Text>
+            <TouchableOpacity
+              style={styles.propsUpgradeBtn}
+              onPress={() =>
+                navigation.navigate('Paywall', {
+                  emphasizeTier: 'premium',
+                  contextMessage: PREMIUM_PROPS_UNLOCK_CONTEXT,
+                })
+              }
+            >
+              <Text style={styles.propsUpgradeBtnText}>View Premium</Text>
+            </TouchableOpacity>
+          </View>
+        ) : propsFeedLoading && propsFeedItems.length === 0 ? (
+          <FeedSkeleton count={4} variant="row" />
+        ) : (
+          <FlatList
+            data={propsFeedItems}
+            renderItem={({ item }) => (
+              <PlayerPropsFeedCard
+                item={item}
+                onPressGame={(id) => navigation.navigate('GameDetail', { gameId: id })}
+              />
+            )}
+            keyExtractor={(item) => item.game.id}
+            contentContainerStyle={styles.listContent}
+            testID="player-props-feed-list"
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            ListHeaderComponent={
+              <>
+                <View style={styles.propsTabHint}>
+                  <Text style={styles.propsTabHintText}>
+                    {propsFeedDisclaimer ??
+                      'Model projections — not sportsbook lines. Tap a game for full prop detail.'}
+                  </Text>
+                </View>
+                {propsFeedError ? (
+                  <FeedErrorBanner
+                    message={propsFeedError}
+                    onRetry={() => void refetchPropsFeed()}
+                  />
+                ) : null}
+              </>
+            }
+            ListEmptyComponent={
+              propsFeedError ? null : (
+                <FeedEmptyState
+                  icon="stats-chart-outline"
+                  title="No player props yet"
+                  subtitle="Try another day or league filter — props appear when models have projections."
+                />
+              )
+            }
+            ListFooterComponent={
+              propsFeedItems.length > 0 ? (
+                <PredictionDisclaimer compact style={styles.disclaimer} />
+              ) : null
+            }
+          />
+        )
       )}
 
       {gamesView === 'trending' && (
@@ -891,6 +993,37 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: theme.colors.textSecondary,
     lineHeight: 20,
+  },
+  propsUpgrade: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing.xl,
+  },
+  propsUpgradeTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginBottom: theme.spacing.sm,
+    textAlign: 'center',
+  },
+  propsUpgradeText: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: theme.spacing.lg,
+  },
+  propsUpgradeBtn: {
+    backgroundColor: theme.colors.accent,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: 12,
+    borderRadius: theme.radii.md,
+  },
+  propsUpgradeBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.background,
   },
   listContent: {
     padding: theme.spacing.sm,

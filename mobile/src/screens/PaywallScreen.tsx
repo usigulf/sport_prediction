@@ -48,7 +48,8 @@ import { useLayout } from '../hooks/useLayout';
 import { trialDaysFromServer, introOfferLabel, paywallPricePromoLabel, paywallReferenceMonthlyPrice } from '../utils/resolvedFeatureFlags';
 import { captureRoutesEnabled } from '../navigation/screenshotNavigation';
 import { openIosManageSubscriptions } from '../utils/manageSubscriptions';
-import { trackSubscriptionActivated } from '../services/productAnalytics';
+import { trackSubscriptionActivated, trackEvent } from '../services/productAnalytics';
+import { ANALYTICS_EVENTS } from '../constants/analyticsEvents';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 
 const CHECKOUT_TIMEOUT_MS = 20000;
@@ -117,6 +118,20 @@ export const PaywallScreen: React.FC = () => {
   const introOfferText = introOfferLabel(serverFlags);
   const pricePromoText = paywallPricePromoLabel(serverFlags);
   const referenceMonthlyPrice = paywallReferenceMonthlyPrice(serverFlags);
+
+  useFocusEffect(
+    useCallback(() => {
+      void trackEvent(ANALYTICS_EVENTS.PAYWALL_EXPERIMENT_VIEWED, {
+        paywall_price_tier: serverFlags.experiments?.paywall_price_tier ?? 'standard',
+        intro_offer_variant: serverFlags.experiments?.intro_offer_variant ?? 'none',
+        trial_length_days: trialDays,
+      });
+    }, [
+      serverFlags.experiments?.paywall_price_tier,
+      serverFlags.experiments?.intro_offer_variant,
+      trialDays,
+    ]),
+  );
 
   // Store billing (App Store / Play Billing via RevenueCat) is the compliant
   // path when the native SDK + a configured offering are present; otherwise we

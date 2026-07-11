@@ -32,4 +32,7 @@ if "<string>production</string>" not in ent:
 print("OK  aps-environment production")
 PY
 
+echo "[mobile-verify] Detox scaffold..."
+bash "$ROOT/scripts/verify_detox_scaffold.sh"
+
 echo "[mobile-verify] Done."

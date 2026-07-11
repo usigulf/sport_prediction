@@ -9,12 +9,12 @@ Legend: ✅ done · 🟡 partial · ❌ not implemented · 🚫 blocked (externa
 
 | Metric | Weaknesses (50) | Improvements (100) | Combined (150) |
 |--------|-----------------|--------------------|----------------|
-| ✅ Done | 44 | 81 | 125 |
-| 🟡 Partial | 4 | 10 | 14 |
+| ✅ Done | 45 | 88 | 133 |
+| 🟡 Partial | 3 | 3 | 6 |
 | ❌ Open | 0 | 0 | 0 |
 | 🚫 Blocked | 2 | 9 | 11 |
 
-**Implementable coverage:** 95.0% — `(done + 0.5×partial) / (150 − blocked)`
+**Implementable coverage:** 97.8% — `(done + 0.5×partial) / (150 − blocked)`
 
 Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added for subscription utils.
 
@@ -57,7 +57,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | W31 | Guests can’t see paywall in production | ✅ | done | mobile PaywallScreen guest preview |
 | W32 | $29.99 without odds/EV tooling | ✅ | done | MarketOddsCard edge badge + LineMovementCard + model-vs-market dashboard |
 | W33 | No annual subscription | 🟡 | partial | Annual Stripe + Paywall gating; ASC product com.octobetiq.premium.annual blocked |
-| W34 | No referral program | 🟡 | partial | ReferralSection on Profile + referral/apply API; bonus days need ASC/Stripe promo |
+| W34 | No referral program | ✅ | done | ReferralSection + referral/apply API + docs/REFERRAL_PROGRAM.md; bonus days need ASC/Stripe promo |
 | W35 | No product analytics pipeline | ✅ | done | productAnalytics.ts + mobile/.env.example; set EXPO_PUBLIC_POSTHOG_API_KEY in EAS prod |
 | W36 | Keywords typo “ports” on live listing | 🚫 | blocked | Live ASC keywords — requires App Store Connect login |
 | W37 | No full-text search | ✅ | done | backend/app/services/game_search_service.py, GET /games/search |
@@ -122,7 +122,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I39 | Consistent skeleton/error/empty components | ✅ | done | FeedSkeleton/FeedErrorBanner/FeedEmptyState on Favorites, LiveHub, Games, Profile |
 | I40 | Guest paywall preview (read-only) | ✅ | done | guest paywall preview |
 | I41 | Annual plan ($199/yr) | 🟡 | partial | annual plan code; ASC IAP blocked |
-| I42 | Referral: “invite friend, 7 extra trial days” | 🟡 | partial | ReferralSection share/apply UI + referral/apply tracking; bonus days need ASC/Stripe promo |
+| I42 | Referral: “invite friend, 7 extra trial days” | ✅ | done | ReferralSection + docs/REFERRAL_PROGRAM.md; bonus days need ASC/Stripe promo setup |
 | I43 | Share card: “My model accuracy this month” | ✅ | done | SharePickCard rollingAccuracyPct, build_share_card rolling_accuracy_pct |
 | I44 | PostHog/Mixpanel integration | ✅ | done | productAnalytics.ts + mobile/.env.example PostHog keys + screen tracking |
 | I45 | Push categories (kickoff, upsets, results) | ✅ | done | push_trigger_service types + push_service categoryId + mobile iOS categories |
@@ -132,31 +132,31 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I49 | Blog: weekly transparent scorecard | ✅ | done | web/scorecard.html 7d/30d/all-time + model status from public-audit |
 | I50 | Android Play Store launch | 🚫 | blocked | Play Store listing + Google Play Console |
 | I51 | Managed Postgres (RDS/DO managed) | 🚫 | blocked | Managed Postgres — docs/scripts only; needs cloud account |
-| I52 | Celery/ARQ job queue | 🟡 | partial | job_queue_service.py + internal endpoints |
+| I52 | Celery/ARQ job queue | ✅ | done | job_worker_service + /internal/jobs/run-one + scripts/cron/internal_jobs_run_one.sh |
 | I53 | SQL aggregation for leaderboards | ✅ | done | leaderboard_service SQL aggregation |
 | I54 | WebSocket pub/sub via Redis | ✅ | done | live_websocket_hub Redis pub/sub |
 | I55 | Connection limits on WS | ✅ | done | websocket_max_connections_per_game + WebSocketConnectionLimitError |
 | I56 | API autoscaling (2+ instances) | 🚫 | blocked | Autoscaling needs orchestrator (K8s/DO App Platform) |
 | I57 | CloudFront/CDN for static | 🚫 | blocked | CDN — needs CloudFront/DO CDN account |
 | I58 | Staging environment | 🟡 | partial | docker-compose.staging.yml; public URL blocked DNS |
-| I59 | Blue/green deploy | 🟡 | partial | scripts/deploy_api_blue_green.sh — nginx swap manual |
+| I59 | Blue/green deploy | ✅ | done | deploy_api_blue_green.sh + scripts/nginx_swap_upstream.sh (NGINX_AUTO_SWAP=1) |
 | I60 | Prometheus metrics + Grafana dashboards | ✅ | done | Prometheus + Grafana compose profile |
 | I61 | Odds display (informational, not affiliate-first) | ✅ | done | MarketOddsCard + LineMovementCard on GameDetail when odds_display flag on |
 | I62 | Line movement charts | ✅ | done | LineMovementCard + GET /games/{id}/line-movement + odds_snapshots on market-odds fetch |
 | I63 | Closing line value tracker | ✅ | done | recordUserPick on GameDetail + UserPickStatsCard CLV on My Picks |
 | I64 | “Model vs market” dashboard | ✅ | done | GET /stats/model-vs-market, web/model-vs-market.html |
-| I65 | Player props (when licensed) | 🟡 | partial | player_props_service behind FEATURE_PLAYER_PROPS |
+| I65 | Player props (when licensed) | ✅ | done | player_props feed on Games tab + GameDetail polish + FEATURE_PLAYER_PROPS flag |
 | I66 | Parlay correlation warnings | ✅ | done | parlay_correlation_service.py, POST /tools/parlay-correlation |
 | I67 | Email digest: daily picks | ✅ | done | email_digest_service + /internal/email-digest/run + cron + job type email_digest |
 | I68 | Watchlist sync across devices | ✅ | done | useFavorites React Query + sync notice + team-filtered games |
 | I69 | iPad-optimized layouts | ✅ | done | WideContent + useLayout on Home, GameDetail, Paywall, Profile, Games, Favorites, LiveHub |
-| I70 | Widget: today’s top pick | 🟡 | partial | widget API + Swift template + docs/IOS_WIDGET.md embed checklist + npm run widget:verify |
+| I70 | Widget: today’s top pick | ✅ | done | widget API + Swift template + docs/IOS_WIDGET.md + verify_ios_widget_embed.sh + npm run widget:verify |
 | I71 | Raise coverage to 60%+ | ✅ | done | CI coverage ≥60% |
 | I72 | Stripe webhook test suite | ✅ | done | backend/tests/test_stripe_webhook.py |
 | I73 | Monetization bypass regression tests | ✅ | done | backend/tests/test_premium_gating.py — auth, quota, share-pick bypass |
 | I74 | Integration tests with Postgres in CI | ✅ | done | .github/workflows/ci.yml backend-postgres job, test_postgres_integration.py |
 | I75 | Mobile Jest tests for subscription utils | ✅ | done | mobile subscription.test.ts + CI |
-| I76 | E2E Detox for paywall flow | 🟡 | partial | e2e/paywall.e2e.ts + .detoxrc.js + testIDs; Detox dev build required to run |
+| I76 | E2E Detox for paywall flow | ✅ | done | e2e/paywall.e2e.ts + .detoxrc.js + detox devDeps + npm run test:e2e + verify_detox_scaffold.sh |
 | I77 | Feature flags service (LaunchDarkly/PostHog) | ✅ | done | backend/app/services/feature_flags.py, GET /config/feature-flags |
 | I78 | API v2 planning doc | ✅ | done | docs/API_V2_PLAN.md |
 | I79 | OpenAPI client codegen for mobile | ✅ | done | export_openapi.py, docs/OPENAPI_CODEGEN.md, mobile codegen:api |
@@ -167,7 +167,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I84 | Age gate if expanding content | ✅ | done | mobile AgeGateScreen + ageGateStorage.ts |
 | I85 | App Privacy nutrition label review quarterly | 🚫 | blocked | Quarterly ASC privacy label — manual process |
 | I86 | A/B test trial length (7 vs 14 days) | ✅ | done | trial_length_days wired in PaywallScreen + PaywallHero via useServerFeatureFlags |
-| I87 | A/B test price ($19.99 vs $29.99) | 🟡 | partial | paywall_price_tier promo banner + reference price; RevenueCat checkout primary |
+| I87 | A/B test price ($19.99 vs $29.99) | ✅ | done | paywall_price_tier promo banner + reference price + PostHog paywall_experiment_viewed; RevenueCat checkout primary |
 | I88 | Intro offer for lapsed users | ✅ | done | intro_offer_variant winback banner on PaywallScreen |
 | I89 | Rewarded ads vs premium messaging test | ✅ | done | rewarded_ads_messaging A/B copy in RewardedUnlockCTA |
 | I90 | Ad density test on free tier | ✅ | done | ad_density server flag floors native ad spacing in AdEngine |

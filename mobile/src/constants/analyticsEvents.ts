@@ -6,6 +6,7 @@ export const ANALYTICS_EVENTS = {
   SIGN_UP_COMPLETED: 'sign_up_completed',
   ONBOARDING_COMPLETED: 'onboarding_completed',
   SUBSCRIPTION_ACTIVATED: 'subscription_activated',
+  PAYWALL_EXPERIMENT_VIEWED: 'paywall_experiment_viewed',
   SHARE_PICK: 'share_pick',
 } as const;
 

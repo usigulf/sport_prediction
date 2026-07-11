@@ -83,6 +83,30 @@ export function useGameDetailData(gameId: string, navigation: Nav) {
     setShowExplanation(false);
   }, [gameId]);
 
+  const refetchPlayerProps = useCallback(() => {
+    if (!playerPropsEnabled || !hasPremiumAccess(subscriptionTier)) return;
+    setPlayerPropsError(null);
+    setPlayerPropsLoading(true);
+    void apiService
+      .getGamePlayerProps(gameId)
+      .then((res) => {
+        const body = res as {
+          props?: PlayerPropItem[];
+          disclaimer?: string;
+          has_named_players?: boolean;
+        };
+        setPlayerProps(body.props ?? []);
+        setPlayerPropsDisclaimer(body.disclaimer ?? null);
+        setPlayerPropsNamed(Boolean(body.has_named_players));
+      })
+      .catch((e: unknown) => {
+        setPlayerPropsError(getUserFriendlyMessage(e));
+      })
+      .finally(() => {
+        setPlayerPropsLoading(false);
+      });
+  }, [gameId, subscriptionTier, playerPropsEnabled]);
+
   useEffect(() => {
     if (!playerPropsEnabled || !hasPremiumAccess(subscriptionTier)) return;
     let cancelled = false;
@@ -340,6 +364,7 @@ export function useGameDetailData(gameId: string, navigation: Nav) {
     playerPropsDisclaimer,
     playerPropsNamed,
     playerPropsEnabled,
+    refetchPlayerProps,
     marketOdds,
     lineMovement,
     injuries,

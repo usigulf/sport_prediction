@@ -59,6 +59,7 @@ export const GameDetailScreen: React.FC = () => {
     playerPropsDisclaimer,
     playerPropsNamed,
     playerPropsEnabled,
+    refetchPlayerProps,
     marketOdds,
     lineMovement,
     injuries,
@@ -150,6 +151,7 @@ export const GameDetailScreen: React.FC = () => {
             playerPropsLoading={playerPropsLoading}
             playerPropsError={playerPropsError}
             playerProps={playerProps}
+            onRetry={refetchPlayerProps}
             navigation={navigation}
           />
         ) : null}
