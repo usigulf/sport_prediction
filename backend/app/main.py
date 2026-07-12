@@ -99,12 +99,31 @@ app.include_router(internal_router)
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
-    return {
-        "status": "healthy",
+    """
+    Liveness + model readiness.
+    Returns 503 when REQUIRE_PUBLISH_READY_MODEL=true and no publish-ready artifacts.
+    """
+    from fastapi.responses import JSONResponse
+
+    from app.services.model_artifact_bom import build_model_artifact_bom
+
+    bom = build_model_artifact_bom()
+    healthy = bool(bom.get("healthy_for_launch", True))
+    payload = {
+        "status": "healthy" if healthy else "unhealthy",
         "service": "sports-prediction-api",
         "environment": settings.environment,
+        "model": {
+            "publish_ready": bom.get("publish_ready"),
+            "inference_mode": bom.get("inference_mode"),
+            "require_publish_ready_model": bom.get("require_publish_ready_model"),
+            "allow_heuristic_inference": bom.get("allow_heuristic_inference"),
+            "detail": bom.get("detail"),
+        },
     }
+    if not healthy:
+        return JSONResponse(status_code=503, content=payload)
+    return payload
 
 
 def _get_ws_token(websocket: WebSocket):

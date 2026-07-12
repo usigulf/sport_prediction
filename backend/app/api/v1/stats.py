@@ -77,40 +77,39 @@ async def get_calibration(db: Session = Depends(get_db)):
 async def get_model_status():
     """
     Public model readiness snapshot from metrics.json (warming vs ready to publish).
-    When artifacts are missing or publish_ready is false, inference uses heuristic fallback.
+    When artifacts are missing or publish_ready is false, inference uses heuristic fallback
+    unless ALLOW_HEURISTIC_INFERENCE=false.
     """
+    from app.services.model_artifact_bom import build_model_artifact_bom
+
+    bom = build_model_artifact_bom()
     settings = get_settings()
     model_dir = (settings.model_artifact_dir or settings.explanation_model_dir or "").strip()
-    if not model_dir:
-        return {
-            "status": "warming",
-            "publish_ready": False,
-            "artifacts_written": False,
-            "detail": "Model artifact directory is not configured on this API instance.",
-        }
-    metrics = load_metrics_json(model_dir)
-    if not metrics:
-        return {
-            "status": "warming",
-            "publish_ready": False,
-            "artifacts_written": False,
-            "detail": "No metrics.json found — model has not been trained on this host yet.",
-        }
-    status = metrics.get("status") or ("ready" if metrics.get("publish_ready") else "warming")
+    metrics = load_metrics_json(model_dir) if model_dir else None
+    status = (metrics or {}).get("status") or (
+        "ready" if bom.get("publish_ready") else "warming"
+    )
     return {
         "status": status,
-        "publish_ready": bool(metrics.get("publish_ready")),
-        "artifacts_written": bool(metrics.get("artifacts_written")),
-        "games": metrics.get("games"),
-        "trained_at": metrics.get("trained_at"),
-        "league_counts": metrics.get("league_counts"),
-        "league_group_corpus_counts": metrics.get("league_group_corpus_counts"),
-        "league_group_holdout_counts": metrics.get("league_group_holdout_counts"),
-        "publish_block_reasons": metrics.get("publish_block_reasons") or [],
-        "min_publish_holdout_per_league_group": metrics.get("min_publish_holdout_per_league_group"),
-        "ensemble_eligible": bool(metrics.get("ensemble_eligible")),
-        "ensemble_gate_reason": metrics.get("ensemble_gate_reason"),
-        "detail": metrics.get("note"),
+        "publish_ready": bool(bom.get("publish_ready")),
+        "artifacts_written": bool((metrics or {}).get("artifacts_written")),
+        "inference_mode": bom.get("inference_mode"),
+        "allow_heuristic_inference": bom.get("allow_heuristic_inference"),
+        "require_publish_ready_model": bom.get("require_publish_ready_model"),
+        "healthy_for_launch": bom.get("healthy_for_launch"),
+        "games": (metrics or {}).get("games"),
+        "trained_at": (metrics or {}).get("trained_at"),
+        "league_counts": (metrics or {}).get("league_counts"),
+        "league_group_corpus_counts": (metrics or {}).get("league_group_corpus_counts"),
+        "league_group_holdout_counts": (metrics or {}).get("league_group_holdout_counts"),
+        "publish_block_reasons": (metrics or {}).get("publish_block_reasons") or [],
+        "min_publish_holdout_per_league_group": (metrics or {}).get(
+            "min_publish_holdout_per_league_group"
+        ),
+        "ensemble_eligible": bool((metrics or {}).get("ensemble_eligible")),
+        "ensemble_gate_reason": (metrics or {}).get("ensemble_gate_reason"),
+        "detail": bom.get("detail") or (metrics or {}).get("note"),
+        "groups": bom.get("groups"),
     }
 
 

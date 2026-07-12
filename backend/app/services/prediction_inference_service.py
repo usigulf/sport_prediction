@@ -122,7 +122,12 @@ def _predict_for_game(
         if out and model_dir != base_dir:
             out = {**out, "model_version": _model_version_for_dir(model_dir)}
     if not out:
-        out = heuristic_predict(features, get_settings().ml_model_version)
+        settings = get_settings()
+        if not getattr(settings, "allow_heuristic_inference", True):
+            raise RuntimeError(
+                "No publish-ready model artifacts and ALLOW_HEURISTIC_INFERENCE=false"
+            )
+        out = heuristic_predict(features, settings.ml_model_version)
 
     native_1x2 = bool(out.get("native_1x2"))
     if native_1x2:

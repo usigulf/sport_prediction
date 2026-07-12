@@ -12,7 +12,7 @@ export function LaunchScreen() {
       <View style={styles.logoRing}>
         <OctobetiQWordmark variant="title" />
       </View>
-      <Text style={styles.tagline}>AI Picks That Win More</Text>
+      <Text style={styles.tagline}>AI picks with tracked accuracy</Text>
       <ActivityIndicator
         size="large"
         color={theme.colors.accent}

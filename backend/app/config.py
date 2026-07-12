@@ -67,6 +67,12 @@ class Settings(BaseSettings):
     explanation_model_dir: Optional[str] = None
     # Optional: override artifact path for inference only; defaults to explanation_model_dir
     model_artifact_dir: Optional[str] = None
+    # When False, batch inference will not write heuristic predictions if sklearn artifacts
+    # are missing (fail closed). Default True so local/dev keeps working.
+    allow_heuristic_inference: bool = True
+    # When True, GET /health returns 503 unless publish-ready model artifacts exist.
+    # Recommended for production once ml/models is populated.
+    require_publish_ready_model: bool = False
     # Gate explanations / rich output when computed quality is below threshold.
     min_data_quality_score: float = 0.45
     # The Odds API (M-01 spike — optional override). When unset, market odds reuse CLEARSPORTS_API_KEY.

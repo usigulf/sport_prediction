@@ -31,7 +31,7 @@ export function HomeHeroStrip({
           ? `${getGreeting()}${userEmail ? ` · ${userEmail.split('@')[0]}` : ''}`
           : 'Welcome to octobetiQ'}
       </Text>
-      <Text style={styles.heroHeadline}>AI Picks That Win More</Text>
+      <Text style={styles.heroHeadline}>AI picks with tracked accuracy</Text>
       <Text style={styles.heroSub}>
         {forYouCount > 0
           ? `${forYouCount} pick${forYouCount === 1 ? '' : 's'} for you today`

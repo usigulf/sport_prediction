@@ -139,7 +139,7 @@ Each slide: navy gradient banner · headline · accent line · subtitle (no devi
 
 | Slot | Source screen | Headline | Subtitle |
 |------|---------------|----------|----------|
-| **01** | Home | AI Picks That Win More | Daily confidence-ranked plays for you |
+| **01** | Home | AI picks with tracked accuracy | Daily confidence-ranked plays for you |
 | **02** | Game detail | Win Probability · Deep Context | See the model's read on every matchup |
 | **03** | Model accuracy | Accuracy You Can Verify | Methodology & rolling stats on every finished game |
 | **04** | Trending | Today's Top Plays | Discover high-confidence picks fast |

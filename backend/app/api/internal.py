@@ -460,6 +460,14 @@ async def clearsports_health(_: None = Depends(_require_cron_secret)):
     return out
 
 
+@router.get("/model-bom")
+async def model_artifact_bom(_: None = Depends(_require_cron_secret)):
+    """Full model artifact bill of materials for release / ops checks."""
+    from app.services.model_artifact_bom import build_model_artifact_bom
+
+    return build_model_artifact_bom()
+
+
 class EnqueueJobBody(BaseModel):
     job_type: str = Field(..., min_length=1, max_length=64)
     payload: dict = Field(default_factory=dict)

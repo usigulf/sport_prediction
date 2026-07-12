@@ -25,7 +25,9 @@ Short reference for investors and developers. **This is what runs in production 
 
 - Soccer: native 1X2 model where trained; US sports: binary home/away
 - `prediction_source` field gates heuristic picks in production UI
+- Artifact BOM + health: `docs/MODEL_ARTIFACT_BOM.md`, `GET /health` model block, `GET /api/v1/stats/model`
 - Public accuracy: `GET /api/v1/stats/public-audit`, walk-forward backtest script
+- Do **not** market unsourced “win more” claims; holdout metrics in sample `metrics.json` are near a naive baseline
 
 ## Key API surfaces (audit-complete)
 

@@ -152,7 +152,7 @@ For each of the 10 slides (in order above):
 
 | Slide | Headline | Subtitle |
 |-------|----------|----------|
-| 01 | AI Picks That Win More | Daily confidence-ranked plays |
+| 01 | AI picks with tracked accuracy | Daily confidence-ranked plays |
 | 02 | Win Probability · Deep Context | Model read on every matchup |
 | 03 | Accuracy You Can Verify | Tracked on finished games |
 | 04 | Today's Top Plays | High-confidence discovery |
