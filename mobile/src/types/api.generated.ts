@@ -514,6 +514,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/games/{game_id}/lineage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Game Lineage
+         * @description Data lineage timeline for a game: odds → features → predictions → ledger,
+         *     plus PIT feature replay for offline re-scoring (audit #13).
+         */
+        get: operations["get_game_lineage_api_v1_games__game_id__lineage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/games/{game_id}/live-predictions": {
         parameters: {
             query?: never;
@@ -736,6 +757,27 @@ export interface paths {
          *     Expands as licensed feeds and sync jobs grow.
          */
         get: operations["get_data_coverage_api_v1_stats_coverage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stats/data-telemetry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Data Telemetry
+         * @description Data lineage ops snapshot: freshness SLOs, feature-coverage, provider sync errors
+         *     (external audit #13). Public read-only summary — no secrets.
+         */
+        get: operations["get_data_telemetry_api_v1_stats_data_telemetry_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1310,6 +1352,26 @@ export interface paths {
          *     Returns 503 when REQUIRE_PUBLISH_READY_MODEL=true and no publish-ready artifacts.
          */
         get: operations["health_check_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/data-telemetry/detail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Data Telemetry Detail
+         * @description Full provider-error samples + freshness/coverage for ops (audit #13).
+         */
+        get: operations["data_telemetry_detail_internal_data_telemetry_detail_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3195,6 +3257,37 @@ export interface operations {
             };
         };
     };
+    get_game_lineage_api_v1_games__game_id__lineage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_live_predictions_api_v1_games__game_id__live_predictions_get: {
         parameters: {
             query?: never;
@@ -3475,6 +3568,26 @@ export interface operations {
         };
     };
     get_data_coverage_api_v1_stats_coverage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_data_telemetry_api_v1_stats_data_telemetry_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -4289,6 +4402,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    data_telemetry_detail_internal_data_telemetry_detail_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Cron-Secret"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

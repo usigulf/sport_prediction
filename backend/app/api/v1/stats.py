@@ -250,3 +250,14 @@ async def get_forecast_ledger_summary(db: Session = Depends(get_db)):
 async def get_community_vs_model(db: Session = Depends(get_db)):
     """Community user-pick consensus vs model (I93)."""
     return build_community_vs_model_summary(db)
+
+
+@router.get("/data-telemetry")
+async def get_data_telemetry(db: Session = Depends(get_db)):
+    """
+    Data lineage ops snapshot: freshness SLOs, feature-coverage, provider sync errors
+    (external audit #13). Public read-only summary — no secrets.
+    """
+    from app.services.data_telemetry_service import build_data_telemetry_summary
+
+    return build_data_telemetry_summary(db)

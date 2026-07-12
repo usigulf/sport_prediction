@@ -28,6 +28,7 @@ from app.models.password_reset_token import PasswordResetToken  # noqa: F401
 from app.models.odds_snapshot import OddsSnapshot  # noqa: F401
 from app.models.forecast_ledger_entry import ForecastLedgerEntry  # noqa: F401
 from app.models.game_feature_snapshot import GameFeatureSnapshot  # noqa: F401
+from app.models.provider_sync_event import ProviderSyncEvent  # noqa: F401
 from app.models.user_pick import UserPick  # noqa: F401
 from app.core.security import get_password_hash
 from uuid import uuid4

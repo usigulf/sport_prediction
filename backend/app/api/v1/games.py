@@ -575,6 +575,30 @@ async def get_game_feature_snapshots(
     return feature_history_for_game(db, gid)
 
 
+@router.get("/{game_id}/lineage")
+async def get_game_lineage(
+    game_id: str,
+    db: Session = Depends(get_db),
+    _: None = Depends(rate_limit_predictions),
+):
+    """
+    Data lineage timeline for a game: odds → features → predictions → ledger,
+    plus PIT feature replay for offline re-scoring (audit #13).
+    """
+    from uuid import UUID
+
+    from app.services.data_telemetry_service import build_game_lineage
+
+    try:
+        gid = UUID(str(game_id).strip())
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid game_id") from e
+    payload = build_game_lineage(db, gid)
+    if not payload.get("found"):
+        raise HTTPException(status_code=404, detail="Game not found")
+    return payload
+
+
 @router.get("/{game_id}/injuries")
 async def get_game_injuries(
     game_id: str,

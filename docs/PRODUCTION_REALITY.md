@@ -31,6 +31,7 @@ Short reference for investors and developers. **This is what runs in production 
 - Acceptance protocol (soccer wedge): `docs/MODEL_ACCEPTANCE_PROTOCOL.md`, `GET /api/v1/stats/model-acceptance`
 - Closing-line ledger: `odds_snapshots.is_closing`, `POST /internal/odds/freeze-closing`, `GET /api/v1/stats/model-vs-closing`
 - Forecast ledger (append-only): `docs/FORECAST_LEDGER.md`, `GET /api/v1/stats/forecast-ledger`
+- Data telemetry (lineage / freshness / provider errors): `docs/DATA_TELEMETRY.md`, `GET /api/v1/stats/data-telemetry`
 - Public accuracy: `GET /api/v1/stats/public-audit`, walk-forward backtest script
 - Do **not** market unsourced “win more” claims; holdout metrics in sample `metrics.json` are near a naive baseline
 - Do **not** charge on AI performance until `public_charge` acceptance passes (needs closing ledger sample + model ≤ market log-loss)

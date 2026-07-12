@@ -1,4 +1,4 @@
-"""Prometheus HTTP metrics for the FastAPI app (PH2-010)."""
+"""Prometheus HTTP + data-pipeline metrics for the FastAPI app (PH2-010 / audit #13)."""
 from __future__ import annotations
 
 import re
@@ -6,7 +6,7 @@ import time
 from typing import Callable
 
 from fastapi import FastAPI, Request, Response
-from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
 from starlette.middleware.base import BaseHTTPMiddleware
 
 _UUID_RE = re.compile(
@@ -24,6 +24,22 @@ HTTP_REQUEST_DURATION_SECONDS = Histogram(
     "HTTP request latency in seconds",
     ["method", "path"],
     buckets=(0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0),
+)
+
+PROVIDER_SYNC_TOTAL = Counter(
+    "provider_sync_total",
+    "Provider sync job attempts",
+    ["provider", "job", "league", "status"],
+)
+PROVIDER_ERRORS_TOTAL = Counter(
+    "provider_errors_total",
+    "Provider sync failures by reason",
+    ["provider", "reason"],
+)
+DATA_FRESHNESS_HOURS = Gauge(
+    "data_freshness_hours",
+    "Hours since latest data for a resource (updated on /stats/data-telemetry)",
+    ["resource", "league"],
 )
 
 

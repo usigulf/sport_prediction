@@ -3432,6 +3432,52 @@
         ]
       }
     },
+    "/api/v1/games/{game_id}/lineage": {
+      "get": {
+        "description": "Data lineage timeline for a game: odds \u2192 features \u2192 predictions \u2192 ledger,\nplus PIT feature replay for offline re-scoring (audit #13).",
+        "operationId": "get_game_lineage_api_v1_games__game_id__lineage_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "title": "Game Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Game Lineage",
+        "tags": [
+          "games"
+        ]
+      }
+    },
     "/api/v1/games/{game_id}/live-predictions": {
       "get": {
         "description": "Live win-probability for premium users. In-play v0 when game is live and model was refreshed after kickoff.",
@@ -3857,6 +3903,26 @@
           }
         },
         "summary": "Get Data Coverage",
+        "tags": [
+          "stats"
+        ]
+      }
+    },
+    "/api/v1/stats/data-telemetry": {
+      "get": {
+        "description": "Data lineage ops snapshot: freshness SLOs, feature-coverage, provider sync errors\n(external audit #13). Public read-only summary \u2014 no secrets.",
+        "operationId": "get_data_telemetry_api_v1_stats_data_telemetry_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Data Telemetry",
         "tags": [
           "stats"
         ]
@@ -4926,6 +4992,47 @@
           }
         },
         "summary": "Health Check"
+      }
+    },
+    "/internal/data-telemetry/detail": {
+      "get": {
+        "description": "Full provider-error samples + freshness/coverage for ops (audit #13).",
+        "operationId": "data_telemetry_detail_internal_data_telemetry_detail_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Cron-Secret",
+            "required": false,
+            "schema": {
+              "title": "X-Cron-Secret",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Data Telemetry Detail",
+        "tags": [
+          "internal"
+        ]
       }
     },
     "/internal/email-digest/run": {

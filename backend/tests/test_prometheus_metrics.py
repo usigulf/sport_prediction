@@ -10,6 +10,10 @@ def test_prometheus_metrics_module_exists():
     text = path.read_text(encoding="utf-8")
     assert "http_requests_total" in text
     assert "normalize_path" in text
+    assert "provider_sync_total" in text
+    assert "data_freshness_hours" in text
+    assert "PROVIDER_SYNC_TOTAL" in text
+    assert "DATA_FRESHNESS_HOURS" in text
 
 
 def test_main_wires_prometheus_metrics():

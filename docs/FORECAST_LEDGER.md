@@ -50,4 +50,5 @@ alembic upgrade head   # applies 019
 
 - Feature PIT snapshots: `game_feature_snapshots` / `GET /stats/feature-store`
 - Closing lines: `docs/MODEL_ACCEPTANCE_PROTOCOL.md`, `GET /stats/model-vs-closing`
+- Data telemetry: `docs/DATA_TELEMETRY.md`, `GET /stats/data-telemetry`
 - Accuracy still locks on pre-game predictions via `select_pregame_prediction_for_accuracy`

@@ -217,6 +217,9 @@ async def run_predictions_cron(
     Set EXPLANATION_MODEL_DIR or MODEL_ARTIFACT_DIR to a folder with simple_model.pkl + feature_columns.pkl
     for sklearn inference; otherwise a deterministic heuristic runs from game state.
     """
+    from app.services.data_telemetry_service import record_provider_sync_event, timed_sync
+
+    t = timed_sync()
     result = run_prediction_job(
         db,
         game_ids=body.game_ids,
@@ -225,6 +228,17 @@ async def run_predictions_cron(
         min_minutes_live=body.min_minutes_live,
         include_recent_finished_days=body.include_recent_finished_days,
         leagues=body.leagues,
+    )
+    errors = list(result.errors or [])
+    record_provider_sync_event(
+        db,
+        provider="model",
+        job="predictions_run",
+        league=",".join(body.leagues) if body.leagues else None,
+        ok=len(errors) == 0,
+        started_at=t.started_at,
+        rows_touched=int(result.predictions_written or 0),
+        errors=errors,
     )
     return {
         "games_considered": result.games_considered,
@@ -336,11 +350,33 @@ async def soccer_sync_schedules(
     Uses ClearSports when CLEARSPORTS_API_KEY is set and Sportradar is not; otherwise Sportradar season feeds.
     After sync, run POST /internal/predictions/run.
     """
+    from app.services.data_telemetry_service import record_sync_result, timed_sync
+    from app.services.soccer_data_provider import use_clearsports_soccer
+
     settings = get_settings()
+    provider = "clearsports" if use_clearsports_soccer(settings) else "sportradar"
     results = []
     for lg in configured_soccer_league_codes(settings):
+        t_sched = timed_sync()
         r_sched = sync_soccer_schedule_for_league(db, lg, settings)
+        record_sync_result(
+            db,
+            provider=provider,
+            job="soccer_schedule",
+            league=lg,
+            started_at=t_sched.started_at,
+            result=r_sched,
+        )
+        t_std = timed_sync()
         r_std = sync_soccer_standings_for_league(db, lg, settings)
+        record_sync_result(
+            db,
+            provider=provider,
+            job="soccer_standings",
+            league=lg,
+            started_at=t_std.started_at,
+            result=r_std,
+        )
         results.append(
             {
                 "league": r_sched.app_league,
@@ -367,8 +403,22 @@ async def us_sports_sync_schedules(
     Import NFL and NBA schedules from ClearSports (CLEARSPORTS_API_KEY required).
     Then POST /internal/predictions/run.
     """
+    from app.services.clearsports_us_service import use_clearsports_us
+    from app.services.data_telemetry_service import record_sync_result, timed_sync
+
     settings = get_settings()
+    provider = "clearsports" if use_clearsports_us(settings) else "sportradar"
+    t = timed_sync()
     results = sync_all_us_schedules(db, settings)
+    for r in results:
+        record_sync_result(
+            db,
+            provider=provider,
+            job="us_schedule",
+            league=getattr(r, "league", None) or getattr(r, "app_league", None),
+            started_at=t.started_at,
+            result=r,
+        )
     return {"results": [us_sync_result_payload(r) for r in results]}
 
 
@@ -503,6 +553,17 @@ async def verify_forecast_ledger_cron(
     from app.services.forecast_ledger_service import verify_forecast_ledger_chain
 
     return verify_forecast_ledger_chain(db)
+
+
+@router.get("/data-telemetry/detail")
+async def data_telemetry_detail(
+    db: Session = Depends(get_db),
+    _: None = Depends(_require_cron_secret),
+):
+    """Full provider-error samples + freshness/coverage for ops (audit #13)."""
+    from app.services.data_telemetry_service import build_data_telemetry_detail
+
+    return build_data_telemetry_detail(db)
 
 
 class EnqueueJobBody(BaseModel):
