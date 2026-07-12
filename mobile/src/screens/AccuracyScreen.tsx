@@ -1,3 +1,8 @@
+/**
+ * Auditable accuracy scorecard (external audit #15).
+ * Surfaces public-audit windows, invite-beta acceptance gates, calibration,
+ * and closing-line comparison — not marketing claims.
+ */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
@@ -7,12 +12,16 @@ import {
   ActivityIndicator,
   RefreshControl,
   useWindowDimensions,
+  Linking,
 } from 'react-native';
 import {
   apiService,
   type AccuracyResponse,
   type CalibrationResponse,
   type CoverageResponse,
+  type ModelAcceptanceResponse,
+  type ModelVsClosingResponse,
+  type PublicAuditResponse,
 } from '../services/api';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { formatLeagueLabel } from '../utils/leagueDisplay';
@@ -20,71 +29,35 @@ import { ACCURACY_METHODOLOGY_DETAIL } from '../utils/methodologyDisplay';
 import { theme } from '../constants/theme';
 import { useModelStatus } from '../hooks/useModelStatus';
 import { CalibrationChart } from '../components/CalibrationChart';
+import { PredictionDisclaimer } from '../components/PredictionDisclaimer';
 import { maybeRequestStoreReview, recordPositiveSession } from '../utils/storeReview';
+import { AcceptanceGateCard } from './accuracy/AcceptanceGateCard';
+import { ClosingLineCard } from './accuracy/ClosingLineCard';
+import { ScoreWindowGrid } from './accuracy/ScoreWindowGrid';
+import {
+  CONFIDENCE_ORDER,
+  confidenceLabel,
+  formatLastUpdated,
+  formatWindowStart,
+} from './accuracy/accuracyFormatters';
 
-const CONFIDENCE_ORDER = ['high', 'medium', 'low', 'unknown'] as const;
-
-function confidenceLabel(key: string): string {
-  switch (key) {
-    case 'high':
-      return 'High confidence';
-    case 'medium':
-      return 'Medium confidence';
-    case 'low':
-      return 'Low confidence';
-    case 'unknown':
-      return 'Not labeled';
-    default:
-      return key;
-  }
-}
-
-/** Always show client copy — API detail may include legacy scope or technical field names. */
-function methodologyDetailText(_apiDetail: string): string {
-  return ACCURACY_METHODOLOGY_DETAIL;
-}
-
-function formatWindowStart(iso: string): string {
-  try {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return iso;
-    return d.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  } catch {
-    return iso;
-  }
-}
-
-function formatLastUpdated(iso: string | null | undefined): string | null {
-  if (!iso) return null;
-  try {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return null;
-    return d.toLocaleString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-  } catch {
-    return null;
-  }
-}
+const PUBLIC_SCORECARD_URL = 'https://octobetiq.com/scorecard.html';
 
 export const AccuracyScreen: React.FC = () => {
   const { width: windowWidth } = useWindowDimensions();
   const [data, setData] = useState<AccuracyResponse | null>(null);
+  const [audit, setAudit] = useState<PublicAuditResponse | null>(null);
   const [calibration, setCalibration] = useState<CalibrationResponse | null>(null);
   const [coverage, setCoverage] = useState<CoverageResponse | null>(null);
+  const [acceptance, setAcceptance] = useState<ModelAcceptanceResponse | null>(null);
+  const [closing, setClosing] = useState<ModelVsClosingResponse | null>(null);
   const [coverageFailed, setCoverageFailed] = useState(false);
+  const [acceptanceFailed, setAcceptanceFailed] = useState(false);
+  const [closingFailed, setClosingFailed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { isWarming, reload: reloadModelStatus } = useModelStatus();
+  const { isWarming, status: modelStatus, reload: reloadModelStatus } = useModelStatus();
   const reviewPromptedRef = useRef(false);
 
   const load = useCallback(async (isRefresh = false) => {
@@ -92,18 +65,23 @@ export const AccuracyScreen: React.FC = () => {
     else setLoading(true);
     setError(null);
     try {
-      const [accRes, calRes, covRes] = await Promise.allSettled([
+      const [accRes, auditRes, calRes, covRes, acceptRes, closeRes] = await Promise.allSettled([
         apiService.getAccuracy(),
+        apiService.getPublicAudit(),
         apiService.getCalibration(),
         apiService.getCoverage(),
+        apiService.getModelAcceptance('invite_beta'),
+        apiService.getModelVsClosing(),
       ]);
       if (accRes.status === 'rejected') throw accRes.reason;
       setData(accRes.value);
-      if (calRes.status === 'fulfilled') {
-        setCalibration(calRes.value);
-      } else {
-        setCalibration(null);
-      }
+
+      if (auditRes.status === 'fulfilled') setAudit(auditRes.value);
+      else setAudit(null);
+
+      if (calRes.status === 'fulfilled') setCalibration(calRes.value);
+      else setCalibration(null);
+
       if (covRes.status === 'fulfilled') {
         setCoverage(covRes.value);
         setCoverageFailed(false);
@@ -111,12 +89,33 @@ export const AccuracyScreen: React.FC = () => {
         setCoverage(null);
         setCoverageFailed(true);
       }
+
+      if (acceptRes.status === 'fulfilled') {
+        setAcceptance(acceptRes.value);
+        setAcceptanceFailed(false);
+      } else {
+        setAcceptance(null);
+        setAcceptanceFailed(true);
+      }
+
+      if (closeRes.status === 'fulfilled') {
+        setClosing(closeRes.value);
+        setClosingFailed(false);
+      } else {
+        setClosing(null);
+        setClosingFailed(true);
+      }
     } catch (e) {
       setError(getUserFriendlyMessage(e));
       setData(null);
+      setAudit(null);
       setCalibration(null);
       setCoverage(null);
+      setAcceptance(null);
+      setClosing(null);
       setCoverageFailed(false);
+      setAcceptanceFailed(false);
+      setClosingFailed(false);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -163,67 +162,91 @@ export const AccuracyScreen: React.FC = () => {
   const totalGames = d.total ?? d.total_games ?? 0;
   const leagues = Object.entries(d.by_league || {}).sort((a, b) => b[1].total - a[1].total);
   const roll = d.rolling_30d;
-  const rollTotal = roll.total ?? (roll as { total_games?: number }).total_games ?? 0;
   const confidenceEntries = CONFIDENCE_ORDER.filter((k) => (d.by_confidence[k]?.total ?? 0) > 0).map(
-    (k) => [k, d.by_confidence[k]] as const
+    (k) => [k, d.by_confidence[k]] as const,
   );
   const covRows = coverage?.leagues?.length
     ? [...coverage.leagues].sort((a, b) => b.standings_rows - a.standings_rows)
     : [];
+  const updatedIso = audit?.computed_at_iso ?? d.computed_at_iso;
+  const allTime = audit?.accuracy_all_time ?? {
+    accuracy_pct: d.accuracy_pct,
+    correct: d.correct,
+    total_games: totalGames,
+  };
+  const roll30 = audit?.accuracy_rolling_30d ?? {
+    accuracy_pct: roll.accuracy_pct,
+    correct: roll.correct,
+    total: roll.total ?? (roll as { total_games?: number }).total_games,
+  };
+  const roll7 = audit?.accuracy_rolling_7d;
 
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
+      testID="accuracy-scorecard"
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={() => onRefresh()} colors={[theme.colors.accent]} />
       }
     >
-      <Text style={styles.title}>How we've done</Text>
-      <Text style={styles.subtitle}>Prediction accuracy on finished games</Text>
-      {formatLastUpdated(d.computed_at_iso) ? (
-        <Text style={styles.freshnessLine}>
-          Last updated {formatLastUpdated(d.computed_at_iso)}
-        </Text>
+      <Text style={styles.title}>Auditable scorecard</Text>
+      <Text style={styles.subtitle}>
+        Pre-kickoff picks vs final results · soccer wedge · not betting advice
+      </Text>
+      {formatLastUpdated(updatedIso) ? (
+        <Text style={styles.freshnessLine}>Last updated {formatLastUpdated(updatedIso)}</Text>
+      ) : null}
+
+      <AcceptanceGateCard acceptance={acceptance} failed={acceptanceFailed} />
+
+      <Text style={styles.sectionTitle}>Tracked windows</Text>
+      <Text style={styles.sectionHint}>
+        Same rules as GET /stats/public-audit — first pre-kickoff prediction only; live refreshes
+        excluded.
+      </Text>
+      <ScoreWindowGrid
+        windows={[
+          ...(roll7
+            ? [{ label: '7 days', ...roll7 }]
+            : [{ label: '7 days', accuracy_pct: undefined, correct: 0, total: 0 }]),
+          { label: '30 days', ...roll30 },
+          { label: 'All time', ...allTime },
+        ]}
+      />
+      {roll?.window_start_iso ? (
+        <Text style={styles.windowHint}>30-day window since {formatWindowStart(roll.window_start_iso)}</Text>
       ) : null}
 
       {isWarming ? (
         <View style={styles.warmingCard}>
           <Text style={styles.warmingTitle}>Model warming</Text>
           <Text style={styles.warmingBody}>
-            Accuracy below reflects pre-kickoff picks on finished games. The full ML model publishes once we
-            have enough decisive history per sport — picks may still use the baseline engine until then.
+            Publish-ready artifacts are not live yet. Numbers below still score pre-kickoff picks;
+            inference may use the baseline engine until invite-beta gates pass.
           </Text>
         </View>
       ) : null}
 
       <View style={styles.methodCard}>
-        <Text style={styles.methodShort}>{d.methodology.short}</Text>
-        <Text style={styles.methodDetail}>{methodologyDetailText(d.methodology.detail)}</Text>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.bigNumber}>{d.accuracy_pct}%</Text>
-        <Text style={styles.cardLabel}>Overall accuracy</Text>
-        <Text style={styles.cardDetail}>
-          {d.correct} correct out of {totalGames} games
+        <Text style={styles.methodShort}>
+          {d.methodology?.short ?? audit?.methodology?.short ?? 'Transparent scoring'}
         </Text>
-      </View>
-
-      <View style={[styles.card, styles.cardSecondary]}>
-        <Text style={styles.sectionTitleSmall}>Last 30 days</Text>
-        <Text style={styles.windowHint}>Since {formatWindowStart(roll.window_start_iso)}</Text>
-        <Text style={styles.bigNumberSmall}>{roll.accuracy_pct}%</Text>
-        <Text style={styles.cardDetail}>
-          {roll.correct} correct out of {rollTotal} games (in window)
-        </Text>
+        <Text style={styles.methodDetail}>{ACCURACY_METHODOLOGY_DETAIL}</Text>
+        {(modelStatus?.trained_at || audit?.model?.trained_at) && (
+          <Text style={styles.trainedAt}>
+            Last trained{' '}
+            {formatLastUpdated(modelStatus?.trained_at ?? audit?.model?.trained_at) ?? '—'}
+          </Text>
+        )}
       </View>
 
       {calibration?.min_sample_met ? (
         <View style={styles.cardSecondaryBlock}>
           <Text style={styles.sectionTitle}>Calibration</Text>
           <Text style={styles.sectionHint}>
-            Predicted probability vs how often we were right ({calibration.total_scored} scored games)
+            Predicted probability vs how often we were right ({calibration.total_scored} scored
+            games)
           </Text>
           <CalibrationChart
             buckets={calibration.buckets}
@@ -237,16 +260,20 @@ export const AccuracyScreen: React.FC = () => {
         </Text>
       ) : null}
 
+      <ClosingLineCard closing={closing} failed={closingFailed} />
+
       {totalGames === 0 && (
         <Text style={styles.emptyText}>
-          No finished games with predictions yet. Accuracy will appear here as games complete.
+          No finished games with predictions yet. The scorecard fills in as games complete.
         </Text>
       )}
 
       {confidenceEntries.length > 0 && (
         <>
           <Text style={styles.sectionTitle}>By confidence label</Text>
-          <Text style={styles.sectionHint}>How often each confidence bucket matched the final result</Text>
+          <Text style={styles.sectionHint}>
+            How often each confidence bucket matched the final result
+          </Text>
           {confidenceEntries.map(([key, stats]) => (
             <View key={key} style={styles.leagueRow}>
               <Text style={styles.leagueName}>{confidenceLabel(key)}</Text>
@@ -302,6 +329,23 @@ export const AccuracyScreen: React.FC = () => {
       ) : (
         <Text style={styles.mutedSmall}>Standings data not available yet for any competition.</Text>
       )}
+
+      <View style={styles.auditFooter}>
+        <Text style={styles.auditFooterTitle}>Independent review</Text>
+        <Text style={styles.auditFooterBody}>
+          Machine-readable bundle: GET /api/v1/stats/public-audit
+          {audit?.contact ? ` · ${audit.contact}` : ' · accuracy@octobetiq.com'}
+        </Text>
+        <Text
+          style={styles.auditLink}
+          onPress={() => Linking.openURL(PUBLIC_SCORECARD_URL).catch(() => {})}
+          accessibilityRole="link"
+        >
+          Open web scorecard
+        </Text>
+      </View>
+
+      <PredictionDisclaimer compact style={styles.disclaimer} />
     </ScrollView>
   );
 };
@@ -328,9 +372,10 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.xs,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs,
+    lineHeight: 21,
   },
   freshnessLine: {
     fontSize: 12,
@@ -376,18 +421,10 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     lineHeight: 19,
   },
-  card: {
-    backgroundColor: theme.colors.backgroundCard,
-    borderRadius: theme.radii.sm,
-    padding: theme.spacing.lg,
-    alignItems: 'center',
-    marginBottom: theme.spacing.lg,
-    borderLeftWidth: 4,
-    borderLeftColor: theme.colors.accent,
-  },
-  cardSecondary: {
-    alignItems: 'stretch',
-    borderLeftColor: theme.colors.borderSubtle,
+  trainedAt: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    marginTop: theme.spacing.sm,
   },
   cardSecondaryBlock: {
     backgroundColor: theme.colors.backgroundCard,
@@ -397,40 +434,11 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: theme.colors.borderSubtle,
   },
-  bigNumber: {
-    fontSize: 42,
-    fontWeight: 'bold',
-    color: theme.colors.accent,
-  },
-  bigNumberSmall: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-    marginTop: theme.spacing.sm,
-    textAlign: 'center',
-  },
-  sectionTitleSmall: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
-  },
   windowHint: {
     fontSize: 12,
     color: theme.colors.textMuted,
-    textAlign: 'center',
-    marginTop: theme.spacing.xs,
-  },
-  cardLabel: {
-    fontSize: 16,
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.sm,
-  },
-  cardDetail: {
-    fontSize: 14,
-    color: theme.colors.textMuted,
-    marginTop: theme.spacing.xs,
-    textAlign: 'center',
+    marginTop: -theme.spacing.md,
+    marginBottom: theme.spacing.lg,
   },
   emptyText: {
     fontSize: 15,
@@ -489,6 +497,33 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     marginBottom: theme.spacing.md,
     lineHeight: 18,
+  },
+  auditFooter: {
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.sm,
+    backgroundColor: theme.colors.backgroundElevated,
+  },
+  auditFooterTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginBottom: theme.spacing.xs,
+  },
+  auditFooterBody: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    lineHeight: 17,
+  },
+  auditLink: {
+    fontSize: 14,
+    color: theme.colors.accent,
+    marginTop: theme.spacing.sm,
+    fontWeight: '600',
+  },
+  disclaimer: {
+    marginTop: theme.spacing.sm,
   },
   errorText: {
     fontSize: 16,

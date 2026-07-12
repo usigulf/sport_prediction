@@ -70,7 +70,7 @@ export const GuestProfileScreen: React.FC = () => {
             })
           }
         />
-        <MenuRow icon="stats-chart-outline" label="Model accuracy" onPress={() => navigation.navigate('Accuracy')} />
+        <MenuRow icon="stats-chart-outline" label="Scorecard" onPress={() => navigation.navigate('Accuracy')} />
         <MenuRow icon="help-circle-outline" label="Help & FAQ" onPress={() => navigation.navigate('Help')} />
         <MenuRow icon="information-circle-outline" label="About octobetiQ" onPress={() => navigation.navigate('Landing')} />
       </View>

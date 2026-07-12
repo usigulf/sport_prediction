@@ -20,9 +20,9 @@ export function AuthTrustLinks({ style }: AuthTrustLinksProps) {
         onPress={() => navigation.navigate('Accuracy')}
         hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
         accessibilityRole="button"
-        accessibilityLabel="Model accuracy"
+        accessibilityLabel="Scorecard"
       >
-        <Text style={styles.link}>Model accuracy</Text>
+        <Text style={styles.link}>Scorecard</Text>
       </TouchableOpacity>
       <Text style={styles.sep}>·</Text>
       <TouchableOpacity

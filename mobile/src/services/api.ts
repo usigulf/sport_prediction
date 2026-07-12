@@ -318,14 +318,86 @@ export interface UserBrierStatsResponse {
 
 /** GET /stats/model — sklearn publish readiness (warming vs ready). */
 export interface ModelStatusResponse {
-  status: 'warming' | 'ready' | 'forced' | string;
-  publish_ready: boolean;
+  status?: string;
+  publish_ready?: boolean;
   artifacts_written?: boolean;
+  inference_mode?: string;
+  allow_heuristic_inference?: boolean;
+  require_publish_ready_model?: boolean;
+  healthy_for_launch?: boolean;
   games?: number;
   trained_at?: string | null;
-  league_counts?: Record<string, number>;
-  publish_block_reasons?: string[];
   detail?: string | null;
+  [key: string]: unknown;
+}
+
+/** GET /stats/public-audit — third-party audit bundle. */
+export interface PublicAuditAccuracyBlock {
+  total_games?: number;
+  total?: number;
+  correct?: number;
+  accuracy_pct?: number;
+  by_league?: Record<string, AccuracyBucket>;
+  by_confidence?: Record<string, AccuracyBucket>;
+}
+
+export interface PublicAuditResponse {
+  audit_version: string;
+  computed_at_iso: string;
+  accuracy_all_time: PublicAuditAccuracyBlock;
+  accuracy_rolling_30d: PublicAuditAccuracyBlock;
+  accuracy_rolling_7d: PublicAuditAccuracyBlock;
+  calibration?: CalibrationResponse;
+  model: {
+    publish_ready?: boolean;
+    status?: string;
+    trained_at?: string | null;
+  };
+  methodology?: AccuracyMethodology;
+  contact?: string;
+}
+
+export interface ModelAcceptanceCheck {
+  name: string;
+  ok: boolean;
+  detail: string;
+}
+
+/** GET /stats/model-acceptance — soccer-wedge protocol (audit #8). */
+export interface ModelAcceptanceResponse {
+  protocol_version: string;
+  level: string;
+  passed: boolean;
+  wedge: string;
+  checks: ModelAcceptanceCheck[];
+  failed_checks: string[];
+  soccer_metrics?: {
+    present?: boolean;
+    publish_ready?: boolean;
+    model_kind?: string | null;
+    model_version?: string | null;
+    games?: number | null;
+    trained_at?: string | null;
+    eval?: Record<string, unknown> | null;
+  };
+  market_baseline?: {
+    status?: string;
+    detail?: string;
+  };
+}
+
+/** GET /stats/model-vs-closing — closing-line ledger summary. */
+export interface ModelVsClosingResponse {
+  ledger_version?: string;
+  scored_games: number;
+  min_scored_for_acceptance: number;
+  ledger_sample_met: boolean;
+  model_mean_log_loss: number | null;
+  market_mean_log_loss: number | null;
+  model_beats_or_ties_closing_market: boolean;
+  closing_snapshots_marked?: number;
+  acceptance_ready: boolean;
+  detail?: string;
 }
 
 class ApiService {
@@ -873,6 +945,21 @@ class ApiService {
 
   async getModelStatus() {
     return this.request<ModelStatusResponse>('/stats/model', { requireAuth: false });
+  }
+
+  async getPublicAudit() {
+    return this.request<PublicAuditResponse>('/stats/public-audit', { requireAuth: false });
+  }
+
+  async getModelAcceptance(level: 'engineering_beta' | 'invite_beta' | 'public_charge' = 'invite_beta') {
+    const q = new URLSearchParams({ level });
+    return this.request<ModelAcceptanceResponse>(`/stats/model-acceptance?${q}`, {
+      requireAuth: false,
+    });
+  }
+
+  async getModelVsClosing() {
+    return this.request<ModelVsClosingResponse>('/stats/model-vs-closing', { requireAuth: false });
   }
 
   // Feed (top picks + personalized for-you)

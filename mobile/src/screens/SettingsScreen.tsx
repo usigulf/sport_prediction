@@ -226,7 +226,7 @@ export const SettingsScreen: React.FC = () => {
           activeOpacity={0.7}
         >
           <View style={styles.linkTextBlock}>
-            <Text style={styles.linkTitle}>Model accuracy</Text>
+            <Text style={styles.linkTitle}>Scorecard</Text>
             <Text style={styles.linkSubtitle}>Overall, last 30 days, confidence & data coverage</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />

@@ -178,7 +178,7 @@ function GuestStack() {
         component={ResetPasswordScreen}
         options={{ title: 'Reset Password' }}
       />
-      <Stack.Screen name="Accuracy" component={AccuracyScreen} options={{ title: 'Model accuracy' }} />
+      <Stack.Screen name="Accuracy" component={AccuracyScreen} options={{ title: 'Scorecard' }} />
       <Stack.Screen name="Help" component={HelpScreen} options={{ title: 'Help & FAQ' }} />
       <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ title: 'Privacy Policy' }} />
       <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} options={{ title: 'Terms of Service' }} />
@@ -308,7 +308,7 @@ function AuthenticatedStack({ showOnboarding }: { showOnboarding: boolean }) {
             <Stack.Screen
               name="Accuracy"
               component={AccuracyScreen}
-              options={{ title: 'Model accuracy' }}
+              options={{ title: 'Scorecard' }}
             />
             <Stack.Screen
               name="Leaderboards"

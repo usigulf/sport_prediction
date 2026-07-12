@@ -195,8 +195,8 @@ export const ProfileScreen: React.FC = () => {
               style={styles.menuItem}
               onPress={() => navigation.navigate('Accuracy')}
             >
-              <Text style={styles.menuText}>Model accuracy</Text>
-              <Text style={styles.menuSubtext}>How we've done</Text>
+              <Text style={styles.menuText}>Scorecard</Text>
+              <Text style={styles.menuSubtext}>Auditable scorecard</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.menuItem}

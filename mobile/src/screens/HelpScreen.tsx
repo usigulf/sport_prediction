@@ -38,9 +38,9 @@ const FAQ = [
     a: 'When our model is very confident (e.g. strong home or away advantage), we mark the prediction as high confidence. You can get push notifications for these via Settings → Push notifications.',
   },
   {
-    q: 'How is "Model accuracy" calculated?',
+    q: 'How is the Scorecard calculated?',
     a:
-      'For finished games we compare the latest stored prediction to the final score. Soccer uses three-way outcomes (home / draw / away), including implied draw probability; other sports use the predicted favorite vs the winner (ties do not match either side). Numbers are informational, not betting advice. Open Model accuracy (from the welcome page, Home, Profile, or Settings) for methodology, a 30-day rollup, confidence buckets, and data coverage.',
+      'For finished games we compare the first pre-kickoff prediction to the final score (live refreshes excluded). Soccer uses three-way outcomes (home / draw / away), including implied draw probability; other sports use the predicted favorite vs the winner (ties do not match either side). The Scorecard also shows invite-beta acceptance gates, calibration, and model-vs-closing when available. Numbers are informational, not betting advice.',
   },
   {
     q: 'How do I add favorite teams?',
@@ -70,7 +70,7 @@ export const HelpScreen: React.FC = () => {
           onPress={() => navigation.navigate('Accuracy')}
           activeOpacity={0.85}
         >
-          <Text style={styles.trustButtonText}>Model accuracy & methodology</Text>
+          <Text style={styles.trustButtonText}>Scorecard & methodology</Text>
           <Ionicons name="chevron-forward" size={18} color={theme.colors.background} />
         </TouchableOpacity>
       </View>
