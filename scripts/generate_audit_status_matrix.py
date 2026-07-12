@@ -107,7 +107,7 @@ REGISTRY: dict[str, tuple[str, str]] = {
     "I42": ("done", "ReferralSection + docs/REFERRAL_PROGRAM.md; bonus days need ASC/Stripe promo setup"),
     "I43": ("done", "SharePickCard rollingAccuracyPct, build_share_card rolling_accuracy_pct"),
     "I44": ("done", "productAnalytics.ts + mobile/.env.example PostHog keys + screen tracking"),
-    "I76": ("done", "e2e/paywall.e2e.ts + .detoxrc.js + detox devDeps + npm run test:e2e + verify_detox_scaffold.sh"),
+    "I76": ("done", "e2e gates/guest/auth/game/paywall/delete + helpers + verify_detox_scaffold.sh"),
     "I45": ("done", "push_trigger_service types + push_service categoryId + mobile iOS categories"),
     "I46": ("done", "send_trial_ending_reminders push + send_trial_ending_email when SMTP set"),
     "I47": ("done", "mobile storeReview.ts"),

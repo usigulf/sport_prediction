@@ -550,6 +550,7 @@ export const PaywallScreen: React.FC = () => {
           disabled={restoring}
           accessibilityRole="button"
           accessibilityLabel="Restore purchases"
+          testID="paywall-restore"
         >
           {restoring ? (
             <ActivityIndicator color={theme.colors.accent} />

@@ -90,7 +90,7 @@ export const HomeScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.wrapper}>
+    <View style={styles.wrapper} testID="home-screen">
       <HomeHeader cachedAt={cachedAt} loadError={loadError} />
       <ScrollView
         style={styles.container}

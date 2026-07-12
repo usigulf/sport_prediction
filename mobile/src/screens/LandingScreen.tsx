@@ -135,7 +135,7 @@ export const LandingScreen: React.FC = () => {
   const handleSeePremium = () => setShowPremiumPreview(true);
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="landing-screen">
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -145,7 +145,12 @@ export const LandingScreen: React.FC = () => {
         <ImageBackground source={{ uri: FALLBACK_BG }} style={styles.heroWrap} resizeMode="cover">
           <View style={styles.overlay} />
           <SafeAreaView style={styles.heroSafe} edges={['top', 'left', 'right']}>
-            <TouchableOpacity style={styles.loginLink} onPress={handleLogIn} accessibilityLabel="Log in">
+            <TouchableOpacity
+              style={styles.loginLink}
+              onPress={handleLogIn}
+              accessibilityLabel="Log in"
+              testID="landing-login"
+            >
               <Text style={styles.loginLinkText}>Log in</Text>
             </TouchableOpacity>
             <View style={styles.copyBlock}>
@@ -153,7 +158,13 @@ export const LandingScreen: React.FC = () => {
               <Text style={styles.subheadline}>{LANDING_HERO_SUBHEADLINE}</Text>
             </View>
             <View style={styles.buttons}>
-              <TouchableOpacity style={styles.primaryButton} onPress={handleGetFreePicks} activeOpacity={0.85}>
+              <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={handleGetFreePicks}
+                activeOpacity={0.85}
+                testID="landing-get-free-picks"
+                accessibilityLabel="Get Free Daily Picks"
+              >
                 <Text style={styles.primaryButtonText}>Get Free Daily Picks</Text>
               </TouchableOpacity>
               {Platform.OS === 'android' ? (

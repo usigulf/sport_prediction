@@ -18,7 +18,7 @@ export const AgeGateScreen: React.FC<Props> = ({ onConfirmed }) => {
   };
 
   return (
-    <SafeAreaView style={styles.safe} accessibilityLabel="Age confirmation">
+    <SafeAreaView style={styles.safe} accessibilityLabel="Age confirmation" testID="age-gate-screen">
       <View style={styles.card}>
         <Text style={styles.title}>Age confirmation</Text>
         <Text style={styles.body}>
@@ -30,6 +30,7 @@ export const AgeGateScreen: React.FC<Props> = ({ onConfirmed }) => {
           onPress={handleConfirm}
           accessibilityRole="button"
           accessibilityLabel="I am 17 or older, continue"
+          testID="age-gate-continue"
         >
           <Text style={styles.primaryText}>I am 17 or older</Text>
         </TouchableOpacity>

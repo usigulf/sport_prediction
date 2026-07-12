@@ -144,6 +144,7 @@ export const ProfileScreen: React.FC = () => {
     <>
       <ScrollView
         style={styles.container}
+        testID="profile-screen"
         contentContainerStyle={[
           styles.scrollInner,
           isWide && { paddingHorizontal: horizontalPadding },
@@ -253,7 +254,13 @@ export const ProfileScreen: React.FC = () => {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Danger zone</Text>
-            <TouchableOpacity style={styles.menuItem} onPress={handleDeleteAccount}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={handleDeleteAccount}
+              testID="profile-delete-account"
+              accessibilityRole="button"
+              accessibilityLabel="Delete account"
+            >
               <Text style={styles.deleteAccountText}>Delete account</Text>
             </TouchableOpacity>
           </View>

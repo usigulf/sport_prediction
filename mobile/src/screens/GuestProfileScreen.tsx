@@ -28,6 +28,7 @@ export const GuestProfileScreen: React.FC = () => {
   return (
     <ScrollView
       style={styles.container}
+      testID="guest-profile-screen"
       contentContainerStyle={[
         styles.content,
         isWide && { paddingHorizontal: horizontalPadding + theme.spacing.lg },
@@ -43,6 +44,7 @@ export const GuestProfileScreen: React.FC = () => {
         accessibilityRole="button"
         style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
         onPress={() => navigation.navigate('Register')}
+        testID="guest-create-account"
       >
         <Text style={styles.primaryBtnText}>Create free account</Text>
       </Pressable>
@@ -51,6 +53,7 @@ export const GuestProfileScreen: React.FC = () => {
         accessibilityRole="button"
         style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]}
         onPress={() => navigation.navigate('Login')}
+        testID="guest-sign-in"
       >
         <Text style={styles.secondaryBtnText}>Sign in</Text>
       </Pressable>
@@ -59,6 +62,7 @@ export const GuestProfileScreen: React.FC = () => {
         <MenuRow
           icon="diamond-outline"
           label="View Premium plans"
+          testID="guest-view-premium"
           onPress={() =>
             navigation.navigate('Paywall', {
               emphasizeTier: 'premium',
@@ -82,16 +86,19 @@ function MenuRow({
   icon,
   label,
   onPress,
+  testID,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress: () => void;
+  testID?: string;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
       style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
       onPress={onPress}
+      testID={testID}
     >
       <Ionicons name={icon} size={20} color={theme.colors.accent} />
       <Text style={styles.menuLabel}>{label}</Text>

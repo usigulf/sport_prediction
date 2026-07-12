@@ -3,7 +3,7 @@
 Generated from `docs/AUDIT_SOURCE_LISTS.json` and repository evidence.  
 Legend: ✅ done · 🟡 partial · ❌ not implemented · 🚫 blocked (external credentials/infrastructure)
 
-**Last updated:** 2026-07-11 · **In-repo coverage:** 100.0% complete
+**Last updated:** 2026-07-12 · **In-repo coverage:** 100.0% complete
 
 ## Summary
 
@@ -156,7 +156,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I73 | Monetization bypass regression tests | ✅ | done | backend/tests/test_premium_gating.py — auth, quota, share-pick bypass |
 | I74 | Integration tests with Postgres in CI | ✅ | done | .github/workflows/ci.yml backend-postgres job, test_postgres_integration.py |
 | I75 | Mobile Jest tests for subscription utils | ✅ | done | mobile subscription.test.ts + CI |
-| I76 | E2E Detox for paywall flow | ✅ | done | e2e/paywall.e2e.ts + .detoxrc.js + detox devDeps + npm run test:e2e + verify_detox_scaffold.sh |
+| I76 | E2E Detox for paywall flow | ✅ | done | e2e gates/guest/auth/game/paywall/delete + helpers + verify_detox_scaffold.sh |
 | I77 | Feature flags service (LaunchDarkly/PostHog) | ✅ | done | backend/app/services/feature_flags.py, GET /config/feature-flags |
 | I78 | API v2 planning doc | ✅ | done | docs/API_V2_PLAN.md |
 | I79 | OpenAPI client codegen for mobile | ✅ | done | export_openapi.py, docs/OPENAPI_CODEGEN.md, mobile codegen:api |

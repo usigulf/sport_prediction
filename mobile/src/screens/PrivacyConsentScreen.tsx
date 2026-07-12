@@ -35,7 +35,7 @@ export const PrivacyConsentScreen: React.FC<Props> = ({ onCompleted }) => {
   };
 
   return (
-    <SafeAreaView style={styles.safe} accessibilityLabel="Privacy choices">
+    <SafeAreaView style={styles.safe} accessibilityLabel="Privacy choices" testID="privacy-consent-screen">
       <View style={styles.card}>
         <Text style={styles.title}>Your privacy choices</Text>
         <Text style={styles.body}>
@@ -54,6 +54,7 @@ export const PrivacyConsentScreen: React.FC<Props> = ({ onCompleted }) => {
             trackColor={{ false: theme.colors.border, true: theme.colors.accentDim }}
             thumbColor={Platform.OS === 'android' ? theme.colors.accent : undefined}
             accessibilityLabel="Allow product analytics"
+            testID="privacy-analytics-switch"
           />
         </View>
 
@@ -71,6 +72,7 @@ export const PrivacyConsentScreen: React.FC<Props> = ({ onCompleted }) => {
             trackColor={{ false: theme.colors.border, true: theme.colors.accentDim }}
             thumbColor={Platform.OS === 'android' ? theme.colors.accent : undefined}
             accessibilityLabel="Allow ad measurement"
+            testID="privacy-ads-switch"
           />
         </View>
 
@@ -80,6 +82,7 @@ export const PrivacyConsentScreen: React.FC<Props> = ({ onCompleted }) => {
           disabled={saving}
           accessibilityRole="button"
           accessibilityLabel="Save privacy choices and continue"
+          testID="privacy-consent-continue"
         >
           <Text style={styles.primaryText}>{saving ? 'Saving…' : 'Continue'}</Text>
         </TouchableOpacity>

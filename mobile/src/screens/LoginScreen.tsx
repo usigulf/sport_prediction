@@ -58,6 +58,7 @@ export const LoginScreen: React.FC = () => {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' && !Platform.isPad ? 'padding' : undefined}
+      testID="login-screen"
     >
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -110,6 +111,7 @@ export const LoginScreen: React.FC = () => {
             ]}
             onPress={handleLogin}
             disabled={formDisabled}
+            testID="login-submit"
           >
             {loading ? (
               <ActivityIndicator color={theme.colors.background} />

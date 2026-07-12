@@ -78,7 +78,7 @@ export const GameDetailScreen: React.FC = () => {
 
   if (loading && !currentGame) {
     return (
-      <View style={s.centerContainer}>
+      <View style={s.centerContainer} testID="game-detail-screen">
         <FeedSkeleton count={4} variant="card" />
       </View>
     );
@@ -86,7 +86,7 @@ export const GameDetailScreen: React.FC = () => {
 
   if (!currentGame) {
     return (
-      <View style={s.centerContainer}>
+      <View style={s.centerContainer} testID="game-detail-screen">
         <Text style={s.errorText}>Game not found</Text>
       </View>
     );
@@ -96,7 +96,7 @@ export const GameDetailScreen: React.FC = () => {
   const awayName = currentGame.away_team?.name ?? 'Away';
 
   return (
-    <View style={s.screenRoot}>
+    <View style={s.screenRoot} testID="game-detail-screen">
       <ScrollView
         style={s.container}
         contentContainerStyle={[

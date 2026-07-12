@@ -1,45 +1,69 @@
-# Detox E2E (I76)
+# Detox E2E (I76 / external audit #10)
 
-Paywall flow tests live in `e2e/paywall.e2e.ts`. Detox requires a **development build** (not Expo Go).
+Critical-path specs live under `mobile/e2e/`. Detox requires a **development build** (not Expo Go).
+
+## Specs
+
+| Spec | Covers |
+|------|--------|
+| `gates.e2e.ts` | Fresh install age gate → privacy consent → home |
+| `guest.e2e.ts` | Guest home → Account → register / landing |
+| `auth.e2e.ts` | Login / register deep links |
+| `gameDetail.e2e.ts` | `game/:gameId` deep link |
+| `paywall.e2e.ts` | Guest Premium entry + deep link + restore affordance |
+| `profileDelete.e2e.ts` | Guest has no delete; optional auth delete with env creds |
+
+Shared helpers: `e2e/helpers.ts` (`launchFreshApp`, `completeFirstRunGates`, `openDeepLink`).
 
 ## Prerequisites
 
-1. Install Detox CLI and build tools (one-time):
-
 ```bash
 cd mobile
-npm install --save-dev detox jest-circus
-```
-
-2. Build the iOS app for simulator:
-
-```bash
+npm install
 npx expo run:ios --configuration Release
 ```
 
-3. Configure `.detoxrc.js` (included in repo) — update `binaryPath` if your scheme/output differs.
+Configure `.detoxrc.js` `binaryPath` if your scheme/output differs.
 
-## Run paywall tests
+## Run
 
 ```bash
 cd mobile
-npx detox test e2e/paywall.e2e.ts --configuration ios.sim.release
+# Scaffold only (no simulator):
+npm run verify:e2e
+
+# Full suite:
+npx detox test --configuration ios.sim.release
+
+# Single flow:
+npx detox test e2e/gates.e2e.ts --configuration ios.sim.release
 ```
 
-For guest paywall preview, launch with deep link or screenshot route:
+## Optional authenticated delete
 
 ```bash
-# Example: open Paywall directly (screenshot navigation flag)
-EXPO_PUBLIC_CAPTURE_SCREENSHOTS=1 npx expo run:ios
+DETOX_E2E_EMAIL=you@example.com DETOX_E2E_PASSWORD='…' \
+  npx detox test e2e/profileDelete.e2e.ts --configuration ios.sim.release
 ```
 
-## testIDs
+## Deep links
+
+Scheme: `com.sportsprediction.app://`
+
+Examples: `paywall`, `login`, `register`, `landing`, `game/:gameId`, `profile`, `home`.
+
+## testIDs (selected)
 
 | testID | Screen |
 |--------|--------|
-| `paywall-screen` | Paywall root |
-| `paywall-choose-plan` | Plan picker title |
-| `paywall-premium-card` | Premium tier card |
-| `paywall-price-promo` | Price experiment banner |
+| `age-gate-screen` / `age-gate-continue` | Age gate |
+| `privacy-consent-screen` / `privacy-consent-continue` | Privacy |
+| `home-screen` | Home |
+| `guest-profile-screen` / `guest-view-premium` | Guest Account |
+| `landing-screen` | Landing |
+| `login-screen` / `register-screen` | Auth |
+| `game-detail-screen` | Game detail |
+| `paywall-screen` / `paywall-premium-card` / `paywall-restore` | Paywall |
+| `profile-delete-account` | Authenticated profile |
 
-Add new flows by extending `e2e/` and matching `testID` props in screens.
+See also `docs/DETOX_E2E.md`.

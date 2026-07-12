@@ -74,6 +74,7 @@ export const RegisterScreen: React.FC = () => {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' && !Platform.isPad ? 'padding' : undefined}
+      testID="register-screen"
     >
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -128,6 +129,7 @@ export const RegisterScreen: React.FC = () => {
               ]}
               onPress={handleRegister}
               disabled={formDisabled}
+              testID="register-submit"
             >
               {loading ? (
                 <ActivityIndicator color={theme.colors.background} />
