@@ -37,15 +37,17 @@ export interface Prediction {
   game_id: string;
   model_version: string;
   prediction_source?: 'sklearn' | 'heuristic' | 'warming' | 'synthetic' | 'inplay' | string;
-  home_win_probability: number;
-  away_win_probability: number;
+  /** Null when API suppresses low-trust / gated probabilities. */
+  home_win_probability?: number | null;
+  away_win_probability?: number | null;
   expected_home_score?: number;
   expected_away_score?: number;
-  confidence_level: 'high' | 'medium' | 'low';
+  confidence_level?: 'high' | 'medium' | 'low' | string | null;
   data_quality_score?: number;
   data_quality_label?: 'high' | 'medium' | 'low';
   quality_gate_applied?: boolean;
   quality_reasons?: string[];
+  probabilities_suppressed?: boolean;
   created_at: string;
   standings_last_updated_iso?: string | null;
 }

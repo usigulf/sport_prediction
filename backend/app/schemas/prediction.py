@@ -73,15 +73,17 @@ class PredictionResponse(BaseModel):
     game_id: str
     model_version: str
     prediction_source: Optional[str] = None
-    home_win_probability: float
-    away_win_probability: float
+    # Null when probabilities_suppressed (low-trust / quality gate).
+    home_win_probability: Optional[float] = None
+    away_win_probability: Optional[float] = None
     expected_home_score: Optional[float] = None
     expected_away_score: Optional[float] = None
-    confidence_level: str
+    confidence_level: Optional[str] = None
     data_quality_score: Optional[float] = None
     data_quality_label: Optional[str] = None
     quality_gate_applied: Optional[bool] = None
     quality_reasons: Optional[List[str]] = None
+    probabilities_suppressed: Optional[bool] = None
     created_at: datetime
     standings_last_updated_iso: Optional[str] = None
     

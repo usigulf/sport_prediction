@@ -82,3 +82,47 @@ export function shouldBlockHeuristicPickUi(
   if (!prediction) return false;
   return isLowTrustPredictionSource(prediction.prediction_source) || isDemoModelPrediction(prediction);
 }
+
+/** True when the API (or client heuristics) say probabilities must not be shown. */
+export function shouldSuppressPredictionProbabilities(
+  prediction: Pick<
+    Prediction,
+    | 'home_win_probability'
+    | 'away_win_probability'
+    | 'prediction_source'
+    | 'model_version'
+    | 'quality_gate_applied'
+    | 'probabilities_suppressed'
+  > | null | undefined,
+): boolean {
+  if (!prediction) return true;
+  if (prediction.probabilities_suppressed) return true;
+  if (prediction.quality_gate_applied && isLowTrustPredictionSource(prediction.prediction_source)) {
+    return true;
+  }
+  if (
+    prediction.home_win_probability == null ||
+    prediction.away_win_probability == null ||
+    Number.isNaN(Number(prediction.home_win_probability)) ||
+    Number.isNaN(Number(prediction.away_win_probability))
+  ) {
+    return true;
+  }
+  return shouldBlockHeuristicPickUi(prediction);
+}
+
+export function lowTrustSuppressionCopy(
+  predictionSource?: PredictionSource | null,
+): string {
+  const source = (predictionSource || '').toLowerCase();
+  if (source === 'warming') {
+    return 'Model still warming — probabilities are hidden until the trained model is publish-ready for this competition.';
+  }
+  if (source === 'synthetic') {
+    return 'Limited data for this competition — probabilities are hidden until real standings features are available.';
+  }
+  if (source === 'heuristic') {
+    return 'Baseline engine only — probabilities are hidden so heuristic picks are not shown as ML forecasts.';
+  }
+  return 'Probabilities are temporarily hidden because this pick does not meet our trust bar.';
+}

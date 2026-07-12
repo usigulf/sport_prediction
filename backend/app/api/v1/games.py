@@ -371,6 +371,7 @@ async def get_prediction_explanation(
         prediction.model_version,
         environment=settings.environment,
         default_model_version=settings.ml_model_version,
+        strict_suppression=bool(settings.strict_low_trust_suppression),
     )
 
     # Record view for prediction history

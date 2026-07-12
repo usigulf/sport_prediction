@@ -19,6 +19,8 @@ import { theme } from '../constants/theme';
 import type { BestPickItem } from './BestPickMiniCard';
 import { confidenceToPickStrength } from './PredictionCard';
 import { formatLeagueLabel } from '../utils/leagueDisplay';
+import { shouldSuppressPredictionProbabilities } from '../utils/predictionTrust';
+import type { Prediction } from '../types';
 
 const H_PADDING = 16;
 const CARD_MARGIN = 10;
@@ -73,13 +75,21 @@ const CarouselCard = React.memo<CarouselCardProps>(function CarouselCard({
   const matchup = `${home} vs ${away}`;
   const pred = pick.prediction;
   const locked = Boolean(pick.guest_locked);
-  const stars = pred && !locked ? confidenceToPickStrength(pred.confidence_level) : 0;
-  const probHome = pred && !locked ? pred.home_win_probability : 0;
+  const suppressed = pred ? shouldSuppressPredictionProbabilities(pred as Prediction) : false;
+  const stars = pred && !locked && !suppressed
+    ? confidenceToPickStrength(pred.confidence_level || undefined)
+    : 0;
+  const probHome =
+    pred && !locked && !suppressed && pred.home_win_probability != null
+      ? Number(pred.home_win_probability)
+      : 0;
   const a11yLabel = locked
     ? `${matchup}, sign up to unlock pick`
-    : pred
-      ? `${matchup}, ${Math.round(probHome * 100)} percent home win probability`
-      : matchup;
+    : suppressed
+      ? `${matchup}, prediction unavailable`
+      : pred
+        ? `${matchup}, ${Math.round(probHome * 100)} percent home win probability`
+        : matchup;
 
   return (
     <View style={[styles.cardWrap, { width: cardWidth + CARD_MARGIN }]}>
@@ -108,7 +118,7 @@ const CarouselCard = React.memo<CarouselCardProps>(function CarouselCard({
         {locked ? (
           <Text style={styles.lockText}>Sign up to unlock this pick</Text>
         ) : null}
-        {pred && !locked && (
+        {pred && !locked && !suppressed && (
           <>
             <View style={styles.starRow}>
               {[1, 2, 3, 4, 5].map((i) => (
@@ -136,6 +146,9 @@ const CarouselCard = React.memo<CarouselCardProps>(function CarouselCard({
             </View>
           </>
         )}
+        {pred && !locked && suppressed ? (
+          <Text style={styles.lockText}>Prediction unavailable</Text>
+        ) : null}
       </TouchableOpacity>
     </View>
   );

@@ -25,6 +25,7 @@ Short reference for investors and developers. **This is what runs in production 
 
 - Soccer: native 1X2 model where trained; US sports: binary home/away
 - `prediction_source` field gates heuristic picks in production UI
+- **Strict low-trust suppression** (`STRICT_LOW_TRUST_SUPPRESSION=true`): API nulls probabilities for heuristic/warming/synthetic; feed excludes them from top picks; mobile shows “Prediction unavailable”
 - Artifact BOM + health: `docs/MODEL_ARTIFACT_BOM.md`, `GET /health` model block, `GET /api/v1/stats/model`
 - Acceptance protocol (soccer wedge): `docs/MODEL_ACCEPTANCE_PROTOCOL.md`, `GET /api/v1/stats/model-acceptance`
 - Public accuracy: `GET /api/v1/stats/public-audit`, walk-forward backtest script

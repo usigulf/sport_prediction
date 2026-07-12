@@ -183,12 +183,20 @@ export function buildSharePickCardData(args: {
   if (!pickDetailsLocked && prediction) {
     const homeP = prediction.home_win_probability;
     const awayP = prediction.away_win_probability;
-    if (homeP >= awayP) {
-      favoredTeam = homeName;
-      pickProbabilityPct = Math.round(homeP * 100);
-    } else {
-      favoredTeam = awayName;
-      pickProbabilityPct = Math.round(awayP * 100);
+    if (
+      homeP != null &&
+      awayP != null &&
+      !prediction.probabilities_suppressed &&
+      typeof homeP === 'number' &&
+      typeof awayP === 'number'
+    ) {
+      if (homeP >= awayP) {
+        favoredTeam = homeName;
+        pickProbabilityPct = Math.round(homeP * 100);
+      } else {
+        favoredTeam = awayName;
+        pickProbabilityPct = Math.round(awayP * 100);
+      }
     }
   }
   return {

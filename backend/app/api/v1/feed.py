@@ -22,6 +22,9 @@ from app.services.data_quality_service import compute_prediction_quality
 from app.services.guest_access_service import cap_guest_teaser_picks
 from app.config import get_settings
 from app.utils.subscription_tiers import is_free_tier_user
+from app.utils.prediction_source import (
+    apply_prediction_source_production_gate,
+)
 
 router = APIRouter(prefix="/feed", tags=["feed"])
 
@@ -174,12 +177,21 @@ def _build_picks(
 ) -> list[dict]:
     prediction_service = PredictionService(db)
     with_pred = []
-    threshold = float(get_settings().min_data_quality_score)
+    settings = get_settings()
+    threshold = float(settings.min_data_quality_score)
     for game in games:
         pred = prediction_service.get_latest_prediction(str(game.id))
         if not pred:
             continue
         quality = compute_prediction_quality(db, game, pred, threshold=threshold)
+        quality, _source = apply_prediction_source_production_gate(
+            quality,
+            pred.model_version,
+            environment=settings.environment,
+            default_model_version=settings.ml_model_version,
+            strict_suppression=bool(settings.strict_low_trust_suppression),
+        )
+        # Exclude low-trust / gated picks from "top picks" (do not rank baseline as AI).
         if quality["quality_gate_applied"]:
             continue
         with_pred.append((game, pred))

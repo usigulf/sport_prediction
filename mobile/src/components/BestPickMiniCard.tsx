@@ -12,17 +12,19 @@ import { teamLogoUriCandidates } from '../utils/teamLogoUrl';
 import { confidenceToPickStrength } from './PredictionCard';
 import { PredictionDisclaimer } from './PredictionDisclaimer';
 import { formatLeagueLabel } from '../utils/leagueDisplay';
+import { shouldSuppressPredictionProbabilities } from '../utils/predictionTrust';
+import type { Prediction } from '../types';
 
 export interface BestPickItem {
   id: string;
   league: string;
   home_team?: { name: string; logo_url?: string | null; abbreviation?: string | null } | null;
   away_team?: { name: string; logo_url?: string | null; abbreviation?: string | null } | null;
-  prediction?: {
-    home_win_probability: number;
-    away_win_probability: number;
-    confidence_level?: string;
-  } | null;
+  prediction?: (Partial<Prediction> & {
+    home_win_probability?: number | null;
+    away_win_probability?: number | null;
+    confidence_level?: string | null;
+  }) | null;
   guest_locked?: boolean;
 }
 
@@ -41,8 +43,12 @@ export const BestPickMiniCard: React.FC<BestPickMiniCardProps> = ({ pick, onPres
   const away = pick.away_team?.name || 'Away';
   const matchup = `${home} vs ${away}`;
   const pred = pick.prediction;
-  const stars = pred ? confidenceToPickStrength(pred.confidence_level) : 0;
-  const probHome = pred ? pred.home_win_probability : 0;
+  const suppressed = pred ? shouldSuppressPredictionProbabilities(pred as Prediction) : false;
+  const stars = pred && !suppressed ? confidenceToPickStrength(pred.confidence_level || undefined) : 0;
+  const probHome =
+    pred && !suppressed && pred.home_win_probability != null
+      ? Number(pred.home_win_probability)
+      : 0;
   const locked = Boolean(pick.guest_locked);
   const badge = leagueBadgeSource(pick.league);
   const homeCrest = teamLogoUriCandidates({
@@ -57,9 +63,11 @@ export const BestPickMiniCard: React.FC<BestPickMiniCardProps> = ({ pick, onPres
   });
   const a11yLabel = locked
     ? `${matchup}, sign up to unlock pick`
-    : pred
-      ? `${matchup}, ${Math.round(probHome * 100)} percent home win probability`
-      : matchup;
+    : suppressed
+      ? `${matchup}, prediction unavailable`
+      : pred
+        ? `${matchup}, ${Math.round(probHome * 100)} percent home win probability`
+        : matchup;
 
   return (
     <TouchableOpacity
@@ -91,7 +99,7 @@ export const BestPickMiniCard: React.FC<BestPickMiniCardProps> = ({ pick, onPres
           <Text style={styles.lockText}>Sign up to unlock</Text>
         </View>
       ) : null}
-      {pred && !locked && (
+      {pred && !locked && !suppressed && (
         <>
           <View style={styles.starRow}>
             {[1, 2, 3, 4, 5].map((i) => (
@@ -116,6 +124,9 @@ export const BestPickMiniCard: React.FC<BestPickMiniCardProps> = ({ pick, onPres
           </View>
         </>
       )}
+      {pred && !locked && suppressed ? (
+        <Text style={styles.unavailable}>Unavailable</Text>
+      ) : null}
       {!locked ? <PredictionDisclaimer league={pick.league} compact style={styles.disclaimer} /> : null}
     </TouchableOpacity>
   );
@@ -230,6 +241,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: theme.colors.accent,
     minWidth: 28,
+  },
+  unavailable: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: theme.colors.textMuted,
+    marginTop: 2,
   },
   lockRow: {
     flexDirection: 'row',

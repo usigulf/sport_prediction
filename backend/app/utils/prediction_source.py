@@ -81,18 +81,24 @@ def apply_prediction_source_production_gate(
     *,
     environment: str,
     default_model_version: str,
+    strict_suppression: bool | None = None,
 ) -> tuple[dict[str, Any], str]:
     """
-    Attach prediction_source and, in production, gate low-trust baseline picks.
+    Attach prediction_source and gate low-trust baseline picks.
+
+    When ``strict_suppression`` is True (default via settings / production),
+    heuristic/warming/synthetic sources force ``quality_gate_applied`` so clients
+    and payloads can suppress probability display (external audit #9).
     """
     source = classify_prediction_source(
         model_version,
         default_version=default_model_version,
     )
     enriched = dict(quality)
-    if (environment or "").strip().lower() == "production" and is_low_trust_prediction_source(
-        source
-    ):
+    env = (environment or "").strip().lower()
+    if strict_suppression is None:
+        strict_suppression = env == "production"
+    if strict_suppression and is_low_trust_prediction_source(source):
         enriched["quality_gate_applied"] = True
         enriched["data_quality_label"] = "low"
         reasons = list(enriched.get("quality_reasons") or [])

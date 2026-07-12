@@ -164,11 +164,11 @@ def test_game(db, test_teams):
 
 @pytest.fixture
 def test_prediction(db, test_game):
-    """Create a test prediction"""
+    """Create a test prediction (sklearn-labeled so strict suppression does not null probs)."""
     prediction = Prediction(
         id=uuid4(),
         game_id=test_game.id,
-        model_version="v1.0.0",
+        model_version="sklearn_football",
         home_win_probability=0.65,
         away_win_probability=0.35,
         expected_home_score=24.5,

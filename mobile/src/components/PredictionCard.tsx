@@ -9,7 +9,7 @@ import {
   impliedDrawForSoccer,
   normalizeThreeWay,
 } from '../utils/predictionDisplay';
-import { demoModelDisclaimer, isDemoModelPrediction, shouldBlockHeuristicPickUi } from '../utils/predictionTrust';
+import { demoModelDisclaimer, isDemoModelPrediction, shouldSuppressPredictionProbabilities, lowTrustSuppressionCopy } from '../utils/predictionTrust';
 import { PredictionFreshnessBadge } from './PredictionFreshnessBadge';
 
 /** BetQL-style pick strength 1–5 from confidence (high→5, medium→3, low→1). */
@@ -74,7 +74,10 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
   embedded = false,
   advancedInsightsLocked = false,
 }) => {
-  const { home_win_probability, away_win_probability, confidence_level } = prediction;
+  const suppressed = shouldSuppressPredictionProbabilities(prediction);
+  const home_win_probability = Number(prediction.home_win_probability ?? 0);
+  const away_win_probability = Number(prediction.away_win_probability ?? 0);
+  const confidence_level = prediction.confidence_level || '';
   const pickStrength = confidenceToPickStrength(confidence_level);
   const soccer = isSoccerLeague(league);
   const rawDraw = soccer
@@ -109,9 +112,25 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
     ? `Data quality: ${prediction.data_quality_label.toUpperCase()}`
     : null;
   const showDemoNote = isDemoModelPrediction(prediction, league);
-  const blockHeuristicUi = shouldBlockHeuristicPickUi(prediction);
 
-  const content = (
+  const suppressedContent = (
+    <>
+      <Text style={styles.title}>Prediction unavailable</Text>
+      <Text style={styles.suppressedBody}>
+        {lowTrustSuppressionCopy(prediction.prediction_source)}
+      </Text>
+      {(prediction.quality_reasons || []).slice(0, 2).map((reason) => (
+        <Text key={reason} style={styles.suppressedReason}>
+          {reason}
+        </Text>
+      ))}
+      <PredictionFreshnessBadge prediction={prediction} />
+    </>
+  );
+
+  const content = suppressed ? (
+    suppressedContent
+  ) : (
     <>
       {showDemoNote ? (
         <Text style={styles.demoNote}>
@@ -128,7 +147,7 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
           <View
             style={[
               styles.confidenceBadge,
-              advancedInsightsLocked || blockHeuristicUi
+              advancedInsightsLocked
                 ? { backgroundColor: theme.colors.borderSubtle }
                 : { backgroundColor: badge.bg },
             ]}
@@ -136,19 +155,17 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
             <Text
               style={[
                 styles.confidenceText,
-                advancedInsightsLocked || blockHeuristicUi
+                advancedInsightsLocked
                   ? { color: theme.colors.textMuted }
                   : { color: badge.fg },
               ]}
             >
               {advancedInsightsLocked
                 ? 'Unlock for confidence'
-                : blockHeuristicUi
-                  ? 'Baseline pick'
-                  : confidenceLabel(confidence_level)}
+                : confidenceLabel(confidence_level)}
             </Text>
           </View>
-          {!advancedInsightsLocked && !blockHeuristicUi ? (
+          {!advancedInsightsLocked ? (
             <View style={styles.starRow}>
               {[1, 2, 3, 4, 5].map((i) => (
                 <Ionicons
@@ -179,7 +196,7 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
             />
           </View>
           <Text style={styles.probabilityText}>
-            {advancedInsightsLocked || blockHeuristicUi ? '—' : `${(home * 100).toFixed(1)}%`}
+            {advancedInsightsLocked ? '—' : `${(home * 100).toFixed(1)}%`}
           </Text>
         </View>
 
@@ -198,7 +215,7 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
               />
             </View>
             <Text style={styles.probabilityText}>
-              {advancedInsightsLocked || blockHeuristicUi ? '—' : `${(draw * 100).toFixed(1)}%`}
+              {advancedInsightsLocked ? '—' : `${(draw * 100).toFixed(1)}%`}
             </Text>
           </View>
         ) : null}
@@ -217,25 +234,23 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
             />
           </View>
           <Text style={styles.probabilityText}>
-            {advancedInsightsLocked || blockHeuristicUi ? '—' : `${(away * 100).toFixed(1)}%`}
+            {advancedInsightsLocked ? '—' : `${(away * 100).toFixed(1)}%`}
           </Text>
         </View>
       </View>
 
-      {expectedLine && !advancedInsightsLocked && !blockHeuristicUi ? (
+      {expectedLine && !advancedInsightsLocked ? (
         <View style={styles.scorePrediction}>
           <Text style={styles.scoreLabel}>{expectedScoreLabel}</Text>
           <Text style={styles.scoreText}>{expectedLine}</Text>
         </View>
       ) : null}
 
-      {!blockHeuristicUi ? (
-        <View style={styles.mostLikelyRow}>
-          <Text style={styles.mostLikelyLabel}>Most likely result</Text>
-          <Text style={styles.mostLikelyValue}>{mostLikelyLabel}</Text>
-        </View>
-      ) : null}
-      {qualityLabel && !advancedInsightsLocked && !blockHeuristicUi ? (
+      <View style={styles.mostLikelyRow}>
+        <Text style={styles.mostLikelyLabel}>Most likely result</Text>
+        <Text style={styles.mostLikelyValue}>{mostLikelyLabel}</Text>
+      </View>
+      {qualityLabel && !advancedInsightsLocked ? (
         <Text style={styles.qualityMeta}>{qualityLabel}</Text>
       ) : null}
     </>
@@ -276,6 +291,19 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     marginBottom: theme.spacing.sm,
     fontStyle: 'italic',
+  },
+  suppressedBody: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    lineHeight: 20,
+    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
+  },
+  suppressedReason: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    lineHeight: 17,
+    marginBottom: 4,
   },
   cardPressed: {
     opacity: 0.85,

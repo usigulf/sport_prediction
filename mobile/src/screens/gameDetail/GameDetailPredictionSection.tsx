@@ -16,6 +16,7 @@ import { PredictionDisclaimer } from '../../components/PredictionDisclaimer';
 import { NativeFeedAdCard } from '../../ads/components/NativeFeedAdCard';
 import { RewardedUnlockCTA } from '../../ads/components/RewardedUnlockCTA';
 import { getUserFriendlyMessage } from '../../utils/errorMessages';
+import { shouldSuppressPredictionProbabilities } from '../../utils/predictionTrust';
 import type { MarketOddsResponse, LineMovementResponse } from '../../services/api';
 import type { Game, Prediction } from '../../types';
 import type { RootStackParamList } from '../../navigation/AppNavigator';
@@ -151,8 +152,16 @@ export function GameDetailPredictionSection({
               analysisAsOf={currentPrediction.created_at}
               analysisRefreshToken={isPremium ? lastUpdatePredictionAt ?? null : null}
               league={game.league}
-              homeWinProbability={currentPrediction.home_win_probability}
-              awayWinProbability={currentPrediction.away_win_probability}
+              homeWinProbability={
+                shouldSuppressPredictionProbabilities(currentPrediction)
+                  ? undefined
+                  : currentPrediction.home_win_probability ?? undefined
+              }
+              awayWinProbability={
+                shouldSuppressPredictionProbabilities(currentPrediction)
+                  ? undefined
+                  : currentPrediction.away_win_probability ?? undefined
+              }
             />
           ) : null}
           <PredictionDisclaimer league={game.league} compact style={{ marginHorizontal: 16 }} />

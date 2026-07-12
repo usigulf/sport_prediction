@@ -75,6 +75,9 @@ class Settings(BaseSettings):
     require_publish_ready_model: bool = False
     # Gate explanations / rich output when computed quality is below threshold.
     min_data_quality_score: float = 0.45
+    # When True, heuristic/warming/synthetic picks are quality-gated in all environments
+    # and API payloads null probabilities (external audit #9).
+    strict_low_trust_suppression: bool = True
     # The Odds API (M-01 spike — optional override). When unset, market odds reuse CLEARSPORTS_API_KEY.
     odds_api_key: str = ""
     odds_api_base_url: str = "https://api.the-odds-api.com/v4"

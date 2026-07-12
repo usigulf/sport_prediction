@@ -51,7 +51,9 @@ def test_get_prediction_free_user(client, auth_headers, test_game, test_predicti
     assert "data_quality_score" in data
     assert "data_quality_label" in data
     assert "quality_gate_applied" in data
-    assert data.get("prediction_source") == "warming"
+    assert data.get("prediction_source") == "sklearn"
+    assert data.get("probabilities_suppressed") is False
+    assert data["home_win_probability"] == 0.65
 
 
 def test_get_prediction_exceeds_daily_limit(client, auth_headers, test_game, test_prediction, db):
@@ -247,3 +249,44 @@ def test_get_live_prediction_premium_user(client, premium_auth_headers, test_gam
     )
     # Should either return data or 404 if no live prediction exists yet
     assert response.status_code in [status.HTTP_200_OK, status.HTTP_404_NOT_FOUND]
+
+
+def test_heuristic_prediction_probabilities_suppressed(
+    client, auth_headers, test_game, db, monkeypatch
+):
+    """Strict low-trust suppression nulls heuristic probabilities in the API."""
+    from uuid import uuid4
+
+    from app.config import get_settings
+    from app.models.prediction import Prediction
+
+    monkeypatch.setenv("STRICT_LOW_TRUST_SUPPRESSION", "true")
+    get_settings.cache_clear()
+    pred = Prediction(
+        id=uuid4(),
+        game_id=test_game.id,
+        model_version="heuristic_v2",
+        home_win_probability=0.72,
+        away_win_probability=0.28,
+        expected_home_score=2.1,
+        expected_away_score=1.0,
+        confidence_level="high",
+    )
+    db.add(pred)
+    db.commit()
+    try:
+        response = client.get(
+            f"/api/v1/games/{test_game.id}/predictions",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["prediction_source"] == "heuristic"
+        assert data["quality_gate_applied"] is True
+        assert data["probabilities_suppressed"] is True
+        assert data["home_win_probability"] is None
+        assert data["away_win_probability"] is None
+        assert data["expected_home_score"] is None
+        assert data["confidence_level"] is None
+    finally:
+        get_settings.cache_clear()

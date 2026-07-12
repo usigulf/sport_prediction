@@ -63,7 +63,7 @@ def test_production_gate_skips_sklearn():
     assert enriched["quality_gate_applied"] is False
 
 
-def test_development_does_not_gate_heuristic():
+def test_development_does_not_gate_heuristic_when_strict_off():
     quality = {
         "data_quality_score": 0.9,
         "data_quality_label": "high",
@@ -75,8 +75,27 @@ def test_development_does_not_gate_heuristic():
         "heuristic_v2",
         environment="development",
         default_model_version="v1.0.0",
+        strict_suppression=False,
     )
     assert enriched["quality_gate_applied"] is False
+
+
+def test_strict_suppression_gates_heuristic_in_development():
+    quality = {
+        "data_quality_score": 0.9,
+        "data_quality_label": "high",
+        "quality_gate_applied": False,
+        "quality_reasons": [],
+    }
+    enriched, source = apply_prediction_source_production_gate(
+        quality,
+        "heuristic_v2",
+        environment="development",
+        default_model_version="v1.0.0",
+        strict_suppression=True,
+    )
+    assert source == PREDICTION_SOURCE_HEURISTIC
+    assert enriched["quality_gate_applied"] is True
 
 
 def test_is_low_trust_prediction_source():
