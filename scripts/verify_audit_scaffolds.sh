@@ -17,6 +17,9 @@ bash scripts/verify_staging_scaffold.sh
 echo "[audit-scaffolds] Detox..."
 bash scripts/verify_detox_scaffold.sh
 
+echo "[audit-scaffolds] Accessibility QA..."
+bash scripts/verify_a11y_scaffold.sh
+
 echo "[audit-scaffolds] Canonical mobile workspace..."
 bash scripts/verify_canonical_mobile.sh
 

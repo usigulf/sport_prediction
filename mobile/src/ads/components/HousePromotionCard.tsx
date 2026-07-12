@@ -19,8 +19,12 @@ export const HousePromotionCard: React.FC<Props> = ({
   surface,
 }) => {
   return (
-    <View style={styles.wrap} accessibilityRole="button">
-      <View style={styles.badgeRow}>
+    <View
+      style={styles.wrap}
+      accessibilityRole="summary"
+      accessibilityLabel={`Sponsored promotion: ${title}`}
+    >
+      <View style={styles.badgeRow} importantForAccessibility="no">
         <Ionicons name="pricetag-outline" size={14} color={theme.colors.accent} />
         <Text style={styles.sponsored}>Sponsored</Text>
       </View>
@@ -32,11 +36,14 @@ export const HousePromotionCard: React.FC<Props> = ({
           Linking.openURL('https://octobetiq.com').catch(() => undefined)
         }
         activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel="Learn more about Premium on octobetiq.com"
+        accessibilityHint="Opens the website"
       >
         <Text style={styles.ctaText}>Learn more</Text>
         <Ionicons name="arrow-forward" size={16} color={theme.colors.background} />
       </TouchableOpacity>
-      <Text style={styles.meta} accessibilityLabel="house ad surface">
+      <Text style={styles.meta} importantForAccessibility="no">
         {surface}
       </Text>
     </View>
@@ -86,6 +93,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.accent,
     paddingVertical: 10,
     borderRadius: theme.radii.sm,
+    minHeight: theme.minTouchSize,
   },
   ctaText: {
     fontSize: 14,

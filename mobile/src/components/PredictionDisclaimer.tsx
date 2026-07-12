@@ -23,6 +23,8 @@ export function PredictionDisclaimer({
     <Text
       style={[styles.base, compact && styles.compact, style]}
       accessibilityRole="text"
+      accessibilityLabel={text}
+      maxFontSizeMultiplier={theme.maxFontSizeMultiplier}
     >
       {text}
     </Text>
@@ -31,12 +33,12 @@ export function PredictionDisclaimer({
 
 const styles = StyleSheet.create({
   base: {
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 16,
     color: theme.colors.textMuted,
   },
   compact: {
-    fontSize: 10,
-    lineHeight: 13,
+    fontSize: 11,
+    lineHeight: 15,
   },
 });

@@ -35,6 +35,8 @@ import { trackScorecardOpened } from '../services/productAnalytics';
 import { AcceptanceGateCard } from './accuracy/AcceptanceGateCard';
 import { ClosingLineCard } from './accuracy/ClosingLineCard';
 import { ScoreWindowGrid } from './accuracy/ScoreWindowGrid';
+import { WideContent } from '../components/WideContent';
+import { useLayout } from '../hooks/useLayout';
 import {
   CONFIDENCE_ORDER,
   confidenceLabel,
@@ -46,6 +48,7 @@ const PUBLIC_SCORECARD_URL = 'https://octobetiq.com/scorecard.html';
 
 export const AccuracyScreen: React.FC = () => {
   const { width: windowWidth } = useWindowDimensions();
+  const { isWide, contentMaxWidth, horizontalPadding } = useLayout();
   const [data, setData] = useState<AccuracyResponse | null>(null);
   const [audit, setAudit] = useState<PublicAuditResponse | null>(null);
   const [calibration, setCalibration] = useState<CalibrationResponse | null>(null);
@@ -187,9 +190,13 @@ export const AccuracyScreen: React.FC = () => {
   const roll7 = audit?.accuracy_rolling_7d;
 
   return (
+    <WideContent>
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[
+        styles.content,
+        isWide && { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' },
+      ]}
       testID="accuracy-scorecard"
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={() => onRefresh()} colors={[theme.colors.accent]} />
@@ -352,6 +359,7 @@ export const AccuracyScreen: React.FC = () => {
 
       <PredictionDisclaimer compact style={styles.disclaimer} />
     </ScrollView>
+    </WideContent>
   );
 };
 

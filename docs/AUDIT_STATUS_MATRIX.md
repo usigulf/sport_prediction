@@ -40,7 +40,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | W14 | God screens 1000+ lines | ✅ | done | GameDetail split into hook + section components; PaywallHero extracted |
 | W15 | No password reset flow | ✅ | done | backend/app/services/password_reset_service.py, mobile ForgotPasswordScreen |
 | W16 | Push may register before consent | ✅ | done | mobile/src/utils/pushNotifications.ts, backend/tests/test_push_consent_order.py |
-| W17 | Minimal accessibility | ✅ | done | VoiceOver on tabs, GameCard, mini cards, carousel, Paywall, GameDetail favorites |
+| W17 | Minimal accessibility | ✅ | done | VoiceOver tabs/cards + ACCESSIBILITY_QA.md + contrast/dynamic-type scaffold (#16) |
 | W18 | No offline/NetInfo UX | ✅ | done | mobile/src/components/OfflineBanner.tsx |
 | W19 | Heuristic picks indistinguishable from ML in UI | ✅ | done | backend/app/utils/prediction_source.py, mobile PredictionCard |
 | W20 | Soccer draw not model-trained | ✅ | done | backend/app/services/model_training.py soccer 1X2 |
@@ -114,7 +114,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I31 | React Query for server state | ✅ | done | mobile React Query hooks |
 | I32 | Split HomeScreen into feature components | ✅ | done | mobile/src/screens/home/HomeFeedSections.tsx |
 | I33 | NetInfo + offline banner | ✅ | done | OfflineBanner + NetInfo |
-| I34 | VoiceOver labels on tabs, cards, carousels | ✅ | done | a11y labels on GameCard, BestPickMiniCard, BestPicksCarousel, GameDetail favorites |
+| I34 | VoiceOver labels on tabs, cards, carousels | ✅ | done | a11y labels + LiveHub/Help/PredictionCard/HousePromo + verify_a11y_scaffold.sh |
 | I35 | Password reset flow | ✅ | done | password reset flow |
 | I36 | Fix push consent order (after onboarding opt-in) | ✅ | done | push consent order |
 | I37 | Native Manage Subscriptions link (iOS 15+) | ✅ | done | mobile manageSubscriptions.ts |
@@ -149,7 +149,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I66 | Parlay correlation warnings | ✅ | done | parlay_correlation_service.py, POST /tools/parlay-correlation |
 | I67 | Email digest: daily picks | ✅ | done | email_digest_service + /internal/email-digest/run + cron + job type email_digest |
 | I68 | Watchlist sync across devices | ✅ | done | useFavorites React Query + sync notice + team-filtered games |
-| I69 | iPad-optimized layouts | ✅ | done | WideContent + useLayout on Home, GameDetail, Paywall, Profile, Games, Favorites, LiveHub |
+| I69 | iPad-optimized layouts | ✅ | done | WideContent on main tabs + Scorecard; tablet steps in ACCESSIBILITY_QA.md |
 | I70 | Widget: today’s top pick | ✅ | done | widget API + Swift template + docs/IOS_WIDGET.md + verify_ios_widget_embed.sh + npm run widget:verify |
 | I71 | Raise coverage to 60%+ | ✅ | done | CI coverage ≥60% |
 | I72 | Stripe webhook test suite | ✅ | done | backend/tests/test_stripe_webhook.py |

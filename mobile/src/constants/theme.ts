@@ -14,7 +14,7 @@ export const theme = {
     secondaryDim: 'rgba(255, 51, 102, 0.2)',
     text: '#FFFFFF',
     textSecondary: '#B0BEC5',
-    textMuted: '#78909C',
+    textMuted: '#94A3B8',
     border: 'rgba(255, 255, 255, 0.12)',
     borderSubtle: 'rgba(255, 255, 255, 0.06)',
     confidenceHigh: '#00E676',
@@ -22,6 +22,8 @@ export const theme = {
     confidenceLow: '#FF5252',
     drawNeutral: '#90A4AE',
   },
+  /** Cap Dynamic Type growth on dense UI (audit #16). */
+  maxFontSizeMultiplier: 1.35,
   radii: {
     xs: 4,
     sm: 12,

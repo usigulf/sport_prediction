@@ -69,6 +69,8 @@ export const HelpScreen: React.FC = () => {
           style={styles.trustButton}
           onPress={() => navigation.navigate('Accuracy')}
           activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Open Scorecard and methodology"
         >
           <Text style={styles.trustButtonText}>Scorecard & methodology</Text>
           <Ionicons name="chevron-forward" size={18} color={theme.colors.background} />
@@ -90,7 +92,12 @@ export const HelpScreen: React.FC = () => {
         <Text style={styles.contactText}>
           Need more help? Send us an email and we'll get back to you.
         </Text>
-        <TouchableOpacity style={styles.contactButton} onPress={openContact}>
+        <TouchableOpacity
+          style={styles.contactButton}
+          onPress={openContact}
+          accessibilityRole="button"
+          accessibilityLabel={`Email support at ${SUPPORT_EMAIL}`}
+        >
           <Text style={styles.contactButtonText}>{SUPPORT_EMAIL}</Text>
         </TouchableOpacity>
       </View>

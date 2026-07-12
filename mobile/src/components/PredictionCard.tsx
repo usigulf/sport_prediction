@@ -259,11 +259,16 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
   const cardStyle = [styles.card, embedded && styles.cardEmbedded];
 
   if (onPress) {
+    const home = homeTeamName || 'Home';
+    const away = awayTeamName || 'Away';
     return (
       <Pressable
         style={({ pressed }) => [cardStyle, pressed && styles.cardPressed]}
         onPress={onPress}
         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        accessibilityRole="button"
+        accessibilityLabel={`Prediction for ${home} versus ${away}`}
+        accessibilityHint="Opens prediction details"
       >
         {content}
       </Pressable>

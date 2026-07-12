@@ -125,18 +125,16 @@ export const LiveHubScreen: React.FC = () => {
     }
     const g = item.item;
     return (
-      <TouchableOpacity onPress={() => handleGamePress(g.id)}>
-        <View style={styles.cardWrap}>
-          <View style={[styles.badge, g.status === 'live' && styles.badgeLive]}>
-            <Text style={[styles.badgeText, g.status === 'live' && styles.badgeTextLive]}>
-              {g.status === 'live'
-                ? `Live ${g.home_score ?? 0}–${g.away_score ?? 0}`
-                : formatStartsIn(g.scheduled_time)}
-            </Text>
-          </View>
-          <GameCard game={g} />
+      <View style={styles.cardWrap}>
+        <View style={[styles.badge, g.status === 'live' && styles.badgeLive]} importantForAccessibility="no">
+          <Text style={[styles.badgeText, g.status === 'live' && styles.badgeTextLive]}>
+            {g.status === 'live'
+              ? `Live ${g.home_score ?? 0}–${g.away_score ?? 0}`
+              : formatStartsIn(g.scheduled_time)}
+          </Text>
         </View>
-      </TouchableOpacity>
+        <GameCard game={g} onPress={() => handleGamePress(g.id)} />
+      </View>
     );
   };
 
