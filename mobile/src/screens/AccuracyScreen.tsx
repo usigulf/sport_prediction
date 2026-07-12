@@ -31,6 +31,7 @@ import { useModelStatus } from '../hooks/useModelStatus';
 import { CalibrationChart } from '../components/CalibrationChart';
 import { PredictionDisclaimer } from '../components/PredictionDisclaimer';
 import { maybeRequestStoreReview, recordPositiveSession } from '../utils/storeReview';
+import { trackScorecardOpened } from '../services/productAnalytics';
 import { AcceptanceGateCard } from './accuracy/AcceptanceGateCard';
 import { ClosingLineCard } from './accuracy/ClosingLineCard';
 import { ScoreWindowGrid } from './accuracy/ScoreWindowGrid';
@@ -141,6 +142,10 @@ export const AccuracyScreen: React.FC = () => {
       await maybeRequestStoreReview();
     })();
   }, [data]);
+
+  useEffect(() => {
+    void trackScorecardOpened('other');
+  }, []);
 
   if (loading && !refreshing) {
     return (

@@ -1,6 +1,7 @@
 /**
- * First-run onboarding (3 steps): value → trust → leagues + optional push.
- * Shown once after login/register. Skip allowed on any step.
+ * First-run activation onboarding (audit #14):
+ * value → trust → favourite leagues → first trusted pick.
+ * Skip allowed, but leagues step nudges for ≥1 selection.
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -15,11 +16,14 @@ import {
   Platform,
 } from 'react-native';
 import { CommonActions, useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../constants/theme';
 import {
   AVAILABLE_LEAGUES,
+  ONBOARDING_FIRST_PICK_BODY,
+  ONBOARDING_FIRST_PICK_TITLE,
   ONBOARDING_LEAGUES_SUBTITLE,
   ONBOARDING_PUSH_HINT,
   ONBOARDING_TRUST_BODY,
@@ -29,14 +33,27 @@ import {
 } from '../constants/leagues';
 import { apiService } from '../services/api';
 import { recordOnboardingEvent, setOnboardingComplete } from '../utils/onboardingStorage';
-import { trackOnboardingCompleted } from '../services/productAnalytics';
+import {
+  setPendingFirstPrediction,
+  setScorecardNudgePending,
+} from '../utils/activationStorage';
+import {
+  trackFavouriteSelected,
+  trackFirstPredictionOpened,
+  trackOnboardingCompleted,
+} from '../services/productAnalytics';
 import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { registerPushTokenIfPossible } from '../utils/pushNotifications';
 import { setPushNotificationsEnabled } from '../utils/settingsStorage';
+import { soccerBetaFetchParams } from '../utils/soccerBetaFetch';
+import { BestPickMiniCard, type BestPickItem } from '../components/BestPickMiniCard';
+import { formatLeagueLabel } from '../utils/leagueDisplay';
+import type { RootStackParamList } from '../navigation/AppNavigator';
 
-const STEP_COUNT = 3;
+const STEP_COUNT = 4;
 
 type StepIcon = React.ComponentProps<typeof Ionicons>['name'];
+type Nav = StackNavigationProp<RootStackParamList>;
 
 function StepDots({ step }: { step: number }) {
   return (
@@ -57,12 +74,46 @@ function ValueBullet({ icon, text }: { icon: StepIcon; text: string }) {
   );
 }
 
+function toBestPick(raw: {
+  id: string;
+  league?: string;
+  home_team?: BestPickItem['home_team'] | { name?: string; logo_url?: string | null; abbreviation?: string | null } | null;
+  away_team?: BestPickItem['away_team'] | { name?: string; logo_url?: string | null; abbreviation?: string | null } | null;
+  prediction?: BestPickItem['prediction'];
+  guest_locked?: boolean;
+}): BestPickItem {
+  return {
+    id: String(raw.id),
+    league: raw.league || '',
+    home_team: raw.home_team?.name
+      ? {
+          name: raw.home_team.name,
+          logo_url: raw.home_team.logo_url,
+          abbreviation: raw.home_team.abbreviation,
+        }
+      : null,
+    away_team: raw.away_team?.name
+      ? {
+          name: raw.away_team.name,
+          logo_url: raw.away_team.logo_url,
+          abbreviation: raw.away_team.abbreviation,
+        }
+      : null,
+    prediction: raw.prediction,
+    guest_locked: raw.guest_locked,
+  };
+}
+
 export function OnboardingScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<Nav>();
   const [step, setStep] = useState(0);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pushOptIn, setPushOptIn] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [firstPick, setFirstPick] = useState<BestPickItem | null>(null);
+  const [pickLoading, setPickLoading] = useState(false);
+  const [pickError, setPickError] = useState<string | null>(null);
+  const [leaguesSaved, setLeaguesSaved] = useState(false);
 
   useEffect(() => {
     void recordOnboardingEvent(0, 'view');
@@ -72,17 +123,66 @@ export function OnboardingScreen() {
     if (step > 0) void recordOnboardingEvent(step, 'view');
   }, [step]);
 
-  const finishOnboarding = useCallback(() => {
-    void recordOnboardingEvent(step, 'complete');
-    void trackOnboardingCompleted(pushOptIn);
-    void setOnboardingComplete().catch(() => {});
+  const loadFirstPick = useCallback(async (leagueIds: string[]) => {
+    setPickLoading(true);
+    setPickError(null);
+    try {
+      const beta = soccerBetaFetchParams();
+      const leagues =
+        leagueIds.length > 0 ? leagueIds.join(',') : beta.leagues;
+      const res = await apiService.getForYouFeed({
+        ...beta,
+        leagues,
+        limit: 8,
+      });
+      const picks = (res.picks || [])
+        .map(toBestPick)
+        .filter((p) => !p.guest_locked && p.prediction);
+      setFirstPick(picks[0] ?? null);
+      if (!picks[0]) {
+        setPickError('No upcoming picks yet for your leagues. You can browse Home instead.');
+      }
+    } catch (e) {
+      setFirstPick(null);
+      setPickError(getUserFriendlyMessage(e));
+    } finally {
+      setPickLoading(false);
+    }
+  }, []);
+
+  const goHome = useCallback(() => {
     navigation.dispatch(
       CommonActions.reset({
         index: 0,
         routes: [{ name: 'MainTabs' }],
       }),
     );
-  }, [navigation, step, pushOptIn]);
+  }, [navigation]);
+
+  const finishOnboarding = useCallback(
+    async (opts?: { openGameId?: string }) => {
+      void recordOnboardingEvent(step, 'complete');
+      void trackOnboardingCompleted(pushOptIn);
+      await setOnboardingComplete().catch(() => {});
+      await setScorecardNudgePending(true).catch(() => {});
+      if (opts?.openGameId) {
+        await setPendingFirstPrediction(opts.openGameId).catch(() => {});
+        void trackFirstPredictionOpened(opts.openGameId, 'auth', 'onboarding');
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 1,
+            routes: [
+              { name: 'MainTabs' },
+              { name: 'GameDetail', params: { gameId: opts.openGameId } },
+            ],
+          }),
+        );
+        return;
+      }
+      goHome();
+    },
+    [navigation, step, pushOptIn, goHome],
+  );
 
   const toggleLeague = (id: string) => {
     setSelected((prev) => {
@@ -98,51 +198,84 @@ export function OnboardingScreen() {
     if (pushOptIn) await registerPushTokenIfPossible({ requestPermission: true });
   };
 
-  const handleFinish = async () => {
+  const saveLeaguesAndAdvance = async () => {
     if (saving) return;
+    if (selected.size === 0) {
+      Alert.alert(
+        'Pick a league',
+        'Choose at least one competition so we can show a real first pick. Or skip to browse Home.',
+      );
+      return;
+    }
     setSaving(true);
     const leagues = [...selected];
     try {
-      if (leagues.length > 0) {
-        await Promise.all(
-          leagues.map((leagueId) =>
-            apiService.addFavoriteLeague(leagueId).catch(() => undefined),
-          ),
-        );
-      }
+      await Promise.all(
+        leagues.map((leagueId) =>
+          apiService.addFavoriteLeague(leagueId).catch(() => undefined),
+        ),
+      );
       await applyPushPreference();
+      void trackFavouriteSelected(leagues.length, 'onboarding');
+      setLeaguesSaved(true);
+      setStep(3);
+      void loadFirstPick(leagues);
     } catch (error) {
       Alert.alert('Could not save preferences', getUserFriendlyMessage(error));
+    } finally {
       setSaving(false);
-      return;
     }
-    finishOnboarding();
-    setSaving(false);
   };
 
   const handleSkip = () => {
     if (saving) return;
     void recordOnboardingEvent(step, 'skip');
     setSaving(true);
-    finishOnboarding();
-    setSaving(false);
+    void (async () => {
+      try {
+        if (step === 2 && !leaguesSaved) {
+          await applyPushPreference().catch(() => {});
+        }
+        await finishOnboarding();
+      } finally {
+        setSaving(false);
+      }
+    })();
   };
 
   const handleNext = () => {
     if (saving) return;
     void recordOnboardingEvent(step, 'next');
+    if (step === 2) {
+      void saveLeaguesAndAdvance();
+      return;
+    }
     setStep((s) => Math.min(s + 1, STEP_COUNT - 1));
   };
 
+  const openFirstPick = () => {
+    if (!firstPick || saving) return;
+    setSaving(true);
+    void finishOnboarding({ openGameId: firstPick.id }).finally(() => setSaving(false));
+  };
+
   const primaryLabel =
-    step < STEP_COUNT - 1
+    step === 0 || step === 1
       ? 'Continue'
-      : selected.size > 0
-        ? `Get started · ${selected.size} league${selected.size === 1 ? '' : 's'}`
-        : 'Get started';
+      : step === 2
+        ? selected.size > 0
+          ? `Continue · ${selected.size} league${selected.size === 1 ? '' : 's'}`
+          : 'Pick a league to continue'
+        : firstPick
+          ? 'Open this pick'
+          : 'Browse Home';
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
+    <SafeAreaView
+      style={styles.container}
+      edges={['top', 'left', 'right', 'bottom']}
+      testID="onboarding-screen"
+    >
       <View style={styles.header}>
         <StepDots step={step} />
         <Pressable
@@ -150,6 +283,7 @@ export function OnboardingScreen() {
           disabled={saving}
           onPress={handleSkip}
           style={({ pressed }) => [styles.skipTop, pressed && !saving && styles.skipPressed]}
+          testID="onboarding-skip"
         >
           <Text style={styles.skipTopText}>Skip</Text>
         </Pressable>
@@ -182,7 +316,7 @@ export function OnboardingScreen() {
             <Text style={styles.title}>{ONBOARDING_TRUST_TITLE}</Text>
             <Text style={styles.subtitle}>{ONBOARDING_TRUST_BODY}</Text>
             <ValueBullet icon="lock-closed-outline" text="Pre-kickoff predictions only — no post-game edits" />
-            <ValueBullet icon="stats-chart-outline" text="Accuracy tab shows hit rate and sample size" />
+            <ValueBullet icon="stats-chart-outline" text="Scorecard shows hit rate, calibration, and sample size" />
             <ValueBullet icon="document-text-outline" text="Methodology and data freshness notes in Help" />
           </View>
         )}
@@ -205,6 +339,7 @@ export function OnboardingScreen() {
                       isSelected && styles.chipSelected,
                       pressed && styles.chipPressed,
                     ]}
+                    testID={`onboarding-league-${league.id}`}
                   >
                     <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
                       {league.name}
@@ -229,18 +364,48 @@ export function OnboardingScreen() {
             </View>
           </View>
         )}
+
+        {step === 3 && (
+          <View style={styles.slide} testID="onboarding-first-pick">
+            <View style={styles.iconCircle}>
+              <Ionicons name="sparkles-outline" size={36} color={theme.colors.accent} />
+            </View>
+            <Text style={styles.title}>{ONBOARDING_FIRST_PICK_TITLE}</Text>
+            <Text style={styles.subtitle}>{ONBOARDING_FIRST_PICK_BODY}</Text>
+            {pickLoading ? (
+              <ActivityIndicator color={theme.colors.accent} style={{ marginVertical: 24 }} />
+            ) : firstPick ? (
+              <View style={styles.pickWrap}>
+                <Text style={styles.pickLeague}>{formatLeagueLabel(firstPick.league)}</Text>
+                <BestPickMiniCard pick={firstPick} onPress={openFirstPick} />
+              </View>
+            ) : (
+              <Text style={styles.pickEmpty}>{pickError ?? 'No picks available right now.'}</Text>
+            )}
+          </View>
+        )}
       </ScrollView>
 
       <View style={styles.footer}>
         <Pressable
           accessibilityRole="button"
-          disabled={saving}
-          onPress={step < STEP_COUNT - 1 ? handleNext : handleFinish}
+          disabled={saving || (step === 2 && selected.size === 0)}
+          onPress={
+            step === 3
+              ? firstPick
+                ? openFirstPick
+                : () => {
+                    setSaving(true);
+                    void finishOnboarding().finally(() => setSaving(false));
+                  }
+              : handleNext
+          }
           style={({ pressed }) => [
             styles.primaryButton,
-            saving && styles.buttonDisabled,
+            (saving || (step === 2 && selected.size === 0)) && styles.buttonDisabled,
             pressed && !saving && styles.primaryPressed,
           ]}
+          testID="onboarding-primary"
         >
           {saving ? (
             <ActivityIndicator color={theme.colors.background} />
@@ -394,6 +559,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: theme.colors.textMuted,
     lineHeight: 18,
+  },
+  pickWrap: {
+    alignItems: 'flex-start',
+  },
+  pickLeague: {
+    fontSize: 13,
+    color: theme.colors.textMuted,
+    marginBottom: theme.spacing.sm,
+  },
+  pickEmpty: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    lineHeight: 20,
   },
   footer: {
     paddingHorizontal: theme.spacing.lg,

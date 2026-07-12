@@ -114,6 +114,38 @@ export async function trackOnboardingCompleted(pushOptIn: boolean): Promise<void
   await trackEvent(ANALYTICS_EVENTS.ONBOARDING_COMPLETED, { push_opt_in: pushOptIn });
 }
 
+export async function trackFavouriteSelected(
+  leagueCount: number,
+  source: 'onboarding' | 'favorites',
+): Promise<void> {
+  await trackEvent(ANALYTICS_EVENTS.FAVOURITE_SELECTED, {
+    league_count: leagueCount,
+    source,
+  });
+}
+
+export async function trackFirstPredictionOpened(
+  gameId: string,
+  audience: 'guest' | 'auth',
+  source: 'onboarding' | 'home_banner' | 'home_feed',
+): Promise<void> {
+  await trackEvent(ANALYTICS_EVENTS.FIRST_PREDICTION_OPENED, {
+    game_id: gameId,
+    audience,
+    source,
+  });
+}
+
+export async function trackScorecardOpened(
+  source: 'onboarding_nudge' | 'home' | 'profile' | 'help' | 'other',
+): Promise<void> {
+  await trackEvent(ANALYTICS_EVENTS.SCORECARD_OPENED, { source });
+}
+
+export async function trackActivationCompleted(): Promise<void> {
+  await trackEvent(ANALYTICS_EVENTS.ACTIVATION_COMPLETED);
+}
+
 export async function trackSubscriptionActivated(
   tier: string,
   source: 'iap' | 'restore' | 'stripe',

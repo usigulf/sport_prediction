@@ -38,10 +38,14 @@ export const ONBOARDING_WELCOME_BODY = BETA_SOCCER_ONLY
 
 export const ONBOARDING_TRUST_TITLE = 'Accuracy you can verify';
 export const ONBOARDING_TRUST_BODY =
-  'We lock predictions before kickoff and track results in the Accuracy tab. See methodology, sample size, and when the model is still warming up.';
+  'We lock predictions before kickoff and track results in the Scorecard. See methodology, sample size, and when the model is still warming up.';
 
 export const ONBOARDING_PUSH_HINT =
   'Optional kickoff alerts ~2 hours before your favorite teams play, post-game result summaries, and high-confidence pick alerts. Change anytime in Settings.';
+
+export const ONBOARDING_FIRST_PICK_TITLE = 'Your first trusted pick';
+export const ONBOARDING_FIRST_PICK_BODY =
+  'Open one real pre-kickoff prediction for a league you follow. Then check the Scorecard anytime to see how we track results.';
 
 /** @deprecated Use MARKETING_SCOPE_LINE — kept for imports */
 export const APP_STORE_LEAGUES_LINE = MARKETING_SCOPE_LINE;

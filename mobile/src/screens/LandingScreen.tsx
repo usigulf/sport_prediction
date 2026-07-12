@@ -127,7 +127,7 @@ export const LandingScreen: React.FC = () => {
     };
   }, []);
 
-  const handleGetFreePicks = () => navigation.navigate('Register');
+  const handleGetFreePicks = () => navigation.navigate('MainTabs');
   const handleLogIn = () => navigation.navigate('Login');
   const handleUnlockMore = () => navigation.navigate('Register');
   const handleStartTrial = () => setShowPremiumPreview(true);
