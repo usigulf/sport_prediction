@@ -380,13 +380,17 @@ def _train_soccer_1x2_group(
                 proba = est.predict_proba(X_te)
                 classes = list(est.classes_)
                 preds = np.array([classes[int(np.argmax(row))] for row in proba], dtype=int)
+                holdout_ll = float(log_loss(y_te, proba, labels=classes))
+                # Uniform 1X2 prior (−ln(1/3)); acceptance protocol compares against this.
+                baseline_ll = float(-np.log(1.0 / 3.0))
                 eval_metrics = {
                     "test_games": int(len(y_te)),
+                    "holdout_games": int(len(y_te)),
+                    "split": "chronological_tail",
                     "accuracy": round(float(accuracy_score(y_te, preds)), 4),
-                    "log_loss": round(
-                        float(log_loss(y_te, proba, labels=classes)),
-                        4,
-                    ),
+                    "log_loss": round(holdout_ll, 4),
+                    "baseline_log_loss": round(baseline_ll, 4),
+                    "beats_uniform_baseline": holdout_ll < baseline_ll,
                     "draw_rate_test": round(float((y_te == SOCCER_1X2_LABEL_DRAW).mean()), 4),
                     "home_rate_test": round(float((y_te == SOCCER_1X2_LABEL_HOME).mean()), 4),
                     "away_rate_test": round(float((y_te == SOCCER_1X2_LABEL_AWAY).mean()), 4),

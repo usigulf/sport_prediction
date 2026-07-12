@@ -59,6 +59,7 @@ def build_model_artifact_bom() -> dict[str, Any]:
     if not configured:
         bom["detail"] = "MODEL_ARTIFACT_DIR / EXPLANATION_MODEL_DIR not set"
         bom["healthy_for_launch"] = not require_ready
+        bom["soccer_wedge"] = {"publish_ready": False, "protocol": "docs/MODEL_ACCEPTANCE_PROTOCOL.md"}
         return bom
 
     root = Path(configured)
@@ -69,6 +70,7 @@ def build_model_artifact_bom() -> dict[str, Any]:
     if not is_dir:
         bom["detail"] = f"Artifact directory does not exist or is inaccessible: {configured}"
         bom["healthy_for_launch"] = not require_ready
+        bom["soccer_wedge"] = {"publish_ready": False, "protocol": "docs/MODEL_ACCEPTANCE_PROTOCOL.md"}
         return bom
 
     bom["root_artifacts"] = _list_artifacts(root)
@@ -121,6 +123,22 @@ def build_model_artifact_bom() -> dict[str, Any]:
 
     # Launch health: fail closed when required and not ready
     bom["healthy_for_launch"] = publish_ready or (allow_heuristic and not require_ready)
+
+    soccer_ready = any(
+        g.get("league_group") == "soccer" and g.get("publish_ready") for g in groups
+    )
+    root_soccer = bool(
+        metrics
+        and (
+            metrics.get("model_kind") == "soccer_1x2"
+            or metrics.get("league_group") == "soccer"
+        )
+        and metrics.get("publish_ready")
+    )
+    bom["soccer_wedge"] = {
+        "publish_ready": soccer_ready or root_soccer,
+        "protocol": "docs/MODEL_ACCEPTANCE_PROTOCOL.md",
+    }
     return bom
 
 

@@ -24,6 +24,8 @@ python walk_forward_backtest.py --min-train 60 --test-window 20
 
 Set `MODEL_ARTIFACT_DIR` (or `EXPLANATION_MODEL_DIR`) to the absolute path of `ml/models` and restart the API.
 
+Soccer-wedge acceptance (invite beta / charge gates): see [docs/MODEL_ACCEPTANCE_PROTOCOL.md](../docs/MODEL_ACCEPTANCE_PROTOCOL.md).
+
 ## Archived legacy scripts
 
 Synthetic-data demos and standalone inference loaders live under `archive/ml/` — see `archive/README.md`.

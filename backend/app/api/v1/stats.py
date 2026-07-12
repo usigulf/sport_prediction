@@ -110,7 +110,33 @@ async def get_model_status():
         "ensemble_gate_reason": (metrics or {}).get("ensemble_gate_reason"),
         "detail": bom.get("detail") or (metrics or {}).get("note"),
         "groups": bom.get("groups"),
+        "soccer_wedge": bom.get("soccer_wedge"),
     }
+
+
+@router.get("/model-acceptance")
+async def get_model_acceptance(
+    level: str = "invite_beta",
+    db: Session = Depends(get_db),
+):
+    """
+    Soccer-wedge model acceptance protocol evaluation (external audit #8).
+    Levels: engineering_beta | invite_beta | public_charge.
+    """
+    from app.services.model_acceptance import LEVEL_ORDER, evaluate_model_acceptance
+    from app.services.trust_metrics_service import aggregate_calibration_from_finished
+
+    if level not in LEVEL_ORDER:
+        from fastapi import HTTPException
+
+        raise HTTPException(
+            status_code=400,
+            detail=f"level must be one of: {', '.join(LEVEL_ORDER)}",
+        )
+    calibration = None
+    if level == "public_charge":
+        calibration = aggregate_calibration_from_finished(db, since=None)
+    return evaluate_model_acceptance(level, calibration=calibration)
 
 
 @router.get("/public-audit")

@@ -58,3 +58,12 @@ python train_model.py --out ../ml/models
 - `backend/models/metrics.json` in git is a **schema example**, not live production evidence.
 - Holdout ~58% accuracy / ~0.69 log loss is near a naive binary baseline — do not market as “AI picks that win more.”
 - UI already labels `prediction_source` (sklearn vs heuristic); keep that visible.
+
+## Acceptance protocol (soccer wedge)
+
+Product gates before invite beta / charging: [MODEL_ACCEPTANCE_PROTOCOL.md](./MODEL_ACCEPTANCE_PROTOCOL.md).
+
+```bash
+python scripts/verify_model_acceptance.py --level invite_beta
+curl -sS 'https://api.octobetiq.com/api/v1/stats/model-acceptance?level=invite_beta' | python3 -m json.tool
+```
