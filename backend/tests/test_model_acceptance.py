@@ -100,10 +100,11 @@ def test_public_charge_blocked_without_market_ledger(monkeypatch, tmp_path):
         result = evaluate_model_acceptance(
             "public_charge",
             calibration={"total_scored": 150, "min_sample_met": True},
+            market_eval=None,
         )
         assert result["passed"] is False
         assert "market_baseline_clv" in result["failed_checks"]
-        assert result["market_baseline"]["status"] == "blocked_until_closing_line_ledger"
+        assert result["market_baseline"]["status"] == "missing_eval"
     finally:
         get_settings.cache_clear()
 

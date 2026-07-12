@@ -18,9 +18,9 @@ Do not expand marketing to NFL/NBA until those groups independently pass the sam
 |-------|--------|-----------|
 | `engineering_beta` | Internal builds | Artifact dir configured; `prediction_source` honesty; soccer-only mobile flag when asserted |
 | `invite_beta` | Invite-only TestFlight / Play internal | Soccer `publish_ready` artifacts; chronological holdout ≥50 games; holdout log-loss **beats** uniform 1X2 baseline (−ln⅓ ≈ 1.0986); `ALLOW_HEURISTIC_INFERENCE=false`; `REQUIRE_PUBLISH_READY_MODEL=true`; `/health` healthy |
-| `public_charge` | Charge / performance marketing | All invite gates + holdout ≥100; live calibration `min_sample_met` with ≥100 scored picks; **and** market/CLV baseline (currently **blocked** until historical closing lines are stored) |
+| `public_charge` | Charge / performance marketing | All invite gates + holdout ≥100; live calibration `min_sample_met` with ≥100 scored picks; closing-line ledger ≥50 games and model log-loss ≤ closing market |
 
-**Today’s honest status:** invite beta is the ceiling once soccer pickles are deployed and env flags are fail-closed. `public_charge` will fail the market baseline check by design until a closing-line ledger exists.
+**Today’s honest status:** invite beta is the ceiling until soccer pickles are deployed, env is fail-closed, and the closing-line ledger has enough scored games for `public_charge`.
 
 ## Chronological holdout
 
@@ -37,14 +37,21 @@ cd backend
 python walk_forward_backtest.py --min-train 60 --test-window 20
 ```
 
-## Market baseline (deferred)
+## Market baseline (closing-line ledger)
 
-Historical closing lines are **not** in the database. Live model-vs-consensus is monitoring only:
+Odds snapshots accumulate from market-odds fetches (`odds_snapshots`). Near kickoff, cron freezes the last pre-kickoff row as `is_closing=true`.
 
-- `GET /api/v1/stats/model-vs-market`
-- `/model-vs-market.html`
+```bash
+# Freeze closing lines (cron secret)
+curl -sS -X POST -H "X-Cron-Secret: $PUSH_CRON_SECRET" \
+  -H "Content-Type: application/json" -d '{}' \
+  http://127.0.0.1:8000/internal/odds/freeze-closing
 
-Passing `public_charge` requires a persisted closing-line ledger and a CLV / market-log-loss comparison. Until then, do **not** market “beats the market” or charge $29.99 on AI performance claims.
+# Score sklearn picks vs closing consensus
+curl -sS https://api.octobetiq.com/api/v1/stats/model-vs-closing | python3 -m json.tool
+```
+
+**`public_charge` market gate** requires ≥50 finished games with closing + sklearn pick where model mean log-loss ≤ market mean log-loss.
 
 ## Calibration
 

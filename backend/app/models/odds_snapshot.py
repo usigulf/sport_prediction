@@ -1,5 +1,5 @@
 """Historical market odds snapshots for line movement (I62) and CLV (I63)."""
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, Numeric, String
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, Numeric, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import uuid
@@ -20,5 +20,7 @@ class OddsSnapshot(Base):
     away_implied_prob = Column(Numeric(5, 4), nullable=True)
     spread_home = Column(Numeric(5, 2), nullable=True)
     total_points = Column(Numeric(5, 2), nullable=True)
+    # Frozen pre-kickoff consensus for CLV / model-vs-closing acceptance.
+    is_closing = Column(Boolean, nullable=False, default=False, server_default="0")
 
     game = relationship("Game", backref="odds_snapshots")

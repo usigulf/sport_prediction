@@ -65,8 +65,9 @@ def build_model_vs_market_summary(db: Session, *, upcoming_limit: int = 15) -> d
     return {
         "computed_at_iso": now.isoformat(),
         "disclaimer": (
-            "Informational only — not betting advice. Market lines are consensus snapshots; "
-            "we do not store historical closing lines for CLV yet."
+            "Informational only — not betting advice. Market lines are live consensus snapshots. "
+            "Historical closing-line scoring uses GET /api/v1/stats/model-vs-closing after "
+            "POST /internal/odds/freeze-closing."
         ),
         "model_accuracy_all_time": accuracy_all,
         "model_accuracy_rolling_30d": accuracy_30d,

@@ -19,7 +19,7 @@ Short reference for investors and developers. **This is what runs in production 
 - Kafka, Triton, Rust microservices (`archive/`)
 - Multi-region HA, Kubernetes autoscaling
 - Ensemble / deep learning models (marketing must not imply otherwise)
-- Historical closing-line database (live odds snapshot only when API keys configured)
+- Tick-by-tick odds feeds (closing lines are frozen consensus snapshots, not exchange tapes)
 
 ## ML honesty
 
@@ -28,9 +28,10 @@ Short reference for investors and developers. **This is what runs in production 
 - **Strict low-trust suppression** (`STRICT_LOW_TRUST_SUPPRESSION=true`): API nulls probabilities for heuristic/warming/synthetic; feed excludes them from top picks; mobile shows “Prediction unavailable”
 - Artifact BOM + health: `docs/MODEL_ARTIFACT_BOM.md`, `GET /health` model block, `GET /api/v1/stats/model`
 - Acceptance protocol (soccer wedge): `docs/MODEL_ACCEPTANCE_PROTOCOL.md`, `GET /api/v1/stats/model-acceptance`
+- Closing-line ledger: `odds_snapshots.is_closing`, `POST /internal/odds/freeze-closing`, `GET /api/v1/stats/model-vs-closing`
 - Public accuracy: `GET /api/v1/stats/public-audit`, walk-forward backtest script
 - Do **not** market unsourced “win more” claims; holdout metrics in sample `metrics.json` are near a naive baseline
-- Do **not** charge on AI performance until `public_charge` acceptance passes (market/CLV gate still deferred)
+- Do **not** charge on AI performance until `public_charge` acceptance passes (needs closing ledger sample + model ≤ market log-loss)
 ## Key API surfaces (audit-complete)
 
 - Privacy: `GET /user/me/export`, `POST /user/me/privacy/ccpa-opt-out`

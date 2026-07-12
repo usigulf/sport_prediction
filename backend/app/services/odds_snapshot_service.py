@@ -97,6 +97,14 @@ def build_line_movement_series(db: Session, game: Game, *, limit: int = 120) -> 
 
 
 def closing_snapshot_before_kickoff(db: Session, game: Game) -> OddsSnapshot | None:
+    marked = (
+        db.query(OddsSnapshot)
+        .filter(OddsSnapshot.game_id == game.id, OddsSnapshot.is_closing.is_(True))
+        .order_by(desc(OddsSnapshot.captured_at))
+        .first()
+    )
+    if marked is not None:
+        return marked
     kickoff = _as_utc(game.scheduled_time)
     q = db.query(OddsSnapshot).filter(OddsSnapshot.game_id == game.id)
     if kickoff is not None:

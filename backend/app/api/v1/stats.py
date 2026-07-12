@@ -134,9 +134,34 @@ async def get_model_acceptance(
             detail=f"level must be one of: {', '.join(LEVEL_ORDER)}",
         )
     calibration = None
+    market_eval = None
     if level == "public_charge":
         calibration = aggregate_calibration_from_finished(db, since=None)
-    return evaluate_model_acceptance(level, calibration=calibration)
+        from app.services.closing_line_ledger_service import evaluate_model_vs_closing
+
+        market_eval = evaluate_model_vs_closing(
+            db,
+            default_model_version=get_settings().ml_model_version,
+        )
+    return evaluate_model_acceptance(
+        level,
+        calibration=calibration,
+        market_eval=market_eval,
+    )
+
+
+@router.get("/model-vs-closing")
+async def get_model_vs_closing(db: Session = Depends(get_db)):
+    """
+    Model log-loss vs frozen closing consensus on finished games (closing-line ledger).
+    Used by public_charge acceptance; informational — not betting advice.
+    """
+    from app.services.closing_line_ledger_service import evaluate_model_vs_closing
+
+    return evaluate_model_vs_closing(
+        db,
+        default_model_version=get_settings().ml_model_version,
+    )
 
 
 @router.get("/public-audit")

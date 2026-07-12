@@ -126,6 +126,7 @@ def evaluate_model_acceptance(
     *,
     bom: dict[str, Any] | None = None,
     calibration: dict[str, Any] | None = None,
+    market_eval: dict[str, Any] | None = None,
     mobile_soccer_only: bool | None = None,
 ) -> dict[str, Any]:
     """
@@ -133,6 +134,8 @@ def evaluate_model_acceptance(
 
     ``calibration`` is the payload from trust calibration aggregation (optional;
     required to pass ``public_charge``).
+    ``market_eval`` is from closing_line_ledger_service.evaluate_model_vs_closing
+    (required to pass the public_charge market gate).
     ``mobile_soccer_only`` when set asserts EXPO_PUBLIC_BETA_SOCCER_ONLY intent.
     """
     if level not in LEVEL_ORDER:
@@ -211,11 +214,8 @@ def evaluate_model_acceptance(
         )
 
     # --- public_charge ---
-    market_status = "deferred"
-    market_detail = (
-        "Historical closing lines are not persisted; CLV / market-baseline gate is deferred. "
-        "Use /api/v1/stats/model-vs-market for live monitoring only — not acceptance evidence."
-    )
+    market_status = "not_evaluated"
+    market_detail = "Market baseline not evaluated at this level"
     if level == "public_charge":
         checks.append(
             _check(
@@ -235,20 +235,23 @@ def evaluate_model_acceptance(
                 f"(need ≥{CHARGE_MIN_CALIBRATION_SCORED} and min_sample_met)"
             )
         checks.append(_check("live_calibration_floor", cal_ok, cal_detail))
-        checks.append(
-            _check(
-                "market_baseline_clv",
-                False,
-                market_detail,
-            )
-        )
-        market_status = "blocked_until_closing_line_ledger"
 
-    # market_baseline_clv is intentionally fail for public_charge until closing-line ledger exists
+        market_ok = False
+        if market_eval is None:
+            market_status = "missing_eval"
+            market_detail = (
+                "Closing-line ledger eval not provided. Freeze closings via "
+                "POST /internal/odds/freeze-closing then GET /stats/model-vs-closing."
+            )
+        else:
+            market_ok = bool(market_eval.get("acceptance_ready"))
+            market_status = "ready" if market_ok else "insufficient_or_underperforms"
+            market_detail = str(market_eval.get("detail") or market_eval)
+        checks.append(_check("market_baseline_clv", market_ok, market_detail))
+
     passed = all(c["ok"] for c in checks)
-    # For public_charge, market gate forces fail — that's correct per protocol
     return {
-        "protocol_version": "1.0",
+        "protocol_version": "1.1",
         "level": level,
         "passed": passed,
         "wedge": "soccer",
@@ -270,6 +273,7 @@ def evaluate_model_acceptance(
         "market_baseline": {
             "status": market_status,
             "detail": market_detail,
+            "eval": market_eval,
         },
         "rollback": {
             "procedure": (

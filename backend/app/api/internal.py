@@ -468,6 +468,32 @@ async def model_artifact_bom(_: None = Depends(_require_cron_secret)):
     return build_model_artifact_bom()
 
 
+class FreezeClosingBody(BaseModel):
+    lookahead_minutes: int = Field(30, ge=0, le=240)
+    after_kickoff_minutes: int = Field(180, ge=0, le=720)
+    fetch_missing: bool = True
+
+
+@router.post("/odds/freeze-closing")
+async def freeze_closing_odds_cron(
+    db: Session = Depends(get_db),
+    _: None = Depends(_require_cron_secret),
+    body: FreezeClosingBody = Body(default_factory=FreezeClosingBody),
+):
+    """
+    Mark pre-kickoff consensus odds as closing for games in the kickoff window.
+    Schedule near every kickoff block (e.g. every 10–15 minutes).
+    """
+    from app.services.closing_line_ledger_service import freeze_closing_lines
+
+    return freeze_closing_lines(
+        db,
+        lookahead_minutes=body.lookahead_minutes,
+        after_kickoff_minutes=body.after_kickoff_minutes,
+        fetch_missing=body.fetch_missing,
+    )
+
+
 class EnqueueJobBody(BaseModel):
     job_type: str = Field(..., min_length=1, max_length=64)
     payload: dict = Field(default_factory=dict)
