@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/api/v1/auth/register": {
+    "/api/v1/analytics/ad-events": {
         parameters: {
             query?: never;
             header?: never;
@@ -14,30 +14,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Register
-         * @description Register a new user
+         * Ingest Ad Events
+         * @description Accept batched ad session metrics from the mobile app (logged server-side).
          */
-        post: operations["register_api_v1_auth_register_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/login": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Login
-         * @description Login and get access token
-         */
-        post: operations["login_api_v1_auth_login_post"];
+        post: operations["ingest_ad_events_api_v1_analytics_ad_events_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -64,46 +44,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/auth/refresh": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Refresh Token
-         * @description Refresh access token. Send JSON body: {"refresh_token": "<token>"}.
-         */
-        post: operations["refresh_token_api_v1_auth_refresh_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/logout": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Logout
-         * @description Revoke refresh/access tokens server-side when provided.
-         */
-        post: operations["logout_api_v1_auth_logout_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/auth/forgot-password": {
         parameters: {
             query?: never;
@@ -124,7 +64,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/auth/reset-password": {
+    "/api/v1/auth/login": {
         parameters: {
             query?: never;
             header?: never;
@@ -134,10 +74,30 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Reset Password
-         * @description Set a new password using a single-use reset token.
+         * Login
+         * @description Login and get access token
          */
-        post: operations["reset_password_api_v1_auth_reset_password_post"];
+        post: operations["login_api_v1_auth_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Logout
+         * @description Revoke refresh/access tokens server-side when provided.
+         */
+        post: operations["logout_api_v1_auth_logout_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -165,7 +125,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/games/search": {
+    "/api/v1/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh Token
+         * @description Refresh access token. Send JSON body: {"refresh_token": "<token>"}.
+         */
+        post: operations["refresh_token_api_v1_auth_refresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register
+         * @description Register a new user
+         */
+        post: operations["register_api_v1_auth_register_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset Password
+         * @description Set a new password using a single-use reset token.
+         */
+        post: operations["reset_password_api_v1_auth_reset_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/challenges": {
         parameters: {
             query?: never;
             header?: never;
@@ -173,10 +193,137 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Search Games Endpoint
-         * @description Full-text-style search by team name or abbreviation (Weakness #37).
+         * List Challenges
+         * @description List challenges created by the current user (Pro only).
          */
-        get: operations["search_games_endpoint_api_v1_games_search_get"];
+        get: operations["list_challenges_api_v1_challenges_get"];
+        put?: never;
+        /**
+         * Create Challenge
+         * @description Create a new challenge with the given game_ids (Pro only). Games must exist and be scheduled.
+         */
+        post: operations["create_challenge_api_v1_challenges_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/challenges/{challenge_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Challenge
+         * @description Get one challenge by id (must be creator; Pro only).
+         */
+        get: operations["get_challenge_api_v1_challenges__challenge_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/config/feature-flags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Feature Flags */
+        get: operations["read_feature_flags_api_v1_config_feature_flags_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/feed/for-you": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get For You Feed
+         * @description Personalized feed for Home "Best Picks for You".
+         *     Logged-in users with favorites see favorite-team games first, then favorite leagues,
+         *     then other high-confidence picks. Guests fall back to top-picks ordering.
+         */
+        get: operations["get_for_you_feed_api_v1_feed_for_you_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/feed/player-props": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Player Props Feed
+         * @description Games with model-projected player props (Premium). For Games tab Props view.
+         */
+        get: operations["get_player_props_feed_api_v1_feed_player_props_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/feed/top-picks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Top Picks
+         * @description Top picks: games with predictions, ordered by confidence (high first) then kickoff.
+         *     Without date: legacy window — scheduled only, from now through end of server local calendar day.
+         *     With date (+ optional time_zone): same UTC window as GET /games/upcoming for that day.
+         *     Public; if user is free and over daily limit, predictions are omitted.
+         */
+        get: operations["get_top_picks_api_v1_feed_top_picks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/feed/widget/top-pick": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Widget Top Pick
+         * @description Minimal public pick for iOS WidgetKit (I70).
+         *     Returns the highest-confidence scheduled pick today — informational only.
+         */
+        get: operations["get_widget_top_pick_api_v1_feed_widget_top_pick_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -198,6 +345,26 @@ export interface paths {
          *     Use in query params: league= or leagues= (comma-separated).
          */
         get: operations["get_leagues_api_v1_games_leagues_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/games/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search Games Endpoint
+         * @description Full-text-style search by team name or abbreviation (Weakness #37).
+         */
+        get: operations["search_games_endpoint_api_v1_games_search_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -266,7 +433,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/games/{game_id}/player-props": {
+    "/api/v1/games/{game_id}/feature-snapshots": {
         parameters: {
             query?: never;
             header?: never;
@@ -274,10 +441,91 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Game Player Props
-         * @description Model-projected player props for a game. Premium only; not sportsbook lines.
+         * Get Game Feature Snapshots
+         * @description Point-in-time feature vectors captured at inference (I91).
          */
-        get: operations["get_game_player_props_api_v1_games__game_id__player_props_get"];
+        get: operations["get_game_feature_snapshots_api_v1_games__game_id__feature_snapshots_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/games/{game_id}/forecast-ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Game Forecast Ledger
+         * @description Append-only issued forecasts for this game (content-hashed ledger).
+         */
+        get: operations["get_game_forecast_ledger_api_v1_games__game_id__forecast_ledger_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/games/{game_id}/injuries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Game Injuries
+         * @description Injury reports for a game (I97).
+         */
+        get: operations["get_game_injuries_api_v1_games__game_id__injuries_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/games/{game_id}/line-movement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Line Movement
+         * @description Historical consensus odds snapshots for line movement charts (I62).
+         *     Populated when market-odds is fetched while odds providers are configured.
+         */
+        get: operations["get_line_movement_api_v1_games__game_id__line_movement_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/games/{game_id}/live-predictions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Live Predictions
+         * @description Live win-probability for premium users. In-play v0 when game is live and model was refreshed after kickoff.
+         */
+        get: operations["get_live_predictions_api_v1_games__game_id__live_predictions_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -307,7 +555,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/games/{game_id}/live-predictions": {
+    "/api/v1/games/{game_id}/player-props": {
         parameters: {
             query?: never;
             header?: never;
@@ -315,10 +563,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Live Predictions
-         * @description Live win-probability for premium users. In-play v0 when game is live and model was refreshed after kickoff.
+         * Get Game Player Props
+         * @description Model-projected player props for a game. Premium only; not sportsbook lines.
          */
-        get: operations["get_live_predictions_api_v1_games__game_id__live_predictions_get"];
+        get: operations["get_game_player_props_api_v1_games__game_id__player_props_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -369,7 +617,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/user/me": {
+    "/api/v1/games/{game_id}/weather": {
         parameters: {
             query?: never;
             header?: never;
@@ -377,37 +625,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Current User Info
-         * @description Get current user information
+         * Get Game Weather
+         * @description Weather forecast near kickoff for outdoor games (I98).
          */
-        get: operations["get_current_user_info_api_v1_user_me_get"];
-        put?: never;
-        post?: never;
-        /**
-         * Delete Account
-         * @description Permanently delete the current user and all associated data (GDPR right to erasure).
-         *     Cancels Stripe subscriptions and removes the RevenueCat subscriber when configured.
-         *     Favorites, prediction history, push tokens, and reminder records are removed.
-         *     The session is invalid after this.
-         */
-        delete: operations["delete_account_api_v1_user_me_delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/user/favorites": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Favorites
-         * @description Get user's favorite teams and leagues (with team details expanded).
-         */
-        get: operations["get_favorites_api_v1_user_favorites_get"];
+        get: operations["get_game_weather_api_v1_games__game_id__weather_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -416,55 +637,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/user/favorites/teams/{team_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Add Favorite Team
-         * @description Add team to favorites.
-         */
-        post: operations["add_favorite_team_api_v1_user_favorites_teams__team_id__post"];
-        /**
-         * Remove Favorite Team
-         * @description Remove team from favorites.
-         */
-        delete: operations["remove_favorite_team_api_v1_user_favorites_teams__team_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/user/favorites/leagues/{league_code}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Add Favorite League
-         * @description Add league to favorites. League code is case-insensitive (e.g. nfl, NFL).
-         */
-        post: operations["add_favorite_league_api_v1_user_favorites_leagues__league_code__post"];
-        /**
-         * Remove Favorite League
-         * @description Remove league from favorites. League code is case-insensitive.
-         */
-        delete: operations["remove_favorite_league_api_v1_user_favorites_leagues__league_code__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/user/prediction-history": {
+    "/api/v1/leaderboards": {
         parameters: {
             query?: never;
             header?: never;
@@ -472,116 +645,13 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Prediction History
-         * @description Get user's prediction viewing history (paginated, most recent first).
+         * Get Leaderboards
+         * @description Leaderboard: users ranked by accuracy of finished games they viewed (prediction vs outcome).
+         *     period: weekly (last 7 days), monthly (last 30 days), or all (no time filter).
          */
-        get: operations["get_prediction_history_api_v1_user_prediction_history_get"];
+        get: operations["get_leaderboards_api_v1_leaderboards_get"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/user/push-token": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Register Push Token
-         * @description Register an Expo (or other) push token for this user. Body: {"token": "ExponentPushToken[xxx]"}.
-         */
-        post: operations["register_push_token_api_v1_user_push_token_post"];
-        /**
-         * Remove Push Token
-         * @description Remove push token(s). Query ?token=ExponentPushToken[xxx] to remove one; no query to remove all for user.
-         */
-        delete: operations["remove_push_token_api_v1_user_push_token_delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/user/me/export": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Export My Data
-         * @description GDPR Article 20 — portable export of account data (JSON).
-         */
-        get: operations["export_my_data_api_v1_user_me_export_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/user/me/privacy/ccpa-opt-out": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Ccpa Opt Out
-         * @description CCPA — record do-not-sell/opt-out preference (we do not sell PII; audit trail).
-         */
-        post: operations["ccpa_opt_out_api_v1_user_me_privacy_ccpa_opt_out_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/user/referral/code": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Referral Code
-         * @description Referral invite code (user id) for share links.
-         */
-        get: operations["get_referral_code_api_v1_user_referral_code_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/user/referral/apply": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Apply Referral Code
-         * @description Attach referrer on first apply (Imp #42 partial — tracking; bonus via ASC/Stripe).
-         */
-        post: operations["apply_referral_code_api_v1_user_referral_apply_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -633,7 +703,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/stats/model": {
+    "/api/v1/stats/community-vs-model": {
         parameters: {
             query?: never;
             header?: never;
@@ -641,53 +711,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Model Status
-         * @description Public model readiness snapshot from metrics.json (warming vs ready to publish).
-         *     When artifacts are missing or publish_ready is false, inference uses heuristic fallback.
+         * Get Community Vs Model
+         * @description Community user-pick consensus vs model (I93).
          */
-        get: operations["get_model_status_api_v1_stats_model_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/stats/public-audit": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Public Audit Bundle
-         * @description Third-party accuracy audit bundle (Imp #94): accuracy, calibration, model readiness.
-         *     Stable JSON for external reviewers — no auth required.
-         */
-        get: operations["get_public_audit_bundle_api_v1_stats_public_audit_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/stats/model-vs-market": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Model Vs Market
-         * @description Model accuracy vs live market consensus on upcoming games (I64).
-         *     Display-only — supports web dashboard and in-app transparency.
-         */
-        get: operations["get_model_vs_market_api_v1_stats_model_vs_market_get"];
+        get: operations["get_community_vs_model_api_v1_stats_community_vs_model_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -717,7 +744,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/feed/top-picks": {
+    "/api/v1/stats/feature-store": {
         parameters: {
             query?: never;
             header?: never;
@@ -725,13 +752,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Top Picks
-         * @description Top picks: games with predictions, ordered by confidence (high first) then kickoff.
-         *     Without date: legacy window — scheduled only, from now through end of server local calendar day.
-         *     With date (+ optional time_zone): same UTC window as GET /games/upcoming for that day.
-         *     Public; if user is free and over daily limit, predictions are omitted.
+         * Get Feature Store Summary
+         * @description Historical PIT feature snapshot counts (I91).
          */
-        get: operations["get_top_picks_api_v1_feed_top_picks_get"];
+        get: operations["get_feature_store_summary_api_v1_stats_feature_store_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -740,7 +764,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/feed/for-you": {
+    "/api/v1/stats/forecast-ledger": {
         parameters: {
             query?: never;
             header?: never;
@@ -748,12 +772,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get For You Feed
-         * @description Personalized feed for Home "Best Picks for You".
-         *     Logged-in users with favorites see favorite-team games first, then favorite leagues,
-         *     then other high-confidence picks. Guests fall back to top-picks ordering.
+         * Get Forecast Ledger Summary
+         * @description Append-only forecast ledger summary + hash-chain health.
          */
-        get: operations["get_for_you_feed_api_v1_feed_for_you_get"];
+        get: operations["get_forecast_ledger_summary_api_v1_stats_forecast_ledger_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -762,7 +784,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/feed/player-props": {
+    "/api/v1/stats/model": {
         parameters: {
             query?: never;
             header?: never;
@@ -770,10 +792,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Player Props Feed
-         * @description Games with model-projected player props (Premium). For Games tab Props view.
+         * Get Model Status
+         * @description Public model readiness snapshot from metrics.json (warming vs ready to publish).
+         *     When artifacts are missing or publish_ready is false, inference uses heuristic fallback
+         *     unless ALLOW_HEURISTIC_INFERENCE=false.
          */
-        get: operations["get_player_props_feed_api_v1_feed_player_props_get"];
+        get: operations["get_model_status_api_v1_stats_model_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -782,7 +806,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/leaderboards": {
+    "/api/v1/stats/model-acceptance": {
         parameters: {
             query?: never;
             header?: never;
@@ -790,11 +814,11 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Leaderboards
-         * @description Leaderboard: users ranked by accuracy of finished games they viewed (prediction vs outcome).
-         *     period: weekly (last 7 days), monthly (last 30 days), or all (no time filter).
+         * Get Model Acceptance
+         * @description Soccer-wedge model acceptance protocol evaluation (external audit #8).
+         *     Levels: engineering_beta | invite_beta | public_charge.
          */
-        get: operations["get_leaderboards_api_v1_leaderboards_get"];
+        get: operations["get_model_acceptance_api_v1_stats_model_acceptance_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -803,7 +827,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/challenges": {
+    "/api/v1/stats/model-vs-closing": {
         parameters: {
             query?: never;
             header?: never;
@@ -811,34 +835,11 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List Challenges
-         * @description List challenges created by the current user (Pro only).
+         * Get Model Vs Closing
+         * @description Model log-loss vs frozen closing consensus on finished games (closing-line ledger).
+         *     Used by public_charge acceptance; informational — not betting advice.
          */
-        get: operations["list_challenges_api_v1_challenges_get"];
-        put?: never;
-        /**
-         * Create Challenge
-         * @description Create a new challenge with the given game_ids (Pro only). Games must exist and be scheduled.
-         */
-        post: operations["create_challenge_api_v1_challenges_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/challenges/{challenge_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Challenge
-         * @description Get one challenge by id (must be creator; Pro only).
-         */
-        get: operations["get_challenge_api_v1_challenges__challenge_id__get"];
+        get: operations["get_model_vs_closing_api_v1_stats_model_vs_closing_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -847,22 +848,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/subscription/create-checkout": {
+    "/api/v1/stats/model-vs-market": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
         /**
-         * Create Checkout Session
-         * @description Create a Stripe Checkout Session for Premium or Pro (premium_plus).
-         *     Premium includes a 7-day trial in code; Pro has no trial here (set trials on the Price in Stripe if needed).
-         *     Returns { url } to open in Stripe Checkout.
+         * Get Model Vs Market
+         * @description Model accuracy vs live market consensus on upcoming games (I64).
+         *     Display-only — supports web dashboard and in-app transparency.
          */
-        post: operations["create_checkout_session_api_v1_subscription_create_checkout_post"];
+        get: operations["get_model_vs_market_api_v1_stats_model_vs_market_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stats/public-audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Public Audit Bundle
+         * @description Third-party accuracy audit bundle (Imp #94): accuracy, calibration, model readiness.
+         *     Stable JSON for external reviewers — no auth required.
+         */
+        get: operations["get_public_audit_bundle_api_v1_stats_public_audit_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -890,7 +911,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/subscription/webhook": {
+    "/api/v1/subscription/create-checkout": {
         parameters: {
             query?: never;
             header?: never;
@@ -900,11 +921,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Stripe Webhook
-         * @description Stripe webhook: on checkout.session.completed, set user subscription_tier from session metadata.
-         *     Register POST /api/v1/subscription/webhook in Stripe (HTTPS origin where this API is exposed).
+         * Create Checkout Session
+         * @description Create a Stripe Checkout Session for Premium or Pro (premium_plus).
+         *     Premium includes a 7-day trial in code; Pro has no trial here (set trials on the Price in Stripe if needed).
+         *     Returns { url } to open in Stripe Checkout.
          */
-        post: operations["stripe_webhook_api_v1_subscription_webhook_post"];
+        post: operations["create_checkout_session_api_v1_subscription_create_checkout_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -934,7 +956,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/analytics/ad-events": {
+    "/api/v1/subscription/webhook": {
         parameters: {
             query?: never;
             header?: never;
@@ -944,27 +966,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Ingest Ad Events
-         * @description Accept batched ad session metrics from the mobile app (logged server-side).
+         * Stripe Webhook
+         * @description Stripe webhook: on checkout.session.completed, set user subscription_tier from session metadata.
+         *     Register POST /api/v1/subscription/webhook in Stripe (HTTPS origin where this API is exposed).
          */
-        post: operations["ingest_ad_events_api_v1_analytics_ad_events_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/config/feature-flags": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Feature Flags */
-        get: operations["read_feature_flags_api_v1_config_feature_flags_get"];
-        put?: never;
-        post?: never;
+        post: operations["stripe_webhook_api_v1_subscription_webhook_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -992,7 +998,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/internal/push-triggers/run": {
+    "/api/v1/user/favorites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Favorites
+         * @description Get user's favorite teams and leagues (with team details expanded).
+         */
+        get: operations["get_favorites_api_v1_user_favorites_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/user/favorites/leagues/{league_code}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1002,11 +1028,478 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Run Push Triggers
-         * @description Run game-starting, high-confidence, and post-game push triggers. Call from cron with header:
+         * Add Favorite League
+         * @description Add league to favorites. League code is case-insensitive (e.g. nfl, NFL).
+         */
+        post: operations["add_favorite_league_api_v1_user_favorites_leagues__league_code__post"];
+        /**
+         * Remove Favorite League
+         * @description Remove league from favorites. League code is case-insensitive.
+         */
+        delete: operations["remove_favorite_league_api_v1_user_favorites_leagues__league_code__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/user/favorites/teams/{team_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Favorite Team
+         * @description Add team to favorites.
+         */
+        post: operations["add_favorite_team_api_v1_user_favorites_teams__team_id__post"];
+        /**
+         * Remove Favorite Team
+         * @description Remove team from favorites.
+         */
+        delete: operations["remove_favorite_team_api_v1_user_favorites_teams__team_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/user/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Current User Info
+         * @description Get current user information
+         */
+        get: operations["get_current_user_info_api_v1_user_me_get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Account
+         * @description Permanently delete the current user and all associated data (GDPR right to erasure).
+         *     Cancels Stripe subscriptions and removes the RevenueCat subscriber when configured.
+         *     Favorites, prediction history, push tokens, and reminder records are removed.
+         *     The session is invalid after this.
+         */
+        delete: operations["delete_account_api_v1_user_me_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/user/me/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export My Data
+         * @description GDPR Article 20 — portable export of account data (JSON).
+         */
+        get: operations["export_my_data_api_v1_user_me_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/user/me/picks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit User Pick
+         * @description Record an explicit user pick for a game (I92 — Brier tracking). Immutable unless replace=true.
+         */
+        post: operations["submit_user_pick_api_v1_user_me_picks_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/user/me/picks/brier": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get User Brier Stats
+         * @description Per-user Brier score vs model on finished games + CLV rollup (I92, I63).
+         */
+        get: operations["get_user_brier_stats_api_v1_user_me_picks_brier_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/user/me/picks/quarantine-unverified": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Quarantine My Unverified Picks
+         * @description Delete legacy/auto picks that should not count as personal performance.
+         */
+        post: operations["quarantine_my_unverified_picks_api_v1_user_me_picks_quarantine_unverified_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/user/me/picks/{game_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get My Pick For Game
+         * @description Return the current user's pick for a game, if any.
+         */
+        get: operations["get_my_pick_for_game_api_v1_user_me_picks__game_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/user/me/privacy/ccpa-opt-out": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ccpa Opt Out
+         * @description CCPA — record do-not-sell/opt-out preference (we do not sell PII; audit trail).
+         */
+        post: operations["ccpa_opt_out_api_v1_user_me_privacy_ccpa_opt_out_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/user/prediction-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Prediction History
+         * @description Get user's prediction viewing history (paginated, most recent first).
+         */
+        get: operations["get_prediction_history_api_v1_user_prediction_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/user/push-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register Push Token
+         * @description Register an Expo (or other) push token for this user. Body: {"token": "ExponentPushToken[xxx]"}.
+         */
+        post: operations["register_push_token_api_v1_user_push_token_post"];
+        /**
+         * Remove Push Token
+         * @description Remove push token(s). Query ?token=ExponentPushToken[xxx] to remove one; no query to remove all for user.
+         */
+        delete: operations["remove_push_token_api_v1_user_push_token_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/user/referral/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply Referral Code
+         * @description Attach referrer on first apply (Imp #42 partial — tracking; bonus via ASC/Stripe).
+         */
+        post: operations["apply_referral_code_api_v1_user_referral_apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/user/referral/code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Referral Code
+         * @description Referral invite code (user id) for share links.
+         */
+        get: operations["get_referral_code_api_v1_user_referral_code_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Health Check
+         * @description Liveness + model readiness.
+         *     Returns 503 when REQUIRE_PUBLISH_READY_MODEL=true and no publish-ready artifacts.
+         */
+        get: operations["health_check_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/email-digest/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run Email Digest Cron
+         * @description Send daily picks email when FEATURE_EMAIL_DIGEST=true and SMTP configured.
+         */
+        post: operations["run_email_digest_cron_internal_email_digest_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/forecast-ledger/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Verify Forecast Ledger Cron
+         * @description Recompute content-hash chain for the append-only forecast ledger.
+         */
+        get: operations["verify_forecast_ledger_cron_internal_forecast_ledger_verify_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/games/{game_id}/player-spotlights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace Game Player Spotlights
+         * @description Replace all performer spotlight rows for a game (ETL / admin). Same auth as cron:
          *     X-Cron-Secret: <PUSH_CRON_SECRET>
          */
-        post: operations["run_push_triggers_internal_push_triggers_run_post"];
+        put: operations["replace_game_player_spotlights_internal_games__game_id__player_spotlights_put"];
+        post?: never;
+        /**
+         * Clear Game Player Spotlights
+         * @description Remove all spotlight rows for a game.
+         */
+        delete: operations["clear_game_player_spotlights_internal_games__game_id__player_spotlights_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/health/clearsports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Clearsports Health
+         * @description Verify ClearSports API key (EPL games probe) and soccer feed when key is the active provider.
+         */
+        get: operations["clearsports_health_internal_health_clearsports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/health/sportradar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sportradar Health
+         * @description Verify Sportradar NFL and (optionally) soccer standings can be fetched (same X-Cron-Secret).
+         *     Does not persist data; uses the same caches as explanation enrichment.
+         */
+        get: operations["sportradar_health_internal_health_sportradar_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/historical-backfill/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Historical Backfill Run
+         * @description M-07: Sync 2+ seasons per league from ClearSports (CLEARSPORTS_API_KEY).
+         *     Idempotent upserts; returns decisive finished-game counts per league.
+         *     Schedule weekly or run once after deploy. Optionally chain predictions for backtest labels.
+         */
+        post: operations["historical_backfill_run_internal_historical_backfill_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/jobs/enqueue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Enqueue Internal Job
+         * @description Enqueue background work (Redis list; Imp #52).
+         */
+        post: operations["enqueue_internal_job_internal_jobs_enqueue_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/jobs/process-one": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Process One Job
+         * @description Dequeue and return one job for worker processing.
+         */
+        post: operations["process_one_job_internal_jobs_process_one_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/jobs/run-one": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run One Job
+         * @description Dequeue, execute handler, and mark job completed or failed (W42 / I52).
+         */
+        post: operations["run_one_job_internal_jobs_run_one_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1029,30 +1522,6 @@ export interface paths {
          *     Schedule every 1–2 minutes via scripts/cron/internal_live_sync_run.sh.
          */
         post: operations["run_live_sync_cron_internal_live_sync_run_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/internal/predictions/run": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Run Predictions Cron
-         * @description Refresh ML predictions for live + upcoming games. Schedule via cron every 15–60 minutes with header:
-         *     X-Cron-Secret: <PUSH_CRON_SECRET>
-         *
-         *     Set EXPLANATION_MODEL_DIR or MODEL_ARTIFACT_DIR to a folder with simple_model.pkl + feature_columns.pkl
-         *     for sklearn inference; otherwise a deterministic heuristic runs from game state.
-         */
-        post: operations["run_predictions_cron_internal_predictions_run_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1085,7 +1554,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/internal/games/{game_id}/player-spotlights": {
+    "/internal/model-bom": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Model Artifact Bom
+         * @description Full model artifact bill of materials for release / ops checks.
+         */
+        get: operations["model_artifact_bom_internal_model_bom_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/odds/freeze-closing": {
         parameters: {
             query?: never;
             header?: never;
@@ -1093,18 +1582,59 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        put?: never;
         /**
-         * Replace Game Player Spotlights
-         * @description Replace all performer spotlight rows for a game (ETL / admin). Same auth as cron:
+         * Freeze Closing Odds Cron
+         * @description Mark pre-kickoff consensus odds as closing for games in the kickoff window.
+         *     Schedule near every kickoff block (e.g. every 10–15 minutes).
+         */
+        post: operations["freeze_closing_odds_cron_internal_odds_freeze_closing_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/predictions/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run Predictions Cron
+         * @description Refresh ML predictions for live + upcoming games. Schedule via cron every 15–60 minutes with header:
+         *     X-Cron-Secret: <PUSH_CRON_SECRET>
+         *
+         *     Set EXPLANATION_MODEL_DIR or MODEL_ARTIFACT_DIR to a folder with simple_model.pkl + feature_columns.pkl
+         *     for sklearn inference; otherwise a deterministic heuristic runs from game state.
+         */
+        post: operations["run_predictions_cron_internal_predictions_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/push-triggers/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run Push Triggers
+         * @description Run game-starting, high-confidence, and post-game push triggers. Call from cron with header:
          *     X-Cron-Secret: <PUSH_CRON_SECRET>
          */
-        put: operations["replace_game_player_spotlights_internal_games__game_id__player_spotlights_put"];
-        post?: never;
-        /**
-         * Clear Game Player Spotlights
-         * @description Remove all spotlight rows for a game.
-         */
-        delete: operations["clear_game_player_spotlights_internal_games__game_id__player_spotlights_delete"];
+        post: operations["run_push_triggers_internal_push_triggers_run_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1153,149 +1683,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/internal/historical-backfill/run": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Historical Backfill Run
-         * @description M-07: Sync 2+ seasons per league from ClearSports (CLEARSPORTS_API_KEY).
-         *     Idempotent upserts; returns decisive finished-game counts per league.
-         *     Schedule weekly or run once after deploy. Optionally chain predictions for backtest labels.
-         */
-        post: operations["historical_backfill_run_internal_historical_backfill_run_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/internal/health/sportradar": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Sportradar Health
-         * @description Verify Sportradar NFL and (optionally) soccer standings can be fetched (same X-Cron-Secret).
-         *     Does not persist data; uses the same caches as explanation enrichment.
-         */
-        get: operations["sportradar_health_internal_health_sportradar_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/internal/health/clearsports": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Clearsports Health
-         * @description Verify ClearSports API key (EPL games probe) and soccer feed when key is the active provider.
-         */
-        get: operations["clearsports_health_internal_health_clearsports_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/internal/jobs/enqueue": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Enqueue Internal Job
-         * @description Enqueue background work (Redis list; Imp #52).
-         */
-        post: operations["enqueue_internal_job_internal_jobs_enqueue_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/internal/jobs/process-one": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Process One Job
-         * @description Dequeue and return one job for worker processing.
-         */
-        post: operations["process_one_job_internal_jobs_process_one_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/internal/email-digest/run": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Run Email Digest Cron
-         * @description Send daily picks email when FEATURE_EMAIL_DIGEST=true and SMTP configured.
-         */
-        post: operations["run_email_digest_cron_internal_email_digest_run_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Health Check
-         * @description Health check endpoint
-         */
-        get: operations["health_check_health_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/ready": {
         parameters: {
             query?: never;
@@ -1322,50 +1709,55 @@ export interface components {
     schemas: {
         /** AdSessionPayload */
         AdSessionPayload: {
-            /** Sessionid */
-            sessionId?: string | null;
-            /**
-             * Ad Impression Count
-             * @default 0
-             */
-            ad_impression_count: number;
             /**
              * Ad Clicks
              * @default 0
              */
             ad_clicks: number;
             /**
-             * Rewarded Ads Watched
+             * Ad Impression Count
              * @default 0
              */
-            rewarded_ads_watched: number;
+            ad_impression_count: number;
             /**
              * Revenue Per Session Micros
              * @default 0
              */
             revenue_per_session_micros: number;
-            /** Sessiondurationms */
-            sessionDurationMs?: number | null;
+            /**
+             * Rewarded Ads Watched
+             * @default 0
+             */
+            rewarded_ads_watched: number;
             /** Screen Where Ad Shown */
             screen_where_ad_shown?: {
                 [key: string]: number;
             };
+            /** Sessiondurationms */
+            sessionDurationMs?: number | null;
+            /** Sessionid */
+            sessionId?: string | null;
         };
         /** AppleSignInRequest */
         AppleSignInRequest: {
-            /** Identity Token */
-            identity_token: string;
             /** Email */
             email?: string | null;
             /** Full Name */
             full_name?: string | null;
+            /** Identity Token */
+            identity_token: string;
         };
         /** Body_login_api_v1_auth_login_post */
         Body_login_api_v1_auth_login_post: {
+            /** Client Id */
+            client_id?: string | null;
+            /**
+             * Client Secret
+             * Format: password
+             */
+            client_secret?: string | null;
             /** Grant Type */
             grant_type?: string | null;
-            /** Username */
-            username: string;
             /**
              * Password
              * Format: password
@@ -1376,32 +1768,27 @@ export interface components {
              * @default
              */
             scope: string;
-            /** Client Id */
-            client_id?: string | null;
-            /**
-             * Client Secret
-             * Format: password
-             */
-            client_secret?: string | null;
+            /** Username */
+            username: string;
         };
         /** ConsensusLine */
         ConsensusLine: {
-            /** Home Moneyline */
-            home_moneyline?: number | null;
+            /** Away Implied Prob */
+            away_implied_prob?: number | null;
             /** Away Moneyline */
             away_moneyline?: number | null;
             /** Home Implied Prob */
             home_implied_prob?: number | null;
-            /** Away Implied Prob */
-            away_implied_prob?: number | null;
+            /** Home Moneyline */
+            home_moneyline?: number | null;
+            /** Over Price */
+            over_price?: number | null;
             /** Spread Home */
             spread_home?: number | null;
             /** Spread Home Price */
             spread_home_price?: number | null;
             /** Total Points */
             total_points?: number | null;
-            /** Over Price */
-            over_price?: number | null;
         };
         /** CreateChallengeRequest */
         CreateChallengeRequest: {
@@ -1414,19 +1801,19 @@ export interface components {
          */
         CreateCheckoutBody: {
             /**
-             * Tier
-             * @description Stripe price: premium or premium_plus (Pro)
-             * @default premium
-             * @enum {string}
-             */
-            tier: "premium" | "premium_plus";
-            /**
              * Billing Period
              * @description Premium billing interval (annual uses STRIPE_PRICE_ID_PREMIUM_ANNUAL)
              * @default monthly
              * @enum {string}
              */
             billing_period: "monthly" | "annual";
+            /**
+             * Tier
+             * @description Stripe price: premium or premium_plus (Pro)
+             * @default premium
+             * @enum {string}
+             */
+            tier: "premium" | "premium_plus";
         };
         /** EnqueueJobBody */
         EnqueueJobBody: {
@@ -1439,14 +1826,14 @@ export interface components {
         };
         /** FeatureImportance */
         FeatureImportance: {
+            /** Description */
+            description?: string | null;
             /** Feature */
             feature: string;
             /** Feature Weight */
             feature_weight: number;
             /** Shap Value */
             shap_value: number;
-            /** Description */
-            description?: string | null;
         };
         /** ForgotPasswordRequest */
         ForgotPasswordRequest: {
@@ -1456,29 +1843,54 @@ export interface components {
              */
             email: string;
         };
+        /** FreezeClosingBody */
+        FreezeClosingBody: {
+            /**
+             * After Kickoff Minutes
+             * @default 180
+             */
+            after_kickoff_minutes: number;
+            /**
+             * Fetch Missing
+             * @default true
+             */
+            fetch_missing: boolean;
+            /**
+             * Lookahead Minutes
+             * @default 30
+             */
+            lookahead_minutes: number;
+        };
         /** GameListResponse */
         GameListResponse: {
             /** Games */
             games: components["schemas"]["GameResponse"][];
-            /** Total */
-            total: number;
-            /** Skip */
-            skip: number;
             /** Limit */
             limit: number;
+            /** Skip */
+            skip: number;
+            /** Total */
+            total: number;
         };
         /** GameResponse */
         GameResponse: {
+            /** Away Score */
+            away_score?: number | null;
+            away_team?: components["schemas"]["TeamResponse"] | null;
+            /** Away Team Id */
+            away_team_id: string;
+            /** Guest Signup Required */
+            guest_signup_required?: boolean | null;
+            /** Home Score */
+            home_score?: number | null;
+            home_team?: components["schemas"]["TeamResponse"] | null;
+            /** Home Team Id */
+            home_team_id: string;
             /** Id */
             id: string;
             /** League */
             league: string;
-            /** Home Team Id */
-            home_team_id: string;
-            /** Away Team Id */
-            away_team_id: string;
-            home_team?: components["schemas"]["TeamResponse"] | null;
-            away_team?: components["schemas"]["TeamResponse"] | null;
+            prediction?: components["schemas"]["PredictionResponse"] | null;
             /**
              * Scheduled Time
              * Format: date-time
@@ -1486,28 +1898,21 @@ export interface components {
             scheduled_time: string;
             /** Status */
             status: string;
-            /** Home Score */
-            home_score?: number | null;
-            /** Away Score */
-            away_score?: number | null;
             /** Venue */
             venue?: string | null;
-            prediction?: components["schemas"]["PredictionResponse"] | null;
-            /** Guest Signup Required */
-            guest_signup_required?: boolean | null;
         };
         /** H2HMeetingDetail */
         H2HMeetingDetail: {
-            /** Date Iso */
-            date_iso: string;
-            /** Home Team Name */
-            home_team_name: string;
-            /** Away Team Name */
-            away_team_name: string;
-            /** Home Score */
-            home_score: number;
             /** Away Score */
             away_score: number;
+            /** Away Team Name */
+            away_team_name: string;
+            /** Date Iso */
+            date_iso: string;
+            /** Home Score */
+            home_score: number;
+            /** Home Team Name */
+            home_team_name: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1520,11 +1925,11 @@ export interface components {
          */
         HistoricalBackfillBody: {
             /**
-             * Seasons Back
-             * @description Number of prior seasons to sync in addition to the current season (e.g. 2 → 3 seasons total).
-             * @default 2
+             * Include Recent Finished Days
+             * @description When run_predictions=true, backfill predictions for finished games in the last N days.
+             * @default 365
              */
-            seasons_back: number;
+            include_recent_finished_days: number;
             /**
              * Leagues
              * @description Optional league filter (e.g. ['nfl','nba','premier_league']). Default: all configured leagues.
@@ -1543,11 +1948,11 @@ export interface components {
              */
             run_predictions: boolean;
             /**
-             * Include Recent Finished Days
-             * @description When run_predictions=true, backfill predictions for finished games in the last N days.
-             * @default 365
+             * Seasons Back
+             * @description Number of prior seasons to sync in addition to the current season (e.g. 2 → 3 seasons total).
+             * @default 2
              */
-            include_recent_finished_days: number;
+            seasons_back: number;
         };
         /** LiveSyncBody */
         LiveSyncBody: {
@@ -1559,32 +1964,32 @@ export interface components {
         };
         /** LogoutRequest */
         LogoutRequest: {
-            /** Refresh Token */
-            refresh_token?: string | null;
             /** Access Token */
             access_token?: string | null;
+            /** Refresh Token */
+            refresh_token?: string | null;
         };
         /** MarketOddsResponse */
         MarketOddsResponse: {
             /** Available */
             available: boolean;
-            /** Reason */
-            reason?: string | null;
-            /** Provider */
-            provider?: string | null;
-            /** Sport Key */
-            sport_key?: string | null;
             /**
              * Book Count
              * @default 0
              */
             book_count: number;
             consensus?: components["schemas"]["ConsensusLine"] | null;
-            model_comparison?: components["schemas"]["ModelMarketComparison"] | null;
             /** Disclaimer */
             disclaimer?: string | null;
             /** Fetched At Iso */
             fetched_at_iso?: string | null;
+            model_comparison?: components["schemas"]["ModelMarketComparison"] | null;
+            /** Provider */
+            provider?: string | null;
+            /** Reason */
+            reason?: string | null;
+            /** Sport Key */
+            sport_key?: string | null;
         };
         /** MessageResponse */
         MessageResponse: {
@@ -1593,29 +1998,29 @@ export interface components {
         };
         /** MetricComparisonRow */
         MetricComparisonRow: {
-            /** Label */
-            label: string;
-            /** Home Display */
-            home_display: string;
             /** Away Display */
             away_display: string;
             /** Footnote */
             footnote?: string | null;
+            /** Home Display */
+            home_display: string;
+            /** Label */
+            label: string;
         };
         /** ModelMarketComparison */
         ModelMarketComparison: {
-            /** Model Home Win Prob */
-            model_home_win_prob?: number | null;
-            /** Market Home Implied Prob */
-            market_home_implied_prob?: number | null;
-            /** Home Edge Pct */
-            home_edge_pct?: number | null;
             /**
              * Edge Label
              * @default unavailable
              * @enum {string}
              */
             edge_label: "model_leans_home" | "model_leans_away" | "aligned" | "unavailable";
+            /** Home Edge Pct */
+            home_edge_pct?: number | null;
+            /** Market Home Implied Prob */
+            market_home_implied_prob?: number | null;
+            /** Model Home Win Prob */
+            model_home_win_prob?: number | null;
         };
         /** ParlayCheckBody */
         ParlayCheckBody: {
@@ -1626,107 +2031,99 @@ export interface components {
         PlayerSpotlightDetail: {
             /** Player Name */
             player_name: string;
-            /** Team Name */
-            team_name: string;
             /** Role */
             role?: string | null;
             /** Summary */
             summary: string;
+            /** Team Name */
+            team_name: string;
         };
         /** PlayerSpotlightItem */
         PlayerSpotlightItem: {
             /** Player Name */
             player_name: string;
-            /** Team Name */
-            team_name: string;
             /** Role */
             role?: string | null;
-            /** Summary */
-            summary: string;
             /**
              * Sort Order
              * @default 0
              */
             sort_order: number;
+            /** Summary */
+            summary: string;
+            /** Team Name */
+            team_name: string;
         };
         /** PredictionExplanationResponse */
         PredictionExplanationResponse: {
-            /** Top Features */
-            top_features: components["schemas"]["FeatureImportance"][];
+            /** Accuracy */
+            accuracy?: number | null;
             /** Confidence Explanation */
             confidence_explanation?: string | null;
+            /** Data Quality Label */
+            data_quality_label?: string | null;
+            /** Data Quality Score */
+            data_quality_score?: number | null;
             /** Model Version */
             model_version: string;
             /** Prediction Source */
             prediction_source?: string | null;
-            /** Accuracy */
-            accuracy?: number | null;
-            /** Data Quality Score */
-            data_quality_score?: number | null;
-            /** Data Quality Label */
-            data_quality_label?: string | null;
             /** Quality Gate Applied */
             quality_gate_applied?: boolean | null;
             /** Quality Reasons */
             quality_reasons?: string[] | null;
             rich_analysis?: components["schemas"]["RichAnalysisSections"] | null;
             structured_analysis?: components["schemas"]["StructuredGameAnalysis"] | null;
+            /** Top Features */
+            top_features: components["schemas"]["FeatureImportance"][];
         };
         /** PredictionResponse */
         PredictionResponse: {
-            /** Id */
-            id: string;
-            /** Game Id */
-            game_id: string;
-            /** Model Version */
-            model_version: string;
-            /** Prediction Source */
-            prediction_source?: string | null;
-            /** Home Win Probability */
-            home_win_probability: number;
             /** Away Win Probability */
-            away_win_probability: number;
-            /** Expected Home Score */
-            expected_home_score?: number | null;
-            /** Expected Away Score */
-            expected_away_score?: number | null;
+            away_win_probability?: number | null;
             /** Confidence Level */
-            confidence_level: string;
-            /** Data Quality Score */
-            data_quality_score?: number | null;
-            /** Data Quality Label */
-            data_quality_label?: string | null;
-            /** Quality Gate Applied */
-            quality_gate_applied?: boolean | null;
-            /** Quality Reasons */
-            quality_reasons?: string[] | null;
+            confidence_level?: string | null;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
+            /** Data Quality Label */
+            data_quality_label?: string | null;
+            /** Data Quality Score */
+            data_quality_score?: number | null;
+            /** Expected Away Score */
+            expected_away_score?: number | null;
+            /** Expected Home Score */
+            expected_home_score?: number | null;
+            /** Game Id */
+            game_id: string;
+            /** Home Win Probability */
+            home_win_probability?: number | null;
+            /** Id */
+            id: string;
+            /** Model Version */
+            model_version: string;
+            /** Prediction Source */
+            prediction_source?: string | null;
+            /** Probabilities Suppressed */
+            probabilities_suppressed?: boolean | null;
+            /** Quality Gate Applied */
+            quality_gate_applied?: boolean | null;
+            /** Quality Reasons */
+            quality_reasons?: string[] | null;
             /** Standings Last Updated Iso */
             standings_last_updated_iso?: string | null;
         };
         /** PredictionRunBody */
         PredictionRunBody: {
-            /** Game Ids */
-            game_ids?: string[] | null;
             /**
              * Force
              * @default false
              */
             force: boolean;
-            /**
-             * Min Minutes Scheduled
-             * @default 45
-             */
-            min_minutes_scheduled: number;
-            /**
-             * Min Minutes Live
-             * @default 2
-             */
-            min_minutes_live: number;
+            /** Game Ids */
+            game_ids?: string[] | null;
             /**
              * Include Recent Finished Days
              * @description Backfill pre-kickoff predictions on finished games in the last N days (accuracy/calibration).
@@ -1738,19 +2135,29 @@ export interface components {
              * @description Optional league filter (e.g. ['premier_league']).
              */
             leagues?: string[] | null;
+            /**
+             * Min Minutes Live
+             * @default 2
+             */
+            min_minutes_live: number;
+            /**
+             * Min Minutes Scheduled
+             * @default 45
+             */
+            min_minutes_scheduled: number;
         };
         /** ProbabilityTrendPoint */
         ProbabilityTrendPoint: {
-            /** Timestamp Iso */
-            timestamp_iso: string;
-            /** Home Win Probability */
-            home_win_probability: number;
             /** Away Win Probability */
             away_win_probability: number;
-            /** Draw Probability */
-            draw_probability?: number | null;
             /** Confidence Level */
             confidence_level?: string | null;
+            /** Draw Probability */
+            draw_probability?: number | null;
+            /** Home Win Probability */
+            home_win_probability: number;
+            /** Timestamp Iso */
+            timestamp_iso: string;
         };
         /** ReferralApplyBody */
         ReferralApplyBody: {
@@ -1772,98 +2179,98 @@ export interface components {
         };
         /** ResetPasswordRequest */
         ResetPasswordRequest: {
-            /** Token */
-            token: string;
             /** Password */
             password: string;
+            /** Token */
+            token: string;
         };
         /**
          * RichAnalysisSections
          * @description Optional narrative sections from job pipeline, DB context, and generated scenarios.
          */
         RichAnalysisSections: {
-            /** Real Time Analysis */
-            real_time_analysis?: string | null;
+            /** Advanced Metrics */
+            advanced_metrics?: string | null;
             /** Form Standings */
             form_standings?: string | null;
+            /** H2H History */
+            h2h_history?: string | null;
             /** Head To Head */
             head_to_head?: string | null;
             /** Key Players */
             key_players?: string | null;
-            /** Tactical */
-            tactical?: string | null;
-            /** H2H History */
-            h2h_history?: string | null;
-            /** Standings Context */
-            standings_context?: string | null;
-            /** Advanced Metrics */
-            advanced_metrics?: string | null;
+            /** Real Time Analysis */
+            real_time_analysis?: string | null;
             /** Scenario Outcomes */
             scenario_outcomes?: string | null;
+            /** Standings Context */
+            standings_context?: string | null;
+            /** Tactical */
+            tactical?: string | null;
         };
         /** StandingsRowDetail */
         StandingsRowDetail: {
-            /** Team Name */
-            team_name: string;
-            /** League Rank */
-            league_rank: number;
-            /** Played */
-            played: number;
-            /** Wins */
-            wins: number;
             /** Draws */
             draws: number;
-            /** Losses */
-            losses: number;
-            /** Points */
-            points?: number | null;
-            /** Goals For */
-            goals_for?: number | null;
-            /** Goals Against */
-            goals_against?: number | null;
             /** Goal Difference */
             goal_difference: number;
+            /** Goals Against */
+            goals_against?: number | null;
+            /** Goals For */
+            goals_for?: number | null;
+            /** League Rank */
+            league_rank: number;
+            /** Losses */
+            losses: number;
+            /** Played */
+            played: number;
+            /** Points */
+            points?: number | null;
+            /** Team Name */
+            team_name: string;
+            /** Wins */
+            wins: number;
         };
         /**
          * StructuredGameAnalysis
          * @description Tabular / card-friendly breakdown; narrative remains in rich_analysis.
          */
         StructuredGameAnalysis: {
-            /** League Label */
-            league_label?: string | null;
-            /** Standings Rows */
-            standings_rows?: components["schemas"]["StandingsRowDetail"][];
+            /** Data Coverage Note */
+            data_coverage_note?: string | null;
+            /** Data Freshness Note */
+            data_freshness_note?: string | null;
             /** H2H Meetings */
             h2h_meetings?: components["schemas"]["H2HMeetingDetail"][];
             /** H2H Series Summary */
             h2h_series_summary?: string | null;
+            /** League Label */
+            league_label?: string | null;
             /** Metric Comparisons */
             metric_comparisons?: components["schemas"]["MetricComparisonRow"][];
-            /** Probability Trend */
-            probability_trend?: components["schemas"]["ProbabilityTrendPoint"][];
-            /** Recent Form Snapshot */
-            recent_form_snapshot?: string | null;
             /** Player Spotlights */
             player_spotlights?: components["schemas"]["PlayerSpotlightDetail"][];
-            /** Data Freshness Note */
-            data_freshness_note?: string | null;
+            /** Probability Trend */
+            probability_trend?: components["schemas"]["ProbabilityTrendPoint"][];
             /** Provider Context Note */
             provider_context_note?: string | null;
-            /** Data Coverage Note */
-            data_coverage_note?: string | null;
+            /** Recent Form Snapshot */
+            recent_form_snapshot?: string | null;
+            /** Standings Rows */
+            standings_rows?: components["schemas"]["StandingsRowDetail"][];
         };
         /** TeamResponse */
         TeamResponse: {
-            /** Id */
-            id: string;
-            /** Name */
-            name: string;
-            /** League */
-            league: string;
             /** Abbreviation */
             abbreviation?: string | null;
+            /** Id */
+            id: string;
+            /** League */
+            league: string;
             /** Logo Url */
             logo_url?: string | null;
+            /** Name */
+            name: string;
         };
         /** Token */
         Token: {
@@ -1883,15 +2290,11 @@ export interface components {
          */
         TrainModelBody: {
             /**
-             * Out Dir
-             * @description Directory for simple_model.pkl + feature_columns.pkl + metrics.json. Defaults to MODEL_ARTIFACT_DIR / EXPLANATION_MODEL_DIR.
+             * Force
+             * @description Train even when usable games < min_games.
+             * @default false
              */
-            out_dir?: string | null;
-            /**
-             * Test Frac
-             * @default 0.2
-             */
-            test_frac: number;
+            force: boolean;
             /**
              * Min Games
              * @default 60
@@ -1903,11 +2306,15 @@ export interface components {
              */
             min_publish_holdout_per_league_group?: number | null;
             /**
-             * Force
-             * @description Train even when usable games < min_games.
-             * @default false
+             * Out Dir
+             * @description Directory for simple_model.pkl + feature_columns.pkl + metrics.json. Defaults to MODEL_ARTIFACT_DIR / EXPLANATION_MODEL_DIR.
              */
-            force: boolean;
+            out_dir?: string | null;
+            /**
+             * Test Frac
+             * @default 0.2
+             */
+            test_frac: number;
         };
         /** UserCreate */
         UserCreate: {
@@ -1919,32 +2326,51 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** UserPickBody */
+        UserPickBody: {
+            /** Game Id */
+            game_id: string;
+            /** Market Away Implied Prob */
+            market_away_implied_prob?: number | null;
+            /** Market Home Implied Prob */
+            market_home_implied_prob?: number | null;
+            /** Outcome */
+            outcome: string;
+            /** Probability */
+            probability: number;
+            /**
+             * Replace
+             * @description If true, overwrite an existing pick. Default false (immutable).
+             * @default false
+             */
+            replace: boolean;
+        };
         /** UserResponse */
         UserResponse: {
-            /** Id */
-            id: string;
-            /** Email */
-            email: string;
-            /** Subscription Tier */
-            subscription_tier: string;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
+            /** Email */
+            email: string;
+            /** Id */
+            id: string;
+            /** Subscription Tier */
+            subscription_tier: string;
         };
         /** ValidationError */
         ValidationError: {
+            /** Context */
+            ctx?: Record<string, never>;
+            /** Input */
+            input?: unknown;
             /** Location */
             loc: (string | number)[];
             /** Message */
             msg: string;
             /** Error Type */
             type: string;
-            /** Input */
-            input?: unknown;
-            /** Context */
-            ctx?: Record<string, never>;
         };
     };
     responses: never;
@@ -1955,7 +2381,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    register_api_v1_auth_register_post: {
+    ingest_ad_events_api_v1_analytics_ad_events_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1964,51 +2390,16 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UserCreate"];
+                "application/json": components["schemas"]["AdSessionPayload"];
             };
         };
         responses: {
             /** @description Successful Response */
-            201: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["UserResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    login_api_v1_auth_login_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/x-www-form-urlencoded": components["schemas"]["Body_login_api_v1_auth_login_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Token"];
-                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -2054,7 +2445,7 @@ export interface operations {
             };
         };
     };
-    refresh_token_api_v1_auth_refresh_post: {
+    forgot_password_api_v1_auth_forgot_password_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -2063,7 +2454,40 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RefreshTokenRequest"];
+                "application/json": components["schemas"]["ForgotPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    login_api_v1_auth_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["Body_login_api_v1_auth_login_post"];
             };
         };
         responses: {
@@ -2120,7 +2544,27 @@ export interface operations {
             };
         };
     };
-    forgot_password_api_v1_auth_forgot_password_post: {
+    get_current_user_info_deprecated_api_v1_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+        };
+    };
+    refresh_token_api_v1_auth_refresh_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -2129,7 +2573,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ForgotPasswordRequest"];
+                "application/json": components["schemas"]["RefreshTokenRequest"];
             };
         };
         responses: {
@@ -2139,7 +2583,40 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MessageResponse"];
+                    "application/json": components["schemas"]["Token"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    register_api_v1_auth_register_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
                 };
             };
             /** @description Validation Error */
@@ -2173,981 +2650,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Token"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_current_user_info_deprecated_api_v1_auth_me_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserResponse"];
-                };
-            };
-        };
-    };
-    search_games_endpoint_api_v1_games_search_get: {
-        parameters: {
-            query: {
-                q: string;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GameListResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_leagues_api_v1_games_leagues_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    get_upcoming_games_api_v1_games_upcoming_get: {
-        parameters: {
-            query?: {
-                /** @description Filter by single league */
-                league?: string | null;
-                /** @description Filter by leagues (comma-separated, e.g. nfl,nba) */
-                leagues?: string | null;
-                /** @description Calendar day (YYYY-MM-DD). With time_zone, that day in the user's zone; without it, UTC midnight–midnight. Includes scheduled, live, and finished on that day. */
-                date?: string | null;
-                /** @description IANA timezone (e.g. America/New_York). Use with date so the day matches the device calendar. */
-                time_zone?: string | null;
-                skip?: number;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GameListResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_game_api_v1_games__game_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                game_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GameResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_prediction_explanation_api_v1_games__game_id__explanation_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                game_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PredictionExplanationResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_game_player_props_api_v1_games__game_id__player_props_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                game_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_market_odds_api_v1_games__game_id__market_odds_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                game_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MarketOddsResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_live_predictions_api_v1_games__game_id__live_predictions_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                game_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_prediction_api_v1_games__game_id__predictions_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                game_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PredictionResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    share_pick_api_v1_games__game_id__share_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                game_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_current_user_info_api_v1_user_me_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserResponse"];
-                };
-            };
-        };
-    };
-    delete_account_api_v1_user_me_delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    get_favorites_api_v1_user_favorites_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    add_favorite_team_api_v1_user_favorites_teams__team_id__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                team_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    remove_favorite_team_api_v1_user_favorites_teams__team_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                team_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    add_favorite_league_api_v1_user_favorites_leagues__league_code__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                league_code: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    remove_favorite_league_api_v1_user_favorites_leagues__league_code__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                league_code: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_prediction_history_api_v1_user_prediction_history_get: {
-        parameters: {
-            query?: {
-                skip?: number;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    register_push_token_api_v1_user_push_token_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    remove_push_token_api_v1_user_push_token_delete: {
-        parameters: {
-            query?: {
-                /** @description ExponentPushToken[xxx] to remove one; omit to remove all */
-                token?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    export_my_data_api_v1_user_me_export_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    ccpa_opt_out_api_v1_user_me_privacy_ccpa_opt_out_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    get_referral_code_api_v1_user_referral_code_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    apply_referral_code_api_v1_user_referral_apply_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReferralApplyBody"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_accuracy_api_v1_stats_accuracy_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    get_calibration_api_v1_stats_calibration_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    get_model_status_api_v1_stats_model_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    get_public_audit_bundle_api_v1_stats_public_audit_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    get_model_vs_market_api_v1_stats_model_vs_market_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    get_data_coverage_api_v1_stats_coverage_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    get_top_picks_api_v1_feed_top_picks_get: {
-        parameters: {
-            query?: {
-                /** @description Filter by single league (alias for leagues=) */
-                league?: string | null;
-                /** @description Filter by leagues (comma-separated) */
-                leagues?: string | null;
-                limit?: number;
-                /** @description Calendar day (YYYY-MM-DD). With time_zone, same local day as /games/upcoming; includes scheduled, live, and finished. */
-                date?: string | null;
-                /** @description IANA timezone (e.g. America/New_York). Use with date for soccer/model alignment. */
-                time_zone?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_for_you_feed_api_v1_feed_for_you_get: {
-        parameters: {
-            query?: {
-                /** @description Filter by single league (alias for leagues=) */
-                league?: string | null;
-                /** @description Filter by leagues (comma-separated) */
-                leagues?: string | null;
-                limit?: number;
-                /** @description Calendar day (YYYY-MM-DD). With time_zone, same local day as /games/upcoming. */
-                date?: string | null;
-                /** @description IANA timezone (e.g. America/New_York). Use with date for soccer/model alignment. */
-                time_zone?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_player_props_feed_api_v1_feed_player_props_get: {
-        parameters: {
-            query?: {
-                /** @description Filter by single league (alias for leagues=) */
-                league?: string | null;
-                /** @description Filter by leagues (comma-separated) */
-                leagues?: string | null;
-                limit?: number;
-                /** @description Calendar day (YYYY-MM-DD) */
-                date?: string | null;
-                /** @description IANA timezone */
-                time_zone?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_leaderboards_api_v1_leaderboards_get: {
-        parameters: {
-            query?: {
-                /** @description weekly | monthly | all */
-                period?: string;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -3258,18 +2760,44 @@ export interface operations {
             };
         };
     };
-    create_checkout_session_api_v1_subscription_create_checkout_post: {
+    read_feature_flags_api_v1_config_feature_flags_get: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateCheckoutBody"];
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
             };
         };
+    };
+    get_for_you_feed_api_v1_feed_for_you_get: {
+        parameters: {
+            query?: {
+                /** @description Filter by single league (alias for leagues=) */
+                league?: string | null;
+                /** @description Filter by leagues (comma-separated) */
+                leagues?: string | null;
+                limit?: number;
+                /** @description Calendar day (YYYY-MM-DD). With time_zone, same local day as /games/upcoming. */
+                date?: string | null;
+                /** @description IANA timezone (e.g. America/New_York). Use with date for soccer/model alignment. */
+                time_zone?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -3287,6 +2815,832 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_player_props_feed_api_v1_feed_player_props_get: {
+        parameters: {
+            query?: {
+                /** @description Filter by single league (alias for leagues=) */
+                league?: string | null;
+                /** @description Filter by leagues (comma-separated) */
+                leagues?: string | null;
+                limit?: number;
+                /** @description Calendar day (YYYY-MM-DD) */
+                date?: string | null;
+                /** @description IANA timezone */
+                time_zone?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_top_picks_api_v1_feed_top_picks_get: {
+        parameters: {
+            query?: {
+                /** @description Filter by single league (alias for leagues=) */
+                league?: string | null;
+                /** @description Filter by leagues (comma-separated) */
+                leagues?: string | null;
+                limit?: number;
+                /** @description Calendar day (YYYY-MM-DD). With time_zone, same local day as /games/upcoming; includes scheduled, live, and finished. */
+                date?: string | null;
+                /** @description IANA timezone (e.g. America/New_York). Use with date for soccer/model alignment. */
+                time_zone?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_widget_top_pick_api_v1_feed_widget_top_pick_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_leagues_api_v1_games_leagues_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    search_games_endpoint_api_v1_games_search_get: {
+        parameters: {
+            query: {
+                q: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_upcoming_games_api_v1_games_upcoming_get: {
+        parameters: {
+            query?: {
+                /** @description Filter by single league */
+                league?: string | null;
+                /** @description Filter by leagues (comma-separated, e.g. nfl,nba) */
+                leagues?: string | null;
+                /** @description Calendar day (YYYY-MM-DD). With time_zone, that day in the user's zone; without it, UTC midnight–midnight. Includes scheduled, live, and finished on that day. */
+                date?: string | null;
+                /** @description IANA timezone (e.g. America/New_York). Use with date so the day matches the device calendar. */
+                time_zone?: string | null;
+                skip?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_game_api_v1_games__game_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_prediction_explanation_api_v1_games__game_id__explanation_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PredictionExplanationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_game_feature_snapshots_api_v1_games__game_id__feature_snapshots_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_game_forecast_ledger_api_v1_games__game_id__forecast_ledger_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_game_injuries_api_v1_games__game_id__injuries_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_line_movement_api_v1_games__game_id__line_movement_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_live_predictions_api_v1_games__game_id__live_predictions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_market_odds_api_v1_games__game_id__market_odds_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketOddsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_game_player_props_api_v1_games__game_id__player_props_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_prediction_api_v1_games__game_id__predictions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PredictionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    share_pick_api_v1_games__game_id__share_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_game_weather_api_v1_games__game_id__weather_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_leaderboards_api_v1_leaderboards_get: {
+        parameters: {
+            query?: {
+                /** @description weekly | monthly | all */
+                period?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_accuracy_api_v1_stats_accuracy_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_calibration_api_v1_stats_calibration_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_community_vs_model_api_v1_stats_community_vs_model_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_data_coverage_api_v1_stats_coverage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_feature_store_summary_api_v1_stats_feature_store_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_forecast_ledger_summary_api_v1_stats_forecast_ledger_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_model_status_api_v1_stats_model_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_model_acceptance_api_v1_stats_model_acceptance_get: {
+        parameters: {
+            query?: {
+                level?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_model_vs_closing_api_v1_stats_model_vs_closing_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_model_vs_market_api_v1_stats_model_vs_market_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_public_audit_bundle_api_v1_stats_public_audit_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
         };
@@ -3311,16 +3665,18 @@ export interface operations {
             };
         };
     };
-    stripe_webhook_api_v1_subscription_webhook_post: {
+    create_checkout_session_api_v1_subscription_create_checkout_post: {
         parameters: {
             query?: never;
-            header?: {
-                "Stripe-Signature"?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCheckoutBody"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -3373,41 +3729,12 @@ export interface operations {
             };
         };
     };
-    ingest_ad_events_api_v1_analytics_ad_events_post: {
+    stripe_webhook_api_v1_subscription_webhook_post: {
         parameters: {
             query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AdSessionPayload"];
+            header?: {
+                "Stripe-Signature"?: string | null;
             };
-        };
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_feature_flags_api_v1_config_feature_flags_get: {
-        parameters: {
-            query?: never;
-            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -3420,6 +3747,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -3457,7 +3793,507 @@ export interface operations {
             };
         };
     };
-    run_push_triggers_internal_push_triggers_run_post: {
+    get_favorites_api_v1_user_favorites_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    add_favorite_league_api_v1_user_favorites_leagues__league_code__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                league_code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_favorite_league_api_v1_user_favorites_leagues__league_code__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                league_code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_favorite_team_api_v1_user_favorites_teams__team_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_favorite_team_api_v1_user_favorites_teams__team_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_current_user_info_api_v1_user_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+        };
+    };
+    delete_account_api_v1_user_me_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    export_my_data_api_v1_user_me_export_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    submit_user_pick_api_v1_user_me_picks_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserPickBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_user_brier_stats_api_v1_user_me_picks_brier_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    quarantine_my_unverified_picks_api_v1_user_me_picks_quarantine_unverified_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_my_pick_for_game_api_v1_user_me_picks__game_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ccpa_opt_out_api_v1_user_me_privacy_ccpa_opt_out_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_prediction_history_api_v1_user_prediction_history_get: {
+        parameters: {
+            query?: {
+                skip?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    register_push_token_api_v1_user_push_token_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_push_token_api_v1_user_push_token_delete: {
+        parameters: {
+            query?: {
+                /** @description ExponentPushToken[xxx] to remove one; omit to remove all */
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_referral_code_api_v1_user_referral_apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReferralApplyBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_referral_code_api_v1_user_referral_code_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    health_check_health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    run_email_digest_cron_internal_email_digest_run_post: {
         parameters: {
             query?: never;
             header?: {
@@ -3488,7 +4324,7 @@ export interface operations {
             };
         };
     };
-    run_live_sync_cron_internal_live_sync_run_post: {
+    verify_forecast_ledger_cron_internal_forecast_ledger_verify_get: {
         parameters: {
             query?: never;
             header?: {
@@ -3497,81 +4333,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["LiveSyncBody"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    run_predictions_cron_internal_predictions_run_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                "X-Cron-Secret"?: string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PredictionRunBody"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    train_model_cron_internal_ml_train_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                "X-Cron-Secret"?: string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["TrainModelBody"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -3663,7 +4425,7 @@ export interface operations {
             };
         };
     };
-    soccer_sync_schedules_internal_soccer_sync_schedules_post: {
+    clearsports_health_internal_health_clearsports_get: {
         parameters: {
             query?: never;
             header?: {
@@ -3673,72 +4435,6 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    us_sports_sync_schedules_internal_us_sports_sync_schedules_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                "X-Cron-Secret"?: string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    historical_backfill_run_internal_historical_backfill_run_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                "X-Cron-Secret"?: string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["HistoricalBackfillBody"];
-            };
-        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -3791,7 +4487,7 @@ export interface operations {
             };
         };
     };
-    clearsports_health_internal_health_clearsports_get: {
+    historical_backfill_run_internal_historical_backfill_run_post: {
         parameters: {
             query?: never;
             header?: {
@@ -3800,7 +4496,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["HistoricalBackfillBody"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -3888,7 +4588,7 @@ export interface operations {
             };
         };
     };
-    run_email_digest_cron_internal_email_digest_run_post: {
+    run_one_job_internal_jobs_run_one_post: {
         parameters: {
             query?: never;
             header?: {
@@ -3919,10 +4619,82 @@ export interface operations {
             };
         };
     };
-    health_check_health_get: {
+    run_live_sync_cron_internal_live_sync_run_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Cron-Secret"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["LiveSyncBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    train_model_cron_internal_ml_train_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Cron-Secret"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["TrainModelBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    model_artifact_bom_internal_model_bom_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Cron-Secret"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -3935,6 +4707,178 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    freeze_closing_odds_cron_internal_odds_freeze_closing_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Cron-Secret"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["FreezeClosingBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_predictions_cron_internal_predictions_run_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Cron-Secret"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PredictionRunBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_push_triggers_internal_push_triggers_run_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Cron-Secret"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    soccer_sync_schedules_internal_soccer_sync_schedules_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Cron-Secret"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    us_sports_sync_schedules_internal_us_sports_sync_schedules_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Cron-Secret"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

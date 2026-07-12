@@ -46,3 +46,4 @@ Short reference for investors and developers. **This is what runs in production 
 
 - Disabled on public prod API (`OPENAPI_DOCS_ENABLED=false`)
 - Schema exported via `python backend/scripts/export_openapi.py` → `docs/openapi.json`
+- CI drift gates: `export_openapi.py --check` + mobile `codegen:api` (see `docs/OPENAPI_CODEGEN.md`)

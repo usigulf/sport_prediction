@@ -38,6 +38,15 @@ jobs:
         working-directory: ..
         run: bash scripts/verify_audit_scaffolds.sh
 
+      - name: OpenAPI schema drift check
+        working-directory: ..
+        env:
+          REDIS_URL: disabled
+          JWT_SECRET: ci-test-jwt-secret-minimum-32-characters-long
+          ENVIRONMENT: development
+          OPENAPI_DOCS_ENABLED: "true"
+        run: python backend/scripts/export_openapi.py --check
+
       - name: Pytest with coverage
         env:
           DATABASE_URL: "sqlite:///:memory:"
@@ -110,6 +119,12 @@ jobs:
         run: |
           npm ci
           npx tsc --noEmit
+
+      - name: OpenAPI TypeScript codegen drift check
+        run: |
+          npm run codegen:api
+          git diff --exit-code -- src/types/api.generated.ts \
+            || (echo "FAIL api.generated.ts drifted — run: cd mobile && npm run codegen:api" && exit 1)
 
       - name: Jest unit tests
         run: npm test -- --ci
