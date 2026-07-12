@@ -1,6 +1,6 @@
 /**
  * Optional PostHog product analytics (HTTP capture — no native SDK required).
- * No-op when EXPO_PUBLIC_POSTHOG_API_KEY is unset.
+ * No-op when EXPO_PUBLIC_POSTHOG_API_KEY is unset or privacy consent denies analytics.
  */
 import { Platform } from 'react-native';
 import { ANALYTICS_EVENTS, type AnalyticsEventName } from '../constants/analyticsEvents';
@@ -9,6 +9,7 @@ import {
   resetAnalyticsDistinctId,
   setAnalyticsDistinctId,
 } from '../utils/analyticsDistinctId';
+import { canSendAnalytics } from '../utils/privacyPreferences';
 
 const POSTHOG_KEY =
   typeof process !== 'undefined' ? process.env.EXPO_PUBLIC_POSTHOG_API_KEY?.trim() : '';
@@ -27,6 +28,7 @@ async function posthogCapture(
   distinctId?: string,
 ): Promise<void> {
   if (!POSTHOG_KEY) return;
+  if (!(await canSendAnalytics())) return;
   const id = distinctId ?? (await getAnalyticsDistinctId());
   try {
     await fetch(`${POSTHOG_HOST}/capture/`, {
@@ -68,6 +70,7 @@ export async function identifyUser(
   traits?: Record<string, string | number | boolean | null | undefined>,
 ): Promise<void> {
   if (!POSTHOG_KEY || !userId) return;
+  if (!(await canSendAnalytics())) return;
   const anonId = await getAnalyticsDistinctId();
   if (anonId !== userId) {
     await posthogCapture(

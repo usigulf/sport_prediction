@@ -36,6 +36,7 @@ import {
 import { recordAppLaunch } from './src/utils/storeReview';
 import { trackAppOpened } from './src/services/productAnalytics';
 import { fetchServerFeatureFlags } from './src/hooks/useServerFeatureFlags';
+import { canInitializeAdsSdk, canSendAnalytics } from './src/utils/privacyPreferences';
 import { RewardedUnlockProvider } from './src/ads/engine/RewardedUnlockContext';
 import { AdEngineProvider } from './src/ads/engine/AdEngineContext';
 
@@ -54,7 +55,11 @@ function AppContent() {
   useEffect(() => {
     if (!appReady) return;
     void recordAppLaunch();
-    void trackAppOpened();
+    void (async () => {
+      if (await canSendAnalytics()) {
+        await trackAppOpened();
+      }
+    })();
     return subscribeToPushNotificationResponses();
   }, [appReady]);
 
@@ -118,8 +123,12 @@ function AppContent() {
       }
       if (cancelled) return;
 
-      // Defer native SDK init until after first paint — avoids launch-time native crashes.
-      void initializeGoogleMobileAds();
+      // Defer native SDK init until after first paint + privacy consent.
+      void (async () => {
+        if (await canInitializeAdsSdk()) {
+          await initializeGoogleMobileAds();
+        }
+      })();
       let lastUserId = store.getState().auth.user?.id ?? '';
       await configurePurchases(lastUserId || undefined);
       unsubEntitlements = addEntitlementListener((tier) => {

@@ -40,6 +40,8 @@ async function requestTrackingPermissionIfNeeded(): Promise<void> {
 }
 
 export async function initializeGoogleMobileAds(): Promise<void> {
+  const { canInitializeAdsSdk } = await import('../../utils/privacyPreferences');
+  if (!(await canInitializeAdsSdk())) return;
   const m = loadGoogleMobileAdsModule();
   if (!m) return;
   const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, unknown>;

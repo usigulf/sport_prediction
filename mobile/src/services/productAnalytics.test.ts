@@ -4,6 +4,10 @@ jest.mock('../utils/analyticsDistinctId', () => ({
   resetAnalyticsDistinctId: jest.fn(async () => undefined),
 }));
 
+jest.mock('../utils/privacyPreferences', () => ({
+  canSendAnalytics: jest.fn(async () => false),
+}));
+
 describe('productAnalytics', () => {
   const originalEnv = process.env;
 

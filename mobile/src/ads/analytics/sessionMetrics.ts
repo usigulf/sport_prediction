@@ -9,6 +9,8 @@ const SESSION_STARTED_AT_KEY = '@octobetiQ/ad_session_started_at_v1';
 
 export async function enqueueServerFlush(payload: unknown): Promise<void> {
   try {
+    const { canSendAdsTelemetry } = await import('../../utils/privacyPreferences');
+    if (!(await canSendAdsTelemetry())) return;
     const origin = getApiOrigin();
     await fetch(`${origin}/api/v1/analytics/ad-events`, {
       method: 'POST',

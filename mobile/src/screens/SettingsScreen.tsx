@@ -7,6 +7,7 @@ import {
   Switch,
   Platform,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -20,6 +21,13 @@ import {
   registerPushTokenIfPossible,
   disablePushNotifications,
 } from '../utils/pushNotifications';
+import {
+  getPrivacyPreferences,
+  setPrivacyPreferences,
+  type PrivacyPreferences,
+} from '../utils/privacyPreferences';
+import { apiService } from '../services/api';
+import { useAppSelector } from '../store/hooks';
 import { theme } from '../constants/theme';
 import {
   isIosManageSubscriptionsAvailable,
@@ -28,12 +36,18 @@ import {
 
 export const SettingsScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
   const [pushEnabled, setPushEnabledState] = useState<boolean>(false);
+  const [privacy, setPrivacy] = useState<PrivacyPreferences | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const enabled = await getPushNotificationsEnabled();
+    const [enabled, prefs] = await Promise.all([
+      getPushNotificationsEnabled(),
+      getPrivacyPreferences(),
+    ]);
     setPushEnabledState(enabled);
+    setPrivacy(prefs);
     setLoading(false);
   }, []);
 
@@ -49,6 +63,53 @@ export const SettingsScreen: React.FC = () => {
     } else {
       await disablePushNotifications();
     }
+  };
+
+  const onAnalyticsToggle = async (value: boolean) => {
+    const next = await setPrivacyPreferences({
+      analyticsEnabled: value,
+      ...(value ? { ccpaOptOut: false } : {}),
+    });
+    setPrivacy(next);
+  };
+
+  const onAdsMeasurementToggle = async (value: boolean) => {
+    const next = await setPrivacyPreferences({
+      adsMeasurementEnabled: value,
+      ...(value ? { ccpaOptOut: false } : {}),
+    });
+    setPrivacy(next);
+  };
+
+  const onCcpaOptOut = () => {
+    Alert.alert(
+      'Do not sell or share',
+      'We do not sell personal information. This turns off analytics and ad measurement on this device and records your preference if you are signed in.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              const next = await setPrivacyPreferences({
+                ccpaOptOut: true,
+                analyticsEnabled: false,
+                adsMeasurementEnabled: false,
+              });
+              setPrivacy(next);
+              if (isAuthenticated) {
+                try {
+                  await apiService.recordCcpaOptOut();
+                } catch {
+                  // Local preference still applies; server sync is best-effort.
+                }
+              }
+            })();
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -70,6 +131,57 @@ export const SettingsScreen: React.FC = () => {
           Kickoff alerts about 2 hours before games for your favorite teams and leagues,
           post-game result summaries, and high-confidence pick alerts. Turn off to stop all push notifications.
         </Text>
+      </View>
+
+      <Text style={styles.outerSectionTitle}>Privacy</Text>
+      <View style={styles.section}>
+        <View style={styles.row}>
+          <Text style={styles.label}>Product analytics</Text>
+          {!loading && privacy && (
+            <Switch
+              value={privacy.analyticsEnabled && !privacy.ccpaOptOut}
+              onValueChange={(v) => void onAnalyticsToggle(v)}
+              trackColor={{ false: theme.colors.border, true: theme.colors.accentDim }}
+              thumbColor={Platform.OS === 'android' ? theme.colors.accent : undefined}
+              accessibilityLabel="Allow product analytics"
+            />
+          )}
+        </View>
+        <Text style={styles.hint}>
+          Anonymous usage events used to improve the product. Off by default until you opt in.
+        </Text>
+        <View style={[styles.row, { marginTop: 12 }]}>
+          <Text style={styles.label}>Ad measurement</Text>
+          {!loading && privacy && (
+            <Switch
+              value={privacy.adsMeasurementEnabled && !privacy.ccpaOptOut}
+              onValueChange={(v) => void onAdsMeasurementToggle(v)}
+              trackColor={{ false: theme.colors.border, true: theme.colors.accentDim }}
+              thumbColor={Platform.OS === 'android' ? theme.colors.accent : undefined}
+              accessibilityLabel="Allow ad measurement"
+            />
+          )}
+        </View>
+        <Text style={styles.hint}>
+          Allows ad performance signals. Free-tier ads may still show without sending telemetry.
+        </Text>
+        <TouchableOpacity
+          style={[styles.linkRow, styles.linkRowLast, { marginTop: 8 }]}
+          onPress={onCcpaOptOut}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Do not sell or share my personal information"
+        >
+          <View style={styles.linkTextBlock}>
+            <Text style={styles.linkTitle}>Do not sell or share</Text>
+            <Text style={styles.linkSubtitle}>
+              {privacy?.ccpaOptOut
+                ? 'Preference recorded on this device'
+                : 'California privacy request (CCPA)'}
+            </Text>
+          </View>
+          <Ionicons name="shield-checkmark-outline" size={20} color={theme.colors.textMuted} />
+        </TouchableOpacity>
       </View>
 
       {isIosManageSubscriptionsAvailable() ? (

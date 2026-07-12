@@ -704,6 +704,13 @@ class ApiService {
     );
   }
 
+  async recordCcpaOptOut() {
+    return this.request<{ message: string; ccpa_opt_out_at: string }>(
+      '/user/me/privacy/ccpa-opt-out',
+      { method: 'POST', requireAuth: true },
+    );
+  }
+
   async getUserBrierStats() {
     return this.request<UserBrierStatsResponse>('/user/me/picks/brier', {
       requireAuth: true,

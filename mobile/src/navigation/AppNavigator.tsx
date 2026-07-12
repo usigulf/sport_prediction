@@ -43,9 +43,15 @@ import { CreateChallengeScreen } from '../screens/CreateChallengeScreen';
 import { ChallengeDetailScreen } from '../screens/ChallengeDetailScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { AgeGateScreen } from '../screens/AgeGateScreen';
+import { PrivacyConsentScreen } from '../screens/PrivacyConsentScreen';
 import { GuestProfileScreen } from '../screens/GuestProfileScreen';
 import { getAgeGateConfirmed } from '../utils/ageGateStorage';
-import { trackScreenView } from '../services/productAnalytics';
+import {
+  canSendAnalytics,
+  getPrivacyPreferences,
+} from '../utils/privacyPreferences';
+import { initializeGoogleMobileAds } from '../ads/native/loadGma';
+import { trackAppOpened, trackScreenView } from '../services/productAnalytics';
 
 // Types
 export type RootStackParamList = {
@@ -352,6 +358,8 @@ export function AppNavigator() {
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const [ageGateChecked, setAgeGateChecked] = useState(false);
   const [ageGateOk, setAgeGateOk] = useState(false);
+  const [privacyChecked, setPrivacyChecked] = useState(false);
+  const [privacyOk, setPrivacyOk] = useState(false);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
@@ -362,13 +370,18 @@ export function AppNavigator() {
         if (!cancelled) {
           setAgeGateOk(true);
           setAgeGateChecked(true);
+          setPrivacyOk(true);
+          setPrivacyChecked(true);
         }
         return;
       }
       const confirmed = await getAgeGateConfirmed();
+      const privacy = await getPrivacyPreferences();
       if (!cancelled) {
         setAgeGateOk(confirmed);
         setAgeGateChecked(true);
+        setPrivacyOk(privacy.consentCompleted);
+        setPrivacyChecked(true);
       }
     })();
     return () => {
@@ -403,7 +416,7 @@ export function AppNavigator() {
   const navigationKey = isAuthenticated ? 'authenticated' : 'guest';
   const routeNameRef = useRef<string | undefined>(undefined);
 
-  if (!ageGateChecked) {
+  if (!ageGateChecked || !privacyChecked) {
     return (
       <View style={styles.gate}>
         <ActivityIndicator size="large" color={theme.colors.accent} />
@@ -413,6 +426,22 @@ export function AppNavigator() {
 
   if (!ageGateOk) {
     return <AgeGateScreen onConfirmed={() => setAgeGateOk(true)} />;
+  }
+
+  if (!privacyOk) {
+    return (
+      <PrivacyConsentScreen
+        onCompleted={() => {
+          setPrivacyOk(true);
+          void initializeGoogleMobileAds();
+          void (async () => {
+            if (await canSendAnalytics()) {
+              await trackAppOpened();
+            }
+          })();
+        }}
+      />
+    );
   }
 
   return (
