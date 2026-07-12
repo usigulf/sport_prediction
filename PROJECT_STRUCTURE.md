@@ -196,15 +196,16 @@ Add as needed: `migrate.sh`, `docker-compose up` helpers, CI scripts.
 
 ---
 
-## 5. Shared / monorepo (optional)
+## 5. Shared / monorepo (resolved)
 
-If you align with `pnpm-workspace.yaml` (`apps/*`, `packages/*`, `services/*`):
+Canonical mobile app stays at repo-root **`mobile/`** (not under `apps/`).
 
-- **apps/mobile** — move `mobile/` into `apps/mobile` so it’s part of the workspace.
-- **packages/** — e.g. shared TypeScript types or API client used by mobile and a future web app.
-- **services/** — e.g. standalone prediction or live-update service (Python/Node).
+The experimental Expo Router tree formerly at `apps/mobile/` was moved to
+[`archive/apps-mobile/`](./archive/apps-mobile/) (audit #12). Root `package.json`
+scripts (`mobile:start`, `mobile:ios`, `mobile:android`) point at `mobile/`.
 
-Current root `package.json` already has `mobile:start`, `mobile:ios`, `mobile:android`; if mobile stays at `mobile/`, you can keep those or point them at `apps/mobile` after moving.
+Optional future packages can still live under `packages/` if needed; do not
+reintroduce a second shippable mobile app under `apps/`.
 
 ---
 

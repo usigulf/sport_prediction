@@ -9,6 +9,7 @@ This directory holds **superseded** experiments and microservice scaffolds. Do n
 | `archive/ml/training/train_simple_model.py` | Synthetic Random Forest demo | `backend/train_model.py` + `app/services/model_training.py` |
 | `archive/ml/inference/simple_inference.py` | Standalone pkl loader | `app/services/ml_artifacts.py` + `prediction_inference_service.py` |
 | `archive/services/predictions/` | Rust predictions microservice (never wired to prod) | FastAPI `backend/app/api/v1/` + internal prediction job |
+| `archive/apps-mobile/` | Experimental Expo Router client at `apps/mobile/` | Canonical Expo app at repo-root `mobile/` |
 
 ## Active ML stack (2026)
 

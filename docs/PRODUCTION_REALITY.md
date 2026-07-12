@@ -10,7 +10,8 @@ Short reference for investors and developers. **This is what runs in production 
 | Database | PostgreSQL + TimescaleDB extension on same VPS |
 | Cache | Redis (requirepass) for rate limits, JWT denylist, WS pub/sub |
 | ML inference | In-process **logistic regression** (per-league sklearn pickles in `ml/models/`) |
-| Mobile | Expo React Native (iOS primary; Android project present) |
+| Mobile | Expo React Native at repo-root `mobile/` (iOS primary; Android project present). Experimental `apps/mobile` archived to `archive/apps-mobile/` |
+
 | Payments | Stripe (web) + RevenueCat / App Store (iOS) |
 | Deploy | `scripts/deploy_api.sh`, Docker Compose |
 
