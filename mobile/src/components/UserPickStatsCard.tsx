@@ -1,19 +1,40 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { theme } from '../constants/theme';
+import { apiService } from '../services/api';
+import { getUserFriendlyMessage } from '../utils/errorMessages';
 import type { UserBrierStatsResponse } from '../services/api';
 
 type Props = {
   stats: UserBrierStatsResponse;
+  onQuarantined?: () => void;
 };
 
-export const UserPickStatsCard: React.FC<Props> = ({ stats }) => {
+export const UserPickStatsCard: React.FC<Props> = ({ stats, onQuarantined }) => {
   const clv = stats.clv;
   const showClv = clv.scored_picks > 0 && clv.avg_clv != null;
+  const unverified = stats.unverified_legacy_picks ?? 0;
+  const [quarantining, setQuarantining] = useState(false);
+
+  const clearUnverified = async () => {
+    setQuarantining(true);
+    try {
+      const res = await apiService.quarantineUnverifiedPicks();
+      Alert.alert('Scorecard', `Removed ${res.deleted} unverified pick(s).`);
+      onQuarantined?.();
+    } catch (e) {
+      Alert.alert('Scorecard', getUserFriendlyMessage(e));
+    } finally {
+      setQuarantining(false);
+    }
+  };
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>Your pick performance</Text>
+      <Text style={styles.title}>Your recorded picks</Text>
+      <Text style={styles.subtitle}>
+        Only picks you explicitly save on game detail count. Model-auto rows are excluded.
+      </Text>
       <View style={styles.row}>
         <View style={styles.stat}>
           <Text style={styles.statValue}>
@@ -51,6 +72,26 @@ export const UserPickStatsCard: React.FC<Props> = ({ stats }) => {
       <Text style={styles.meta}>
         {stats.scored_picks} graded · {stats.pending_picks} pending · {stats.total_picks} total
       </Text>
+      {unverified > 0 ? (
+        <View style={styles.quarantineBox}>
+          <Text style={styles.quarantineText}>
+            {unverified} legacy/auto pick(s) are excluded from this scorecard.
+          </Text>
+          <TouchableOpacity
+            style={styles.quarantineBtn}
+            onPress={() => void clearUnverified()}
+            disabled={quarantining}
+            accessibilityRole="button"
+            accessibilityLabel="Remove unverified picks"
+          >
+            {quarantining ? (
+              <ActivityIndicator size="small" color={theme.colors.background} />
+            ) : (
+              <Text style={styles.quarantineBtnText}>Remove unverified</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      ) : null}
     </View>
   );
 };
@@ -68,6 +109,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: theme.colors.text,
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    lineHeight: 16,
     marginBottom: theme.spacing.sm,
   },
   row: {
@@ -115,5 +162,30 @@ const styles = StyleSheet.create({
   meta: {
     fontSize: 11,
     color: theme.colors.textMuted,
+  },
+  quarantineBox: {
+    marginTop: theme.spacing.sm,
+    paddingTop: theme.spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderSubtle,
+  },
+  quarantineText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.sm,
+  },
+  quarantineBtn: {
+    alignSelf: 'flex-start',
+    backgroundColor: theme.colors.secondary,
+    borderRadius: theme.radii.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minHeight: 36,
+    justifyContent: 'center',
+  },
+  quarantineBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.background,
   },
 });

@@ -13,7 +13,12 @@ from app.api.deps import get_current_user
 from app.config import get_settings
 from app.services.subscription_cancel_service import cancel_external_subscriptions_for_user
 from app.services.gdpr_export_service import build_user_data_export
-from app.services.user_brier_service import build_user_brier_summary, record_user_pick
+from app.services.user_brier_service import (
+    build_user_brier_summary,
+    get_user_pick_for_game,
+    quarantine_unverified_user_picks,
+    record_user_pick,
+)
 from app.schemas.user import UserResponse
 from app.models.game import Game
 from app.models.user import User
@@ -276,6 +281,10 @@ class UserPickBody(BaseModel):
     probability: float = Field(..., ge=0.01, le=0.99)
     market_home_implied_prob: Optional[float] = Field(None, ge=0.0, le=1.0)
     market_away_implied_prob: Optional[float] = Field(None, ge=0.0, le=1.0)
+    replace: bool = Field(
+        False,
+        description="If true, overwrite an existing pick. Default false (immutable).",
+    )
 
 
 @router.post("/me/picks")
@@ -284,7 +293,7 @@ async def submit_user_pick(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Record or update the user's pick for a game (I92 — Brier tracking)."""
+    """Record an explicit user pick for a game (I92 — Brier tracking). Immutable unless replace=true."""
     try:
         game_uuid = UUID(body.game_id.strip())
     except ValueError as e:
@@ -301,6 +310,8 @@ async def submit_user_pick(
             probability=body.probability,
             market_home_implied=body.market_home_implied_prob,
             market_away_implied=body.market_away_implied_prob,
+            source="user",
+            replace=body.replace,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -309,6 +320,7 @@ async def submit_user_pick(
         "game_id": str(pick.game_id),
         "outcome": pick.outcome,
         "probability": float(pick.probability),
+        "source": getattr(pick, "source", "user"),
         "created_at": datetime_to_iso(pick.created_at),
     }
 
@@ -320,6 +332,45 @@ async def get_user_brier_stats(
 ):
     """Per-user Brier score vs model on finished games + CLV rollup (I92, I63)."""
     return build_user_brier_summary(db, current_user.id)
+
+
+@router.post("/me/picks/quarantine-unverified")
+async def quarantine_my_unverified_picks(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete legacy/auto picks that should not count as personal performance."""
+    result = quarantine_unverified_user_picks(db, user_id=current_user.id)
+    return {
+        "message": "Unverified picks removed from your scorecard.",
+        "deleted": result["deleted"],
+    }
+
+
+@router.get("/me/picks/{game_id}")
+async def get_my_pick_for_game(
+    game_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return the current user's pick for a game, if any."""
+    try:
+        game_uuid = UUID(game_id.strip())
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid game_id") from e
+    pick = get_user_pick_for_game(db, user_id=current_user.id, game_id=game_uuid)
+    if not pick:
+        return {"pick": None}
+    return {
+        "pick": {
+            "id": str(pick.id),
+            "game_id": str(pick.game_id),
+            "outcome": pick.outcome,
+            "probability": float(pick.probability),
+            "source": getattr(pick, "source", "user"),
+            "created_at": datetime_to_iso(pick.created_at),
+        }
+    }
 
 
 @router.get("/me/export")

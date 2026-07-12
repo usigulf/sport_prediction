@@ -25,7 +25,7 @@ export interface Game {
   home_team?: Team;
   away_team?: Team;
   scheduled_time: string;
-  status: 'scheduled' | 'live' | 'finished';
+  status: 'scheduled' | 'live' | 'finished' | 'final';
   home_score?: number;
   away_score?: number;
   venue?: string;

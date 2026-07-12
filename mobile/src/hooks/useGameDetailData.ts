@@ -15,7 +15,6 @@ import { hasPremiumAccess } from '../utils/subscription';
 import { useRewardedUnlock } from '../ads/engine/RewardedUnlockContext';
 import { useAdEngine } from '../ads/engine/AdEngineContext';
 import { trackSharePick } from '../services/productAnalytics';
-import { modelPickFromPrediction } from '../utils/userPickTracking';
 import {
   gameDetailQueryKey,
   gamePredictionQueryKey,
@@ -210,37 +209,6 @@ export function useGameDetailData(gameId: string, navigation: Nav) {
       cancelled = true;
     };
   }, [gameId, currentGame?.id, currentGame?.league]);
-
-  useEffect(() => {
-    if (!isAuthenticated || !currentPrediction || !currentGame) return;
-    const status = currentGame.status;
-    if (status === 'finished' || status === 'final') return;
-
-    const hp = Number(currentPrediction.home_win_probability);
-    const ap = Number(currentPrediction.away_win_probability);
-    if (!Number.isFinite(hp) || !Number.isFinite(ap)) return;
-
-    const { outcome, probability } = modelPickFromPrediction(hp, ap, currentGame.league);
-    void apiService
-      .recordUserPick({
-        game_id: gameId,
-        outcome,
-        probability,
-        market_home_implied_prob: marketOdds?.consensus?.home_implied_prob ?? null,
-        market_away_implied_prob: marketOdds?.consensus?.away_implied_prob ?? null,
-      })
-      .catch(() => {
-        /* non-blocking */
-      });
-  }, [
-    currentGame,
-    currentPrediction,
-    gameId,
-    isAuthenticated,
-    marketOdds?.consensus?.away_implied_prob,
-    marketOdds?.consensus?.home_implied_prob,
-    marketOdds?.fetched_at_iso,
-  ]);
 
   useEffect(() => {
     if (!isPremium || !lastUpdate?.prediction_updated_at) return;

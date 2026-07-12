@@ -17,6 +17,7 @@ import { GameDetailPlayerPropsSection } from './gameDetail/GameDetailPlayerProps
 import { GameDetailGameInfo } from './gameDetail/GameDetailGameInfo';
 import { GameDetailInjurySection } from './gameDetail/GameDetailInjurySection';
 import { GameDetailWeatherSection } from './gameDetail/GameDetailWeatherSection';
+import { GameDetailRecordPickSection } from './gameDetail/GameDetailRecordPickSection';
 import { gameDetailStyles as s } from './gameDetail/gameDetailStyles';
 
 export type { PlayerPropItem } from './gameDetail/types';
@@ -134,6 +135,18 @@ export const GameDetailScreen: React.FC = () => {
           lastUpdatePredictionAt={lastUpdate?.prediction_updated_at}
           onShare={handleShare}
           navigation={navigation}
+        />
+        <GameDetailRecordPickSection
+          gameId={gameId}
+          league={currentGame.league}
+          homeName={homeName}
+          awayName={awayName}
+          homeWinProb={currentPrediction?.home_win_probability}
+          awayWinProb={currentPrediction?.away_win_probability}
+          gameStatus={currentGame.status}
+          isAuthenticated={isAuthenticated}
+          marketHomeImplied={marketOdds?.consensus?.home_implied_prob}
+          marketAwayImplied={marketOdds?.consensus?.away_implied_prob}
         />
         {isPremium ? (
           <GameDetailLiveSection

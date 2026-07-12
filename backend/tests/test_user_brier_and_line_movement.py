@@ -78,6 +78,82 @@ def test_submit_pick_endpoint(client, auth_headers, test_game):
     body = r.json()
     assert body["outcome"] == "home"
     assert body["probability"] == 0.62
+    assert body.get("source") == "user"
+
+    # Immutable: second POST without replace fails
+    r2 = client.post(
+        "/api/v1/user/me/picks",
+        headers=auth_headers,
+        json={
+            "game_id": str(test_game.id),
+            "outcome": "away",
+            "probability": 0.55,
+        },
+    )
+    assert r2.status_code == status.HTTP_400_BAD_REQUEST
+
+    # Explicit replace allowed
+    r3 = client.post(
+        "/api/v1/user/me/picks",
+        headers=auth_headers,
+        json={
+            "game_id": str(test_game.id),
+            "outcome": "away",
+            "probability": 0.55,
+            "replace": True,
+        },
+    )
+    assert r3.status_code == status.HTTP_200_OK
+    assert r3.json()["outcome"] == "away"
+
+
+def test_legacy_picks_excluded_from_brier_and_quarantine(db, test_user, test_teams):
+    game_id = uuid4()
+    scheduled = datetime.now(timezone.utc) - timedelta(days=2)
+    game = Game(
+        id=game_id,
+        league="nfl",
+        home_team_id=test_teams[0].id,
+        away_team_id=test_teams[1].id,
+        scheduled_time=scheduled,
+        status="scheduled",
+    )
+    db.add(game)
+    db.add(
+        Prediction(
+            id=uuid4(),
+            game_id=game_id,
+            model_version="v1.0.0",
+            prediction_type="pre_game",
+            home_win_probability=0.55,
+            away_win_probability=0.45,
+            confidence_level="medium",
+        )
+    )
+    db.commit()
+
+    record_user_pick(
+        db,
+        user_id=test_user.id,
+        game=game,
+        outcome="home",
+        probability=0.90,
+        source="legacy_unverified",
+    )
+    game.status = "finished"
+    game.home_score = 28
+    game.away_score = 14
+    db.commit()
+
+    summary = build_user_brier_summary(db, test_user.id)
+    assert summary["scored_picks"] == 0
+    assert summary["unverified_legacy_picks"] == 1
+
+    from app.services.user_brier_service import quarantine_unverified_user_picks
+
+    result = quarantine_unverified_user_picks(db, user_id=test_user.id)
+    assert result["deleted"] == 1
+    assert db.query(UserPick).filter(UserPick.user_id == test_user.id).count() == 0
 
 
 def test_brier_endpoint_requires_auth(client):

@@ -1,4 +1,4 @@
-import { modelPickFromPrediction } from './userPickTracking';
+import { modelPickFromPrediction, probabilityForOutcome } from './userPickTracking';
 
 describe('modelPickFromPrediction', () => {
   it('picks home or away for two-outcome sports', () => {
@@ -16,5 +16,12 @@ describe('modelPickFromPrediction', () => {
     const pick = modelPickFromPrediction(0.2, 0.2, 'premier_league');
     expect(pick.outcome).toBe('draw');
     expect(pick.probability).toBeCloseTo(0.6, 5);
+  });
+});
+
+describe('probabilityForOutcome', () => {
+  it('returns model probability for the selected side', () => {
+    expect(probabilityForOutcome('home', 0.7, 0.3, 'nfl')).toBeCloseTo(0.7);
+    expect(probabilityForOutcome('away', 0.7, 0.3, 'nfl')).toBeCloseTo(0.3);
   });
 });

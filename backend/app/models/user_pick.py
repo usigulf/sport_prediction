@@ -15,6 +15,8 @@ class UserPick(Base):
     game_id = Column(GUID, ForeignKey("games.id", ondelete="CASCADE"), nullable=False, index=True)
     outcome = Column(String(10), nullable=False)  # home | away | draw
     probability = Column(Numeric(5, 4), nullable=False)
+    # user = explicit UI tap; legacy_unverified = pre-fix auto/unknown rows
+    source = Column(String(32), nullable=False, server_default="user")
     market_home_implied_prob = Column(Numeric(5, 4), nullable=True)
     market_away_implied_prob = Column(Numeric(5, 4), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

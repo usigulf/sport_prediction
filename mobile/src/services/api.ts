@@ -307,6 +307,7 @@ export interface UserBrierStatsResponse {
   user_brier: number | null;
   model_brier: number | null;
   brier_delta: number | null;
+  unverified_legacy_picks?: number;
   clv: {
     scored_picks: number;
     avg_clv: number | null;
@@ -667,14 +668,39 @@ class ApiService {
     probability: number;
     market_home_implied_prob?: number | null;
     market_away_implied_prob?: number | null;
+    replace?: boolean;
   }) {
-    return this.request<{ id: string; game_id: string; outcome: string; probability: number }>(
-      '/user/me/picks',
-      {
-        method: 'POST',
-        requireAuth: true,
-        body,
-      },
+    return this.request<{
+      id: string;
+      game_id: string;
+      outcome: string;
+      probability: number;
+      source?: string;
+      created_at?: string;
+    }>('/user/me/picks', {
+      method: 'POST',
+      requireAuth: true,
+      body,
+    });
+  }
+
+  async getUserPickForGame(gameId: string) {
+    return this.request<{
+      pick: {
+        id: string;
+        game_id: string;
+        outcome: string;
+        probability: number;
+        source?: string;
+        created_at?: string;
+      } | null;
+    }>(`/user/me/picks/${gameId}`, { requireAuth: true });
+  }
+
+  async quarantineUnverifiedPicks() {
+    return this.request<{ message: string; deleted: number }>(
+      '/user/me/picks/quarantine-unverified',
+      { method: 'POST', requireAuth: true },
     );
   }
 

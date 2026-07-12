@@ -1,20 +1,12 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import type { Game } from '../../types';
+import type { LiveUpdateMessage } from '../../hooks/useLiveUpdates';
 import { gameDetailStyles as s } from './gameDetailStyles';
-
-type LiveUpdate = {
-  is_in_play?: boolean;
-  home_score?: number;
-  away_score?: number;
-  home_win_probability?: number;
-  away_win_probability?: number;
-  confidence_level?: string;
-};
 
 type Props = {
   game: Game;
-  lastUpdate: LiveUpdate | null;
+  lastUpdate: LiveUpdateMessage | null;
   connected: boolean;
   liveError: string | null;
 };

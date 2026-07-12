@@ -158,7 +158,7 @@ export const PredictionHistoryScreen: React.FC = () => {
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           brierStats && brierStats.total_picks > 0 ? (
-            <UserPickStatsCard stats={brierStats} />
+            <UserPickStatsCard stats={brierStats} onQuarantined={() => void load(true)} />
           ) : null
         }
         ListEmptyComponent={

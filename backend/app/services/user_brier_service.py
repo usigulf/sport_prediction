@@ -18,6 +18,9 @@ from app.services.trust_metrics_service import (
 
 FINISHED_STATUSES = ("finished", "final")
 VALID_OUTCOMES = frozenset({"home", "away", "draw"})
+# Only explicit user taps count toward scored performance.
+SCORED_SOURCES = frozenset({"user"})
+LEGACY_SOURCES = frozenset({"legacy_unverified", "auto_model"})
 
 
 def actual_outcome(game: Game) -> str | None:
@@ -53,6 +56,14 @@ def model_probability_for_outcome(game: Game, pred: Prediction, outcome: str) ->
     return None
 
 
+def get_user_pick_for_game(db: Session, *, user_id: UUID, game_id: UUID) -> UserPick | None:
+    return (
+        db.query(UserPick)
+        .filter(UserPick.user_id == user_id, UserPick.game_id == game_id)
+        .first()
+    )
+
+
 def record_user_pick(
     db: Session,
     *,
@@ -62,7 +73,13 @@ def record_user_pick(
     probability: float,
     market_home_implied: float | None = None,
     market_away_implied: float | None = None,
+    source: str = "user",
+    replace: bool = False,
 ) -> UserPick:
+    """
+    Record an explicit user pick. Existing picks are immutable unless replace=True.
+    Silent overwrite of model-auto picks was a trust bug; callers must be intentional.
+    """
     o = outcome.lower().strip()
     if o not in VALID_OUTCOMES:
         raise ValueError("outcome must be home, away, or draw")
@@ -71,19 +88,23 @@ def record_user_pick(
     p = float(probability)
     if p < 0.01 or p > 0.99:
         raise ValueError("probability must be between 0.01 and 0.99")
+    src = (source or "user").strip().lower()
+    if src not in {"user", "auto_model", "legacy_unverified"}:
+        raise ValueError("invalid pick source")
 
     league = (game.league or "").lower()
     if o == "draw" and league not in SOCCER_LEAGUES_SET:
         raise ValueError("draw picks are only supported for soccer leagues")
 
-    existing = (
-        db.query(UserPick)
-        .filter(UserPick.user_id == user_id, UserPick.game_id == game.id)
-        .first()
-    )
+    existing = get_user_pick_for_game(db, user_id=user_id, game_id=game.id)
     if existing:
+        if not replace:
+            raise ValueError(
+                "Pick already recorded for this game. Picks are immutable once saved."
+            )
         existing.outcome = o
         existing.probability = p
+        existing.source = src
         existing.market_home_implied_prob = market_home_implied
         existing.market_away_implied_prob = market_away_implied
         db.commit()
@@ -95,6 +116,7 @@ def record_user_pick(
         game_id=game.id,
         outcome=o,
         probability=p,
+        source=src,
         market_home_implied_prob=market_home_implied,
         market_away_implied_prob=market_away_implied,
     )
@@ -104,6 +126,20 @@ def record_user_pick(
     return pick
 
 
+def quarantine_unverified_user_picks(
+    db: Session,
+    *,
+    user_id: UUID | None = None,
+) -> dict[str, Any]:
+    """Delete legacy/auto picks that should not count as user performance."""
+    q = db.query(UserPick).filter(UserPick.source.in_(tuple(LEGACY_SOURCES)))
+    if user_id is not None:
+        q = q.filter(UserPick.user_id == user_id)
+    deleted = q.delete(synchronize_session=False)
+    db.commit()
+    return {"deleted": int(deleted)}
+
+
 def build_user_brier_summary(db: Session, user_id: UUID) -> dict[str, Any]:
     picks = (
         db.query(UserPick)
@@ -111,6 +147,10 @@ def build_user_brier_summary(db: Session, user_id: UUID) -> dict[str, Any]:
         .filter(UserPick.user_id == user_id)
         .all()
     )
+    unverified = sum(1 for p in picks if (getattr(p, "source", None) or "") in LEGACY_SOURCES)
+    scored_candidates = [
+        p for p in picks if (getattr(p, "source", None) or "user") in SCORED_SOURCES
+    ]
     scored = 0
     user_brier_sum = 0.0
     model_brier_sum = 0.0
@@ -118,7 +158,7 @@ def build_user_brier_summary(db: Session, user_id: UUID) -> dict[str, Any]:
     clv_values: list[float] = []
     clv_scored = 0
 
-    for pick in picks:
+    for pick in scored_candidates:
         game = pick.game
         if game is None or game.status not in FINISHED_STATUSES:
             continue
@@ -142,16 +182,20 @@ def build_user_brier_summary(db: Session, user_id: UUID) -> dict[str, Any]:
             db,
             game=game,
             outcome=pick.outcome,
-            pick_home_implied=float(pick.market_home_implied_prob) if pick.market_home_implied_prob is not None else None,
-            pick_away_implied=float(pick.market_away_implied_prob) if pick.market_away_implied_prob is not None else None,
+            pick_home_implied=float(pick.market_home_implied_prob)
+            if pick.market_home_implied_prob is not None
+            else None,
+            pick_away_implied=float(pick.market_away_implied_prob)
+            if pick.market_away_implied_prob is not None
+            else None,
         )
         if clv_row is not None:
             clv_scored += 1
             clv_values.append(float(clv_row["clv"]))
 
-    pending = len(picks) - scored
+    pending = len(scored_candidates) - scored
     return {
-        "total_picks": len(picks),
+        "total_picks": len(scored_candidates),
         "scored_picks": scored,
         "pending_picks": max(0, pending),
         "correct": correct,
@@ -159,6 +203,7 @@ def build_user_brier_summary(db: Session, user_id: UUID) -> dict[str, Any]:
         "user_brier": round(user_brier_sum / scored, 4) if scored else None,
         "model_brier": round(model_brier_sum / scored, 4) if scored else None,
         "brier_delta": round((user_brier_sum - model_brier_sum) / scored, 4) if scored else None,
+        "unverified_legacy_picks": unverified,
         "clv": {
             "scored_picks": clv_scored,
             "avg_clv": round(sum(clv_values) / len(clv_values), 4) if clv_values else None,
@@ -167,8 +212,9 @@ def build_user_brier_summary(db: Session, user_id: UUID) -> dict[str, Any]:
             else None,
         },
         "methodology": (
-            "Brier score averages (probability − outcome)² on finished games where you recorded a pick. "
-            "Model Brier uses the model's probability on your chosen outcome (not the model's own pick). "
-            "Lower is better. CLV compares closing consensus implied probability to odds at pick time."
+            "Brier score averages (probability − outcome)² on finished games where you explicitly "
+            "recorded a pick. Model Brier uses the model's probability on your chosen outcome. "
+            "Lower is better. Auto/legacy picks are excluded. CLV compares closing consensus "
+            "implied probability to odds at pick time."
         ),
     }
