@@ -494,6 +494,17 @@ async def freeze_closing_odds_cron(
     )
 
 
+@router.get("/forecast-ledger/verify")
+async def verify_forecast_ledger_cron(
+    db: Session = Depends(get_db),
+    _: None = Depends(_require_cron_secret),
+):
+    """Recompute content-hash chain for the append-only forecast ledger."""
+    from app.services.forecast_ledger_service import verify_forecast_ledger_chain
+
+    return verify_forecast_ledger_chain(db)
+
+
 class EnqueueJobBody(BaseModel):
     job_type: str = Field(..., min_length=1, max_length=64)
     payload: dict = Field(default_factory=dict)

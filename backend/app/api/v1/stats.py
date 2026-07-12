@@ -238,6 +238,14 @@ async def get_feature_store_summary(db: Session = Depends(get_db)):
     return feature_store_summary(db)
 
 
+@router.get("/forecast-ledger")
+async def get_forecast_ledger_summary(db: Session = Depends(get_db)):
+    """Append-only forecast ledger summary + hash-chain health."""
+    from app.services.forecast_ledger_service import forecast_ledger_summary
+
+    return forecast_ledger_summary(db)
+
+
 @router.get("/community-vs-model")
 async def get_community_vs_model(db: Session = Depends(get_db)):
     """Community user-pick consensus vs model (I93)."""

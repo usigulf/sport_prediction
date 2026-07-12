@@ -29,6 +29,7 @@ Short reference for investors and developers. **This is what runs in production 
 - Artifact BOM + health: `docs/MODEL_ARTIFACT_BOM.md`, `GET /health` model block, `GET /api/v1/stats/model`
 - Acceptance protocol (soccer wedge): `docs/MODEL_ACCEPTANCE_PROTOCOL.md`, `GET /api/v1/stats/model-acceptance`
 - Closing-line ledger: `odds_snapshots.is_closing`, `POST /internal/odds/freeze-closing`, `GET /api/v1/stats/model-vs-closing`
+- Forecast ledger (append-only): `docs/FORECAST_LEDGER.md`, `GET /api/v1/stats/forecast-ledger`
 - Public accuracy: `GET /api/v1/stats/public-audit`, walk-forward backtest script
 - Do **not** market unsourced “win more” claims; holdout metrics in sample `metrics.json` are near a naive baseline
 - Do **not** charge on AI performance until `public_charge` acceptance passes (needs closing ledger sample + model ≤ market log-loss)

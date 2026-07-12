@@ -535,6 +535,27 @@ async def get_line_movement(
     return build_line_movement_series(db, game)
 
 
+@router.get("/{game_id}/forecast-ledger")
+async def get_game_forecast_ledger(
+    game_id: str,
+    db: Session = Depends(get_db),
+    _: None = Depends(rate_limit_predictions),
+):
+    """Append-only issued forecasts for this game (content-hashed ledger)."""
+    from uuid import UUID
+
+    from app.services.forecast_ledger_service import forecast_ledger_for_game
+
+    game = db.query(Game).filter(Game.id == game_id).first()
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    try:
+        gid = UUID(str(game_id))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid game id") from e
+    return forecast_ledger_for_game(db, gid)
+
+
 @router.get("/{game_id}/feature-snapshots")
 async def get_game_feature_snapshots(
     game_id: str,

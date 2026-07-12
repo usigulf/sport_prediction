@@ -271,6 +271,17 @@ def run_prediction_job(
             db.commit()
             db.refresh(pred)
             try:
+                from app.services.forecast_ledger_service import append_forecast_ledger_entry
+
+                append_forecast_ledger_entry(
+                    db,
+                    game=game,
+                    prediction=pred,
+                    feature_source=str(feat_src),
+                )
+            except Exception:
+                logger.exception("forecast_ledger append failed for game %s", game.id)
+            try:
                 from app.services.feature_store_service import record_feature_snapshot
 
                 record_feature_snapshot(

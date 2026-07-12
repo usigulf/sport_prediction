@@ -25,6 +25,10 @@ from app.models.game_player_spotlight import GamePlayerSpotlight  # noqa: F401
 from app.models.stripe_webhook_event import StripeWebhookEvent  # noqa: F401
 from app.models.revenuecat_webhook_event import RevenueCatWebhookEvent  # noqa: F401
 from app.models.password_reset_token import PasswordResetToken  # noqa: F401
+from app.models.odds_snapshot import OddsSnapshot  # noqa: F401
+from app.models.forecast_ledger_entry import ForecastLedgerEntry  # noqa: F401
+from app.models.game_feature_snapshot import GameFeatureSnapshot  # noqa: F401
+from app.models.user_pick import UserPick  # noqa: F401
 from app.core.security import get_password_hash
 from uuid import uuid4
 from datetime import datetime, timedelta
