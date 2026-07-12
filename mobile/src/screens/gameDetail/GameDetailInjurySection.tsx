@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { theme } from '../constants/theme';
+import { theme } from '../../constants/theme';
 import { gameDetailStyles as s } from './gameDetailStyles';
 
 export type InjuryReportItem = {
