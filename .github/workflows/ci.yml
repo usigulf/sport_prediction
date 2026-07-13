@@ -34,6 +34,9 @@ jobs:
       - name: pip-audit
         run: bash ../scripts/pip_audit_backend.sh
 
+      - name: Bandit SAST
+        run: bash ../scripts/bandit_backend.sh
+
       - name: Audit scaffold verify
         working-directory: ..
         run: bash scripts/verify_audit_scaffolds.sh

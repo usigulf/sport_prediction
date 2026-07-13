@@ -20,6 +20,9 @@ bash scripts/verify_detox_scaffold.sh
 echo "[audit-scaffolds] Accessibility QA..."
 bash scripts/verify_a11y_scaffold.sh
 
+echo "[audit-scaffolds] Security..."
+bash scripts/verify_security_scaffold.sh
+
 echo "[audit-scaffolds] Canonical mobile workspace..."
 bash scripts/verify_canonical_mobile.sh
 

@@ -49,7 +49,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | W23 | Stale `ml/` + ARCHITECTURE.md mislead developers/investors | ✅ | done | archive/README.md + ARCHITECTURE.md §3.0 shipped table |
 | W24 | Rust microservices dead weight | ✅ | done | archive/services/ + services/users/README.md — legacy not deployed |
 | W25 | CI Ruff never fails (`|| true`) | ✅ | done | .github/workflows/ci.yml Ruff without || true |
-| W26 | No dependency security scanning | ✅ | done | scripts/pip_audit_backend.sh, npm audit in CI |
+| W26 | No dependency security scanning | ✅ | done | pip-audit + npm audit + bandit + SECURITY_THREAT_MODEL.md + verify_security_scaffold.sh |
 | W27 | `deploy_api.sh` no migrations | ✅ | done | scripts/deploy_api.sh alembic upgrade head |
 | W28 | No Prometheus metrics on API | ✅ | done | backend/app/monitoring/prometheus_metrics.py |
 | W29 | Account delete doesn’t cancel billing | ✅ | done | backend/app/services/subscription_cancel_service.py |
@@ -94,7 +94,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I11 | Redis requirepass | ✅ | done | docker-compose Redis auth |
 | I12 | Run migrations in `deploy_api.sh` | ✅ | done | scripts/deploy_api.sh migrations |
 | I13 | Fail CI on Ruff | ✅ | done | CI Ruff |
-| I14 | Add `pip-audit` + `npm audit` to CI | ✅ | done | CI pip-audit npm audit |
+| I14 | Add `pip-audit` + `npm audit` to CI | ✅ | done | CI pip-audit npm audit bandit; dependabot.yml; restore drill scaffold |
 | I15 | Pin backend dependencies | ✅ | done | backend/requirements.txt pinned |
 | I16 | Cancel subscriptions on account delete | ✅ | done | subscription_cancel_service on delete |
 | I17 | Remove unsourced “62%+” from web copy | ✅ | done | backend/tests/test_web_marketing_copy.py |

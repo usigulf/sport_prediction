@@ -22,6 +22,13 @@ def test_ci_runs_pip_audit_without_swallowing_errors():
     assert "|| true" not in pip_section
 
 
+def test_ci_runs_bandit_sast():
+    ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert "bandit_backend.sh" in ci
+    bandit_section = ci.split("Bandit SAST")[1].split("Audit scaffold")[0]
+    assert "|| true" not in bandit_section
+
+
 def test_ci_runs_npm_audit_on_production_deps():
     ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
     assert "npm audit --omit=dev --audit-level=high" in ci
@@ -30,6 +37,11 @@ def test_ci_runs_npm_audit_on_production_deps():
 def test_requirements_dev_includes_pip_audit():
     dev = (REPO_ROOT / "backend" / "requirements-dev.txt").read_text(encoding="utf-8")
     assert "pip-audit" in dev
+
+
+def test_requirements_dev_includes_bandit():
+    dev = (REPO_ROOT / "backend" / "requirements-dev.txt").read_text(encoding="utf-8")
+    assert "bandit" in dev
 
 
 def test_pip_audit_script_runs_clean_audit():

@@ -26,6 +26,16 @@ bash scripts/verify_external_ops_readiness.sh
 | I96 | Sport-specific ML hiring | § Hiring (below) | External |
 | I100 | Patent / trade secret | § Legal (below) | External |
 
+**In-repo security self-audit (#17 — not a pen-test):**
+
+| Topic | Runbook |
+|-------|---------|
+| Threat model + scans | [SECURITY_THREAT_MODEL.md](./SECURITY_THREAT_MODEL.md) |
+| Mobile checklist | [MOBILE_SECURITY_CHECKLIST.md](./MOBILE_SECURITY_CHECKLIST.md) |
+| Staging restore drill | [RESTORE_DRILL.md](./RESTORE_DRILL.md) |
+
+Verify scaffold: `bash scripts/verify_security_scaffold.sh`
+
 **Already documented elsewhere (ops-only credentials):**
 
 | Topic | Runbook |

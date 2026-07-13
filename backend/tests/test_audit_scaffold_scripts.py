@@ -7,14 +7,20 @@ SCAFFOLD_SCRIPTS = (
     "scripts/verify_offsite_backup_scaffold.sh",
     "scripts/verify_annual_iap_scaffold.sh",
     "scripts/verify_staging_scaffold.sh",
+    "scripts/verify_security_scaffold.sh",
     "scripts/verify_audit_scaffolds.sh",
     "scripts/run_staging_local.sh",
+    "scripts/restore_drill_staging.sh",
+    "scripts/bandit_backend.sh",
 )
 
 SCAFFOLD_DOCS = (
     "docs/OFFSITE_BACKUP_RUNBOOK.md",
     "docs/ANNUAL_IAP_SETUP.md",
     "docs/STAGING_ENVIRONMENT.md",
+    "docs/SECURITY_THREAT_MODEL.md",
+    "docs/MOBILE_SECURITY_CHECKLIST.md",
+    "docs/RESTORE_DRILL.md",
 )
 
 
