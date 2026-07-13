@@ -55,7 +55,7 @@
     "expo-notifications": "~0.32.17",
     "expo-secure-store": "~15.0.7",
     "expo-sharing": "~14.0.8",
-    "expo-splash-screen": "^0.29.24",
+    "expo-splash-screen": "^57.0.2",
     "expo-status-bar": "~3.0.9",
     "expo-store-review": "~9.0.9",
     "expo-tracking-transparency": "~6.0.8",
