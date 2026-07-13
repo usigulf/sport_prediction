@@ -23,6 +23,9 @@ bash scripts/verify_a11y_scaffold.sh
 echo "[audit-scaffolds] Security..."
 bash scripts/verify_security_scaffold.sh
 
+echo "[audit-scaffolds] SLO / load / chaos..."
+bash scripts/verify_slo_scaffold.sh
+
 echo "[audit-scaffolds] Canonical mobile workspace..."
 bash scripts/verify_canonical_mobile.sh
 

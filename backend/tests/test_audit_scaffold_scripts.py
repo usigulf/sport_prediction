@@ -8,10 +8,14 @@ SCAFFOLD_SCRIPTS = (
     "scripts/verify_annual_iap_scaffold.sh",
     "scripts/verify_staging_scaffold.sh",
     "scripts/verify_security_scaffold.sh",
+    "scripts/verify_slo_scaffold.sh",
     "scripts/verify_audit_scaffolds.sh",
     "scripts/run_staging_local.sh",
     "scripts/restore_drill_staging.sh",
     "scripts/bandit_backend.sh",
+    "scripts/load_test_api.sh",
+    "scripts/chaos_drill_staging.sh",
+    "scripts/check_uptime.sh",
 )
 
 SCAFFOLD_DOCS = (
@@ -21,6 +25,8 @@ SCAFFOLD_DOCS = (
     "docs/SECURITY_THREAT_MODEL.md",
     "docs/MOBILE_SECURITY_CHECKLIST.md",
     "docs/RESTORE_DRILL.md",
+    "docs/SLO_AND_CAPACITY.md",
+    "docs/LOAD_AND_CHAOS.md",
 )
 
 

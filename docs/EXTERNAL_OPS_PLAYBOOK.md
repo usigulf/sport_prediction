@@ -36,6 +36,15 @@ bash scripts/verify_external_ops_readiness.sh
 
 Verify scaffold: `bash scripts/verify_security_scaffold.sh`
 
+**In-repo SLO / load / chaos scaffold (#18 — not a load-test certification):**
+
+| Topic | Runbook |
+|-------|---------|
+| SLOs + capacity | [SLO_AND_CAPACITY.md](./SLO_AND_CAPACITY.md) |
+| Load + chaos drills | [LOAD_AND_CHAOS.md](./LOAD_AND_CHAOS.md) |
+
+Verify scaffold: `bash scripts/verify_slo_scaffold.sh`
+
 **Already documented elsewhere (ops-only credentials):**
 
 | Topic | Runbook |

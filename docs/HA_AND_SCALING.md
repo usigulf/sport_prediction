@@ -67,6 +67,7 @@ Health check: `GET /health` (already in compose healthchecks).
 - [ ] Offsite backups working — [OFFSITE_BACKUP_RUNBOOK.md](./OFFSITE_BACKUP_RUNBOOK.md)  
 - [ ] Staging smoke test after deploy pattern change  
 - [ ] Prometheus scrape target updated if port layout changes — [PROMETHEUS_METRICS.md](./PROMETHEUS_METRICS.md)
+- [ ] Invite-beta SLOs + staging load/chaos recorded — [SLO_AND_CAPACITY.md](./SLO_AND_CAPACITY.md), [LOAD_AND_CHAOS.md](./LOAD_AND_CHAOS.md)
 
 ---
 

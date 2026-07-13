@@ -100,7 +100,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I17 | Remove unsourced “62%+” from web copy | ✅ | done | backend/tests/test_web_marketing_copy.py |
 | I18 | Fix live keywords `ports` → `sports` | 🚫 | blocked | docs/ASC_OPS_CHECKLIST.md §1 — paste keywords in App Store Connect |
 | I19 | Sentry alerts on webhook failures | ✅ | done | backend/app/utils/sentry_alerts.py |
-| I20 | Uptime monitoring on `/health` + `/stats/model` | ✅ | done | scripts/check_api_health.sh |
+| I20 | Uptime monitoring on `/health` + `/stats/model` | ✅ | done | check_api_health.sh + check_uptime.sh; SLO targets in SLO_AND_CAPACITY.md |
 | I21 | PIT-only features at inference; no current standings fallback in prod | ✅ | done | backend/tests/test_feature_builder_pit.py |
 | I22 | Train native soccer 1X2 model | ✅ | done | backend/app/services/model_training.py |
 | I23 | Walk-forward backtest script | ✅ | done | backend/app/services/walk_forward_backtest.py |
