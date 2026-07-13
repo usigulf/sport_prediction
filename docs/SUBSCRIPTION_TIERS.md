@@ -23,5 +23,6 @@ All tier checks go through `subscription_tiers.py`:
 
 ## Related audit items
 
+- **#19** Offer redesign — **`docs/SUBSCRIPTION_OFFER_POLICY.md`**; default `invite_founder` ($9.99) until retention + `public_charge`
 - **W33 / I41** Annual IAP — see **`docs/ANNUAL_IAP_SETUP.md`**; Paywall auto-shows annual when RevenueCat package exists
 - **I87** Price experiment — messaging via feature flags; checkout price comes from RevenueCat/Stripe

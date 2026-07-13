@@ -66,7 +66,7 @@ export function isPaywallDiscountTier(flags: ServerFeatureFlags): boolean {
 
 export function paywallPricePromoLabel(flags: ServerFeatureFlags): string | null {
   if (!isPaywallDiscountTier(flags)) return null;
-  return `Limited-time offer — ${PAYWALL_EXPERIMENT_MONTHLY_LABEL}/mo tier for new subscribers`;
+  return `Limited-time offer — ${PAYWALL_EXPERIMENT_MONTHLY_LABEL}/mo messaging tier (checkout uses store price)`;
 }
 
 /** Reference list price shown struck-through when user is in the discount experiment bucket. */

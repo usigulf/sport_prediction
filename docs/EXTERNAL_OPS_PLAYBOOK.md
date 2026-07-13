@@ -45,6 +45,15 @@ Verify scaffold: `bash scripts/verify_security_scaffold.sh`
 
 Verify scaffold: `bash scripts/verify_slo_scaffold.sh`
 
+**In-repo subscription offer policy (#19 — not retention evidence):**
+
+| Topic | Runbook |
+|-------|---------|
+| Founder vs public list gates | [SUBSCRIPTION_OFFER_POLICY.md](./SUBSCRIPTION_OFFER_POLICY.md) |
+| Tiers + annual IAP | [SUBSCRIPTION_TIERS.md](./SUBSCRIPTION_TIERS.md), [ANNUAL_IAP_SETUP.md](./ANNUAL_IAP_SETUP.md) |
+
+Verify scaffold: `bash scripts/verify_subscription_offer_scaffold.sh`
+
 **Already documented elsewhere (ops-only credentials):**
 
 | Topic | Runbook |

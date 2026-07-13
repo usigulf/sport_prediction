@@ -5,6 +5,7 @@ import { theme } from '../../constants/theme';
 import { apiService } from '../../services/api';
 import { PredictionDisclaimer } from '../PredictionDisclaimer';
 import { trialDaysFromServer } from '../../utils/resolvedFeatureFlags';
+import { ACTIVE_OFFER_PHASE, offerPhaseHeadline } from '../../constants/subscriptionPricing';
 import type { ServerFeatureFlags } from '../../hooks/useServerFeatureFlags';
 
 type Props = {
@@ -28,17 +29,19 @@ export function PaywallHero({ serverFlags }: Props) {
   }, []);
 
   return (
-    <View style={styles.hero} accessibilityRole="header">
+    <View style={styles.hero} accessibilityRole="header" testID="paywall-hero">
       <Text style={styles.brand}>octobetiQ</Text>
-      <Text style={styles.headline}>AI picks with tracked accuracy</Text>
+      <Text style={styles.headline}>{offerPhaseHeadline()}</Text>
       <Text style={styles.sub}>
-        Unlimited predictions, live updates, and methodology you can verify in-app.
+        {ACTIVE_OFFER_PHASE === 'invite_founder'
+          ? 'Soccer-wedge Premium: unlimited picks, explanations, and an ad-free feed while we prove the model. Checkout uses the App Store / Play price.'
+          : 'Unlimited trusted soccer picks, explanations, and an ad-free experience. Checkout uses the App Store / Play price.'}
       </Text>
       <View style={styles.pills}>
         {accuracyPct != null ? (
           <View style={styles.pill}>
             <Ionicons name="stats-chart" size={14} color={theme.colors.accent} />
-            <Text style={styles.pillText}>{accuracyPct}% model accuracy</Text>
+            <Text style={styles.pillText}>{accuracyPct}% tracked (see Scorecard)</Text>
           </View>
         ) : null}
         <View style={styles.pill}>

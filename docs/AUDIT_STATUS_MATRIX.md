@@ -51,12 +51,12 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | W25 | CI Ruff never fails (`|| true`) | ✅ | done | .github/workflows/ci.yml Ruff without || true |
 | W26 | No dependency security scanning | ✅ | done | pip-audit + npm audit + bandit + SECURITY_THREAT_MODEL.md + verify_security_scaffold.sh |
 | W27 | `deploy_api.sh` no migrations | ✅ | done | scripts/deploy_api.sh alembic upgrade head |
-| W28 | No Prometheus metrics on API | ✅ | done | backend/app/monitoring/prometheus_metrics.py |
+| W28 | No Prometheus metrics on API | ✅ | done | prometheus_metrics.py + SLO_AND_CAPACITY.md + load/chaos scaffolds (#18) |
 | W29 | Account delete doesn’t cancel billing | ✅ | done | backend/app/services/subscription_cancel_service.py |
 | W30 | Inconsistent subscription tier checks | ✅ | done | backend/app/utils/subscription_tiers.py |
 | W31 | Guests can’t see paywall in production | ✅ | done | mobile PaywallScreen guest preview |
 | W32 | $29.99 without odds/EV tooling | ✅ | done | MarketOddsCard edge badge + LineMovementCard + model-vs-market dashboard |
-| W33 | No annual subscription | ✅ | done | Annual Stripe + Paywall gating + docs/ANNUAL_IAP_SETUP.md + verify_annual_iap_scaffold.sh; ASC product ops-only |
+| W33 | No annual subscription | ✅ | done | Annual IAP + SUBSCRIPTION_OFFER_POLICY founder phase (#19) + verify_subscription_offer_scaffold.sh; ASC product ops-only |
 | W34 | No referral program | ✅ | done | ReferralSection + referral/apply API + docs/REFERRAL_PROGRAM.md; bonus days need ASC/Stripe promo |
 | W35 | No product analytics pipeline | ✅ | done | productAnalytics.ts + mobile/.env.example; set EXPO_PUBLIC_POSTHOG_API_KEY in EAS prod |
 | W36 | Keywords typo “ports” on live listing | 🚫 | blocked | docs/ASC_OPS_CHECKLIST.md + print_asc_keywords.sh — ASC login ops-only |
@@ -68,7 +68,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | W42 | No job queue for long tasks | ✅ | done | job_queue_service + job_worker_service + /internal/jobs/run-one + cron |
 | W43 | Unpinned Docker `:latest` tags | ✅ | done | docker-compose.yml pinned image tags |
 | W44 | Mobile: no unit tests in CI | ✅ | done | mobile/src/utils/subscription.test.ts, CI mobile Jest job |
-| W45 | `premium_plus` tier exists but not marketed | ✅ | done | docs/SUBSCRIPTION_TIERS.md — premium_plus legacy; Paywall Premium-only by design |
+| W45 | `premium_plus` tier exists but not marketed | ✅ | done | SUBSCRIPTION_TIERS.md + SUBSCRIPTION_OFFER_POLICY.md — premium_plus legacy; founder vs public_list |
 | W46 | RevenueCat entitlement was `octobetiq Pro` vs `premium` mismatch (fixed in ops, fragile) | ✅ | done | backend/tests/test_revenuecat_webhook.py entitlement mapping |
 | W47 | No web subscriber portal | ✅ | done | web/subscriber-portal.html, POST /subscription/billing-portal |
 | W48 | Coverage.xml in git | ✅ | done | .gitignore coverage.xml |
@@ -121,7 +121,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I38 | Paywall hero redesign + social proof | ✅ | done | PaywallHero + accuracy pill + dynamic trial days |
 | I39 | Consistent skeleton/error/empty components | ✅ | done | FeedSkeleton/FeedErrorBanner/FeedEmptyState on Favorites, LiveHub, Games, Profile |
 | I40 | Guest paywall preview (read-only) | ✅ | done | guest paywall preview |
-| I41 | Annual plan ($199/yr) | ✅ | done | annual plan code + docs/ANNUAL_IAP_SETUP.md + test_annual_subscription_plan.py; ASC IAP ops-only |
+| I41 | Annual plan ($199/yr) | ✅ | done | annual plan + SUBSCRIPTION_OFFER_POLICY founder/$29.99 gates; ASC IAP ops-only |
 | I42 | Referral: “invite friend, 7 extra trial days” | ✅ | done | ReferralSection + docs/REFERRAL_PROGRAM.md; bonus days need ASC/Stripe promo setup |
 | I43 | Share card: “My model accuracy this month” | ✅ | done | SharePickCard rollingAccuracyPct, build_share_card rolling_accuracy_pct |
 | I44 | PostHog/Mixpanel integration | ✅ | done | productAnalytics.ts + mobile/.env.example PostHog keys + screen tracking |
@@ -140,7 +140,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I57 | CloudFront/CDN for static | 🚫 | blocked | docs/CDN_STATIC_ASSETS.md + nginx-static-cache-snippet — CDN account ops-only |
 | I58 | Staging environment | ✅ | done | docker-compose.staging.yml + run_staging_local.sh + deploy_staging_* scripts; public URL ops-only |
 | I59 | Blue/green deploy | ✅ | done | deploy_api_blue_green.sh + scripts/nginx_swap_upstream.sh (NGINX_AUTO_SWAP=1) |
-| I60 | Prometheus metrics + Grafana dashboards | ✅ | done | Prometheus + Grafana compose profile |
+| I60 | Prometheus metrics + Grafana dashboards | ✅ | done | Prometheus + Grafana; load/chaos scaffold + verify_slo_scaffold.sh (#18) |
 | I61 | Odds display (informational, not affiliate-first) | ✅ | done | MarketOddsCard + LineMovementCard on GameDetail when odds_display flag on |
 | I62 | Line movement charts | ✅ | done | LineMovementCard + GET /games/{id}/line-movement + odds_snapshots on market-odds fetch |
 | I63 | Closing line value tracker | ✅ | done | recordUserPick on GameDetail + UserPickStatsCard CLV on My Picks |
@@ -167,7 +167,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I84 | Age gate if expanding content | ✅ | done | mobile AgeGateScreen + ageGateStorage.ts |
 | I85 | App Privacy nutrition label review quarterly | 🚫 | blocked | docs/ASC_OPS_CHECKLIST.md §2 + asc_privacy_review_reminder.sh — quarterly ASC ops-only |
 | I86 | A/B test trial length (7 vs 14 days) | ✅ | done | trial_length_days wired in PaywallScreen + PaywallHero via useServerFeatureFlags |
-| I87 | A/B test price ($19.99 vs $29.99) | ✅ | done | paywall_price_tier promo banner + reference price + PostHog paywall_experiment_viewed; RevenueCat checkout primary |
+| I87 | A/B test price ($19.99 vs $29.99) | ✅ | done | paywall_price_tier promo + founder offer phase (#19); RevenueCat checkout primary |
 | I88 | Intro offer for lapsed users | ✅ | done | intro_offer_variant winback banner on PaywallScreen |
 | I89 | Rewarded ads vs premium messaging test | ✅ | done | rewarded_ads_messaging A/B copy in RewardedUnlockCTA |
 | I90 | Ad density test on free tier | ✅ | done | ad_density server flag floors native ad spacing in AdEngine |

@@ -23,6 +23,7 @@ import { getUserFriendlyMessage } from '../utils/errorMessages';
 import { theme } from '../constants/theme';
 import { PLAN_MATRIX } from '../constants/planFeatures';
 import {
+  ACTIVE_OFFER_PHASE,
   displayPremiumAnnualPrice,
   displayPremiumMonthlyPrice,
   premiumAnnualPriceWithPeriod,
@@ -121,12 +122,18 @@ export const PaywallScreen: React.FC = () => {
 
   useFocusEffect(
     useCallback(() => {
+      void trackEvent(ANALYTICS_EVENTS.PAYWALL_VIEWED, {
+        offer_phase: ACTIVE_OFFER_PHASE,
+        guest_preview: guestPreview,
+      });
       void trackEvent(ANALYTICS_EVENTS.PAYWALL_EXPERIMENT_VIEWED, {
         paywall_price_tier: serverFlags.experiments?.paywall_price_tier ?? 'standard',
         intro_offer_variant: serverFlags.experiments?.intro_offer_variant ?? 'none',
         trial_length_days: trialDays,
+        offer_phase: ACTIVE_OFFER_PHASE,
       });
     }, [
+      guestPreview,
       serverFlags.experiments?.paywall_price_tier,
       serverFlags.experiments?.intro_offer_variant,
       trialDays,
@@ -261,6 +268,12 @@ export const PaywallScreen: React.FC = () => {
   const handleSubscribe = useCallback(
     async (tierId: string) => {
       if (tierId !== 'premium') return;
+      void trackEvent(ANALYTICS_EVENTS.PAYWALL_CTA_TAPPED, {
+        tier: tierId,
+        billing_period: billingPeriod,
+        offer_phase: ACTIVE_OFFER_PHASE,
+        guest_preview: guestPreview,
+      });
       if (guestPreview) {
         Alert.alert(
           'Create an account',

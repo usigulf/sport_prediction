@@ -18,12 +18,14 @@ export const PLAN_MATRIX = {
     'See upgrade prompts when a feature needs Premium',
   ],
   premium: [
-    'Unlimited predictions & pick history',
-    'Full AI explanations and analysis',
-    'In-play win-probability updates while a match is on (informational — not betting odds)',
-    ...(PLAYER_PROPS_ENABLED ? (['Player props and game spotlights'] as const) : []),
-    'Challenges and leaderboards',
+    'Unlimited soccer predictions & pick history',
+    'Full AI explanations when the model is publish-ready',
     'Ad-free experience',
+    'Favorites, alerts workflow, and pick history',
+    'Challenges and leaderboards',
+    ...(PLAYER_PROPS_ENABLED
+      ? (['Experimental player props (not a launch promise)'] as const)
+      : []),
     `${PREMIUM_TRIAL_DAYS}-day free trial, then ${PREMIUM_MONTHLY_PRICE_LABEL}/mo`,
   ],
 } as const;
