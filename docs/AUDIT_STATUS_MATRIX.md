@@ -50,7 +50,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | W24 | Rust microservices dead weight | ✅ | done | archive/services/ + services/users/README.md — legacy not deployed |
 | W25 | CI Ruff never fails (`|| true`) | ✅ | done | .github/workflows/ci.yml Ruff without || true |
 | W26 | No dependency security scanning | ✅ | done | pip-audit + npm audit + bandit + SECURITY_THREAT_MODEL.md + verify_security_scaffold.sh |
-| W27 | `deploy_api.sh` no migrations | ✅ | done | scripts/deploy_api.sh alembic upgrade head |
+| W27 | `deploy_api.sh` no migrations | ✅ | done | deploy_api.sh alembic + INVITE_BETA_OPS.md cutover (migration 020) |
 | W28 | No Prometheus metrics on API | ✅ | done | prometheus_metrics.py + SLO_AND_CAPACITY.md + load/chaos scaffolds (#18) |
 | W29 | Account delete doesn’t cancel billing | ✅ | done | backend/app/services/subscription_cancel_service.py |
 | W30 | Inconsistent subscription tier checks | ✅ | done | backend/app/utils/subscription_tiers.py |
@@ -92,7 +92,7 @@ Backend CI enforces **≥60%** line coverage (`pytest.ini`). Mobile Jest added f
 | I9 | Add Stripe + RC webhook idempotency table | ✅ | done | alembic 011/012 webhook events |
 | I10 | Add DB backup to crontab + S3 offsite | ✅ | done | setup_offsite_backup + OFFSITE_BACKUP_RUNBOOK + verify_offsite_backup_scaffold.sh; credentials ops-only |
 | I11 | Redis requirepass | ✅ | done | docker-compose Redis auth |
-| I12 | Run migrations in `deploy_api.sh` | ✅ | done | scripts/deploy_api.sh migrations |
+| I12 | Run migrations in `deploy_api.sh` | ✅ | done | deploy_api.sh migrations + docs/INVITE_BETA_OPS.md |
 | I13 | Fail CI on Ruff | ✅ | done | CI Ruff |
 | I14 | Add `pip-audit` + `npm audit` to CI | ✅ | done | CI pip-audit npm audit bandit; dependabot.yml; restore drill scaffold |
 | I15 | Pin backend dependencies | ✅ | done | backend/requirements.txt pinned |

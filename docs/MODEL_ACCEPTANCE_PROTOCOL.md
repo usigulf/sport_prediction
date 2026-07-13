@@ -94,6 +94,8 @@ python scripts/verify_model_acceptance.py --level invite_beta --api https://api.
 
 ## Production env (invite beta)
 
+Full VPS cutover order: [INVITE_BETA_OPS.md](./INVITE_BETA_OPS.md).
+
 ```bash
 EXPLANATION_MODEL_DIR=/models
 ALLOW_HEURISTIC_INFERENCE=false

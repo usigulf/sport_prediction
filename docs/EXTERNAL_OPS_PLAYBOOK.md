@@ -54,6 +54,15 @@ Verify scaffold: `bash scripts/verify_slo_scaffold.sh`
 
 Verify scaffold: `bash scripts/verify_subscription_offer_scaffold.sh`
 
+**Invite-beta VPS cutover (constrained beta — not live proof):**
+
+| Topic | Runbook |
+|-------|---------|
+| Cutover order | [INVITE_BETA_OPS.md](./INVITE_BETA_OPS.md) |
+| Model gates | [MODEL_ACCEPTANCE_PROTOCOL.md](./MODEL_ACCEPTANCE_PROTOCOL.md) |
+
+Verify scaffold: `bash scripts/verify_invite_beta_scaffold.sh`
+
 **Already documented elsewhere (ops-only credentials):**
 
 | Topic | Runbook |
@@ -68,11 +77,12 @@ Verify scaffold: `bash scripts/verify_subscription_offer_scaffold.sh`
 
 1. **ASC keywords** (W36 / I18) — `./scripts/print_asc_keywords.sh` → paste in App Store Connect  
 2. **Offsite backup** — `./scripts/setup_offsite_backup.sh` with DO Spaces keys  
-3. **Staging public URL** — DNS A record → `./scripts/deploy_staging_public_url.sh`  
-4. **Annual IAP** — ASC product + RevenueCat → [ANNUAL_IAP_SETUP.md](./ANNUAL_IAP_SETUP.md)  
-5. **Google Play internal track** — [GOOGLE_PLAY_LAUNCH.md](./GOOGLE_PLAY_LAUNCH.md)  
-6. **CDN** — cache static web assets before scaling traffic  
-7. **Managed Postgres + HA** — when single-VPS risk exceeds ops capacity  
+3. **Invite-beta VPS cutover** — [INVITE_BETA_OPS.md](./INVITE_BETA_OPS.md) (fail-closed model, cron, founder IAP)  
+4. **Staging public URL** — DNS A record → `./scripts/deploy_staging_public_url.sh`  
+5. **Annual / founder IAP** — ASC product + RevenueCat → [ANNUAL_IAP_SETUP.md](./ANNUAL_IAP_SETUP.md), [SUBSCRIPTION_OFFER_POLICY.md](./SUBSCRIPTION_OFFER_POLICY.md)  
+6. **Google Play internal track** — [GOOGLE_PLAY_LAUNCH.md](./GOOGLE_PLAY_LAUNCH.md)  
+7. **CDN** — cache static web assets before scaling traffic  
+8. **Managed Postgres + HA** — when single-VPS risk exceeds ops capacity  
 
 ---
 

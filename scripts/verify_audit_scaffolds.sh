@@ -29,6 +29,9 @@ bash scripts/verify_slo_scaffold.sh
 echo "[audit-scaffolds] Subscription offer..."
 bash scripts/verify_subscription_offer_scaffold.sh
 
+echo "[audit-scaffolds] Invite-beta VPS cutover..."
+bash scripts/verify_invite_beta_scaffold.sh
+
 echo "[audit-scaffolds] Canonical mobile workspace..."
 bash scripts/verify_canonical_mobile.sh
 
